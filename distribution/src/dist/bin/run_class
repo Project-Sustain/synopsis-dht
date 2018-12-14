@@ -1,0 +1,34 @@
+#!/bin/bash
+
+java_opts="-Xmx8192m"
+
+if [[ ! -d "../lib/" ]]; then
+  echo "Could not locate Pebble jars. Exiting!"
+  exit 1
+fi
+
+# initialize the classpath
+PEBBLES_CLASSPATH=""
+for f in ../lib/*
+do
+  if [ "$PEBBLES_CLASSPATH" == "" ]
+    then
+    PEBBLES_CLASSPATH=$f
+  else
+    PEBBLES_CLASSPATH="$PEBBLES_CLASSPATH":$f
+  fi
+done
+
+echo ${PEBBLES_CLASSPATH}
+# location of the log4j properties file
+log4j_conf_file='file:../lib/log4j.properties'
+# append it to java opts
+java_opts=${java_opts}' -Dlog4j.configuration='${log4j_conf_file}' -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false
+-Dcom.sun.management.jmxremote.port=10021'
+
+#-XX:+HeapDumpOnOutOfMemoryError
+
+java \
+    ${java_opts} \
+    -cp ${PEBBLES_CLASSPATH} \
+    ${@}

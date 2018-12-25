@@ -13,6 +13,7 @@ import org.apache.log4j.Logger;
 import synopsis2.SpatioTemporalRecord;
 import synopsis2.client.Ingester;
 import synopsis2.client.IngestionConfig;
+import synopsis2.client.TemporalQuantizer;
 import synopsis2.client.geohash.GeoHash;
 
 import java.io.BufferedInputStream;
@@ -30,10 +31,12 @@ public class NOAAIngester implements Ingester {
     private int index = 0;
     private SerializationInputStream inStream;
     private int recordCount = 0;
+    private final TemporalQuantizer temporalQuantizer;
 
     public NOAAIngester(String baseInputDir, IngestionConfig config) {
         this.baseInputDir = baseInputDir;
         this.ingestionConfig = config;
+        this.temporalQuantizer = new TemporalQuantizer(config.getTemporalGranularity());
     }
 
     @Override
@@ -68,8 +71,8 @@ public class NOAAIngester implements Ingester {
             byte[] payload = inStream.readField();
             Metadata eventMetadata = Serializer.deserialize(io.sigpipe.sing.dataset.Metadata.class, payload);
             String stringHash = GeoHash.encode(lat, lon, ingestionConfig.getPrecision());
-            record = new SpatioTemporalRecord(stringHash, eventMetadata.getTemporalProperties().getEnd(),
-                    constructStrand(stringHash, eventMetadata));
+            long ts = eventMetadata.getTemporalProperties().getEnd();
+            record = constructStrand(stringHash, ts, eventMetadata);
         } catch (IOException e) {
             logger.error("Read Error.", e);
         } catch (SerializationException e) {
@@ -78,24 +81,31 @@ public class NOAAIngester implements Ingester {
         return record;
     }
 
-    private Path constructStrand(String geohash, Metadata metadata) {
+    private SpatioTemporalRecord constructStrand(String geohash, long ts, Metadata metadata) {
         List<String> features = ingestionConfig.getFeatures();
-        Path path = new Path(features.size() + 1); // additional vertex for location
+        Path path = new Path(features.size() + 2); // additional vertices for time and location
+        StringBuilder keyBuilder = new StringBuilder();
 
-        double[] values = new double[path.size() - 1]; // skip the location
+        // path: time -> feature 1 -> ..... -> feature n -> geohash (data container)
+        long temporalBracket = temporalQuantizer.getBoundary(ts);
+        path.add(new Feature("time", temporalBracket));
+        keyBuilder.append(temporalBracket);
+        double[] values = new double[path.size() - 2]; // skip time and location
         int i = 0;
-        for(String feature : features){
+        for (String feature : features) {
             Quantizer quantizer = ingestionConfig.getQuantizer(feature);
             Feature quantizedVal = quantizer.quantize(metadata.getAttribute(feature));
             values[i++] = metadata.getAttribute(feature).getDouble();
             path.add(new Feature(feature, quantizedVal));
+            keyBuilder.append(quantizedVal.getDouble());
         }
         path.add(new Feature("location", geohash));
+        keyBuilder.append(geohash);
         // create the data container and set as the data of the last vertex
         RunningStatisticsND rsnd = new RunningStatisticsND(values);
         DataContainer container = new DataContainer(rsnd);
-        path.get(path.size()-1).setData(container);
-        return path;
+        path.get(path.size() - 1).setData(container);
+        return new SpatioTemporalRecord(geohash, ts, path, keyBuilder.toString());
     }
 
     private File[] getInputFilesInDir(String dataDirPath) {

@@ -3,10 +3,12 @@ package synopsis2.samples.noaa;
 import io.sigpipe.sing.dataset.Metadata;
 import io.sigpipe.sing.dataset.analysis.Quantizer;
 import io.sigpipe.sing.dataset.feature.Feature;
+import io.sigpipe.sing.graph.DataContainer;
 import io.sigpipe.sing.graph.Path;
 import io.sigpipe.sing.serialization.SerializationException;
 import io.sigpipe.sing.serialization.SerializationInputStream;
 import io.sigpipe.sing.serialization.Serializer;
+import io.sigpipe.sing.stat.RunningStatisticsND;
 import org.apache.log4j.Logger;
 import synopsis2.SpatioTemporalRecord;
 import synopsis2.client.Ingester;
@@ -67,7 +69,7 @@ public class NOAAIngester implements Ingester {
             Metadata eventMetadata = Serializer.deserialize(io.sigpipe.sing.dataset.Metadata.class, payload);
             String stringHash = GeoHash.encode(lat, lon, ingestionConfig.getPrecision());
             record = new SpatioTemporalRecord(stringHash, eventMetadata.getTemporalProperties().getEnd(),
-                    constructStrand(stringHash, eventMetadata), eventMetadata);
+                    constructStrand(stringHash, eventMetadata));
         } catch (IOException e) {
             logger.error("Read Error.", e);
         } catch (SerializationException e) {
@@ -78,13 +80,21 @@ public class NOAAIngester implements Ingester {
 
     private Path constructStrand(String geohash, Metadata metadata) {
         List<String> features = ingestionConfig.getFeatures();
-        Path path = new Path(features.size() + 1);
+        Path path = new Path(features.size() + 1); // additional vertex for location
+
+        double[] values = new double[path.size() - 1]; // skip the location
+        int i = 0;
         for(String feature : features){
             Quantizer quantizer = ingestionConfig.getQuantizer(feature);
             Feature quantizedVal = quantizer.quantize(metadata.getAttribute(feature));
+            values[i++] = metadata.getAttribute(feature).getDouble();
             path.add(new Feature(feature, quantizedVal));
         }
         path.add(new Feature("location", geohash));
+        // create the data container and set as the data of the last vertex
+        RunningStatisticsND rsnd = new RunningStatisticsND(values);
+        DataContainer container = new DataContainer(rsnd);
+        path.get(path.size()-1).setData(container);
         return path;
     }
 

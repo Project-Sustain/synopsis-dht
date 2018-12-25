@@ -7,13 +7,11 @@ public class SpatioTemporalRecord {
     private final String geohash;
     private final long timestamp;
     private final Path path;
-    private final Metadata metadata;
 
-    public SpatioTemporalRecord(String geohash, long timestamp, Path path, Metadata metadata) {
+    public SpatioTemporalRecord(String geohash, long timestamp, Path path) {
         this.geohash = geohash;
         this.timestamp = timestamp;
         this.path = path;
-        this.metadata = metadata;
     }
 
     public String getGeohash() {

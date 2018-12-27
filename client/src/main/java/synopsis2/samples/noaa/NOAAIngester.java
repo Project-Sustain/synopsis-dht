@@ -10,7 +10,7 @@ import io.sigpipe.sing.serialization.SerializationInputStream;
 import io.sigpipe.sing.serialization.Serializer;
 import io.sigpipe.sing.stat.RunningStatisticsND;
 import org.apache.log4j.Logger;
-import synopsis2.SpatioTemporalRecord;
+import synopsis2.Strand;
 import synopsis2.client.Ingester;
 import synopsis2.client.IngestionConfig;
 import synopsis2.client.TemporalQuantizer;
@@ -32,6 +32,7 @@ public class NOAAIngester implements Ingester {
     private SerializationInputStream inStream;
     private int recordCount = 0;
     private final TemporalQuantizer temporalQuantizer;
+    private boolean initialized = false;
 
     public NOAAIngester(String baseInputDir, IngestionConfig config) {
         this.baseInputDir = baseInputDir;
@@ -47,11 +48,15 @@ public class NOAAIngester implements Ingester {
 
     @Override
     public boolean hasNext() {
+        if(!initialized){
+            initialize();
+            this.initialized = true;
+        }
         return recordCount > 0 || index < inputFiles.length;
     }
 
     @Override
-    public SpatioTemporalRecord next() {
+    public Strand next() {
         if (recordCount == 0) {
             startNextFile();
         }
@@ -63,8 +68,8 @@ public class NOAAIngester implements Ingester {
         }
     }
 
-    private SpatioTemporalRecord parse() {
-        SpatioTemporalRecord record = null;
+    private Strand parse() {
+        Strand record = null;
         try {
             float lat = inStream.readFloat();
             float lon = inStream.readFloat();
@@ -81,7 +86,7 @@ public class NOAAIngester implements Ingester {
         return record;
     }
 
-    private SpatioTemporalRecord constructStrand(String geohash, long ts, Metadata metadata) {
+    private Strand constructStrand(String geohash, long ts, Metadata metadata) {
         List<String> features = ingestionConfig.getFeatures();
         Path path = new Path(features.size() + 2); // additional vertices for time and location
         StringBuilder keyBuilder = new StringBuilder();
@@ -90,7 +95,7 @@ public class NOAAIngester implements Ingester {
         long temporalBracket = temporalQuantizer.getBoundary(ts);
         path.add(new Feature("time", temporalBracket));
         keyBuilder.append(temporalBracket);
-        double[] values = new double[path.size() - 2]; // skip time and location
+        double[] values = new double[features.size()]; // skip time and location
         int i = 0;
         for (String feature : features) {
             Quantizer quantizer = ingestionConfig.getQuantizer(feature);
@@ -105,7 +110,7 @@ public class NOAAIngester implements Ingester {
         RunningStatisticsND rsnd = new RunningStatisticsND(values);
         DataContainer container = new DataContainer(rsnd);
         path.get(path.size() - 1).setData(container);
-        return new SpatioTemporalRecord(geohash, ts, path, keyBuilder.toString());
+        return new Strand(geohash, ts, path, keyBuilder.toString());
     }
 
     private File[] getInputFilesInDir(String dataDirPath) {

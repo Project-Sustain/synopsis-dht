@@ -11,6 +11,15 @@ public class ServerConstants {
         public static final String NODE_TYPE = "node.type";
         public static final String HOSTNAME = "hostname";
         public static final String KAFKA_BOOTSTRAP_BROKERS = "kafka.bootstrap.brokers";
+        public static final String STRAND_INGESTION_CONSUMER_GROUP_ID = "strand.ingestion.consumer.group.id";
+        public static final String STRAND_INGESTION_TOPIC_PREFIX = "strand.ingestion.topic.prefix";
+    }
+
+    public class TIMEOUTS{
+        public static final int RELAY_WRITE_TIMEOUT_S = 3;
+        public static final int RELAY_READ_TIMEOUT_S = 3;
+        public static final int KAFKA_CONSUMER_HEARTBEAT_INTERVAL_MS = 4;
+        public static final int KAFKA_CONSUMER_SESSION_TIMEOUT = 20;
     }
 
     public class REPLACEABLE_STRINGS {

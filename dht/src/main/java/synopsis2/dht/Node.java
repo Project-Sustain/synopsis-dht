@@ -1,5 +1,6 @@
 package synopsis2.dht;
 
+import com.sun.security.ntlm.Server;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelFuture;
@@ -13,11 +14,17 @@ import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
+import synopsis2.common.kafka.BlockingQueueBackedMessageRelay;
+import synopsis2.common.kafka.Consumer;
+import synopsis2.common.kafka.MessageRelay;
 import synopsis2.dht.tcp.recv.MessageReceiver;
 import synopsis2.dht.tcp.recv.ProtocolFactory;
 import synopsis2.dht.tcp.recv.ServerHandler;
 import synopsis2.dht.zk.ZKError;
 import synopsis2.dht.zk.ZooKeeperAgent;
+
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Thilina Buddhika
@@ -65,7 +72,31 @@ public class Node {
             // start the Ring updater thread.
             Ring ring = new Ring();
             new Thread(ring).start();
-            Context.getInstance().setRing(ring);
+            Context ctx = Context.getInstance();
+            ctx.setRing(ring);
+
+            // start the kafka consumers
+            Properties consumerProps = new Properties();
+            consumerProps.put("bootstrap.servers", ctx.getProperty(ServerConstants.Configuration.KAFKA_BOOTSTRAP_BROKERS));
+            consumerProps.put("group.id", ctx.getProperty(ServerConstants.Configuration.STRAND_INGESTION_CONSUMER_GROUP_ID));
+            consumerProps.put("key.deserializer",
+                    "org.apache.kafka.common.serialization.StringDeserializer");
+            consumerProps.put("value.deserializer",
+                    "org.apache.kafka.common.serialization.ByteArrayDeserializer");
+            // timeout values
+            consumerProps.put("session.timeout.ms", ServerConstants.TIMEOUTS.KAFKA_CONSUMER_SESSION_TIMEOUT);
+            consumerProps.put("heartbeat.interval.ms", ServerConstants.TIMEOUTS.KAFKA_CONSUMER_HEARTBEAT_INTERVAL_MS);
+            consumerProps.put("max.poll.records", 5000);
+
+            MessageRelay<String, byte[]> relay = new BlockingQueueBackedMessageRelay<>(100000,
+                    ServerConstants.TIMEOUTS.RELAY_READ_TIMEOUT_S,
+                    ServerConstants.TIMEOUTS.RELAY_WRITE_TIMEOUT_S,
+                    TimeUnit.SECONDS);
+            Consumer<String, byte[]> consumer = new Consumer<>(consumerProps, ctx.getProperty(ServerConstants.Configuration.STRAND_INGESTION_TOPIC_PREFIX), relay);
+            new Thread(consumer).start();
+            logger.info("Started the Kafka consumer.");
+            // todo: we need another thread handling messages received from the relay - storage
+
             future.channel().closeFuture().sync();
             logger.info("Shutting down the node.");
         } catch (InterruptedException e) {

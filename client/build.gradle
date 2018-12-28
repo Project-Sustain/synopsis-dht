@@ -3,6 +3,7 @@ dependencies {
     compile 'org.apache.zookeeper:zookeeper:3.4.5'
     compile fileTree(dir: '../lib', include: '*.jar')
     compile project(':dht')
+    compile project(':common')
     compile 'org.apache.kafka:kafka-clients:2.1.0'
     runtime 'org.apache.zookeeper:zookeeper:3.4.5'
 }

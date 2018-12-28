@@ -10,6 +10,7 @@ public class ServerConstants {
         public static final String ZK_SERVERS = "zk.servers";
         public static final String NODE_TYPE = "node.type";
         public static final String HOSTNAME = "hostname";
+        public static final String KAFKA_BOOTSTRAP_BROKERS = "kafka.bootstrap.brokers";
     }
 
     public class REPLACEABLE_STRINGS {
@@ -18,7 +19,7 @@ public class ServerConstants {
     
     public class NodeType {
         public static final String DATA = "spatial";
-        public static final String METADATA = "temporal";
+        public static final String TEMPORAL = "temporal";
     }
 
     public static final String ZK_NODES_ROOT = "/gossamer_nodes";

@@ -1,1 +1,1 @@
-include 'dht', 'distribution'
+include 'common', 'dht', 'client', 'distribution'

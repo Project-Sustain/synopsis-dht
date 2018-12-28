@@ -3,10 +3,9 @@ package synopsis2.client;
 import io.sigpipe.sing.serialization.SerializationOutputStream;
 import org.apache.log4j.Logger;
 import synopsis2.Strand;
-import synopsis2.client.kafka.Publisher;
+import synopsis2.common.kafka.Publisher;
 
 import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,7 +32,7 @@ public class StrandRegistry {
         return registry.size() > 50000; // send every 50k records.
     }
 
-    public void publish(String topic, Publisher publisher) {
+    public void publish(String topic, Publisher<String, byte[]> publisher) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         SerializationOutputStream dos = new SerializationOutputStream(baos);
         Map<String, Strand> nextRegistry = new HashMap<>();

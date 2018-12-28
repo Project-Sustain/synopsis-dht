@@ -68,7 +68,8 @@ public class Ring implements Runnable, MembershipListener {
     }
 
     private Queue<List<String>> updates = new LinkedBlockingDeque<>();
-    private final SortedMap<BigInteger, Entity> dataCircle = new TreeMap<>();
+    private final SortedMap<BigInteger, Entity> spatialRing = new TreeMap<>(); // outer ring with spatial data
+    private List<String> temporalNodes = new ArrayList<>();
     private final Map<String, BigInteger> dataAddressToIdMapping = new HashMap<>();
     private DataDispersionScheme dataDispersionScheme;
 
@@ -124,7 +125,7 @@ public class Ring implements Runnable, MembershipListener {
     }
 
     public synchronized void updateRings(List<String> nodes) {
-        updateRing(nodes, dataDispersionScheme, dataCircle, dataAddressToIdMapping);
+        updateRing(nodes, dataDispersionScheme, spatialRing, dataAddressToIdMapping);
         logger.info("Updated data ring structure for new nodes. New node count: " + nodes.size());
     }
 
@@ -142,7 +143,7 @@ public class Ring implements Runnable, MembershipListener {
     }
 
     public String lookup(String entityId) {
-        return search(dataDispersionScheme.getIdentifier(entityId), dataCircle);
+        return search(dataDispersionScheme.getIdentifier(entityId), spatialRing);
     }
 
     public BigInteger getIdentifier(String key) {

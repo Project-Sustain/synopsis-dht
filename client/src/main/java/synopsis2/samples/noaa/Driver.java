@@ -1,12 +1,14 @@
 package synopsis2.samples.noaa;
 
 import io.sigpipe.sing.dataset.analysis.Quantizer;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import synopsis2.Strand;
 import synopsis2.client.IngestionConfig;
 import synopsis2.client.StrandRegistry;
 import synopsis2.client.Util;
-import synopsis2.client.kafka.Publisher;
+import synopsis2.common.kafka.Publisher;
 import synopsis2.dht.Context;
+import synopsis2.dht.ServerConstants;
 
 import java.io.FileReader;
 import java.io.IOException;
@@ -52,7 +54,13 @@ public class Driver {
             context.initialize(initProps);
 
             Util.createKafkaTopicIfNotExists(topic, 2, (short)3);
-            Publisher publisher = new Publisher();
+            Context ctxt = Context.getInstance();
+            Properties configProperties = new Properties();
+            configProperties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
+                    ctxt.getProperty(ServerConstants.Configuration.KAFKA_BOOTSTRAP_BROKERS));
+            configProperties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
+            configProperties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.ByteArraySerializer");
+            Publisher<String, byte[]> publisher = new Publisher<>(configProperties);
 
             Map<String, Quantizer> quantizerMap = Util.quantizerMapFromFile(binConfig);
             IngestionConfig ingestionConfig = new IngestionConfig(Arrays.asList(FEATURE_NAMES), quantizerMap, 4, Duration.ofHours(6));

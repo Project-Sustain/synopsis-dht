@@ -1,7 +1,9 @@
 dependencies {
     compile 'io.netty:netty-all:4.0.25.Final'
     compile 'org.apache.zookeeper:zookeeper:3.4.5'
+    compile 'com.oath.halodb:halodb:0.4.6'
     compile project(':common')
     runtime 'io.netty:netty-all:4.0.25.Final'
     runtime 'org.apache.zookeeper:zookeeper:3.4.5'
+    runtime 'com.oath.halodb:halodb:0.4.6'
 }

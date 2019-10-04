@@ -1,6 +1,6 @@
 package synopsis2.samples.noaa;
 
-import io.sigpipe.sing.dataset.analysis.Quantizer;
+import sustain.synopsis.sketch.dataset.Quantizer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import synopsis2.Strand;
 import synopsis2.client.IngestionConfig;

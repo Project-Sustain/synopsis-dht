@@ -1,14 +1,14 @@
 package synopsis2.samples.noaa;
 
-import io.sigpipe.sing.dataset.Metadata;
-import io.sigpipe.sing.dataset.analysis.Quantizer;
-import io.sigpipe.sing.dataset.feature.Feature;
-import io.sigpipe.sing.graph.DataContainer;
-import io.sigpipe.sing.graph.Path;
-import io.sigpipe.sing.serialization.SerializationException;
-import io.sigpipe.sing.serialization.SerializationInputStream;
-import io.sigpipe.sing.serialization.Serializer;
-import io.sigpipe.sing.stat.RunningStatisticsND;
+import sustain.synopsis.sketch.dataset.Metadata;
+import sustain.synopsis.sketch.dataset.Quantizer;
+import sustain.synopsis.sketch.dataset.feature.Feature;
+import sustain.synopsis.sketch.graph.DataContainer;
+import sustain.synopsis.sketch.graph.Path;
+import sustain.synopsis.sketch.serialization.SerializationException;
+import sustain.synopsis.sketch.serialization.SerializationInputStream;
+import sustain.synopsis.sketch.serialization.Serializer;
+import sustain.synopsis.sketch.stat.RunningStatisticsND;
 import org.apache.log4j.Logger;
 import synopsis2.Strand;
 import synopsis2.client.Ingester;
@@ -74,7 +74,7 @@ public class NOAAIngester implements Ingester {
             float lat = inStream.readFloat();
             float lon = inStream.readFloat();
             byte[] payload = inStream.readField();
-            Metadata eventMetadata = Serializer.deserialize(io.sigpipe.sing.dataset.Metadata.class, payload);
+            Metadata eventMetadata = Serializer.deserialize(sustain.synopsis.sketch.dataset.Metadata.class, payload);
             String stringHash = GeoHash.encode(lat, lon, ingestionConfig.getPrecision());
             long ts = eventMetadata.getTemporalProperties().getEnd();
             record = constructStrand(stringHash, ts, eventMetadata);

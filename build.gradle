@@ -9,9 +9,24 @@ subprojects {
 
     repositories {
         mavenCentral()
+        maven{
+            url 'https://yahoo.bintray.com/maven'
+        }
+        maven{
+            url 'https://github.com/Project-Sustain/synopsis-sketch/raw/mvn-repository'
+        }
     }
 
     dependencies {
         compile 'log4j:log4j:1.2.17'
+        testCompile 'org.mockito:mockito-core:2.+'
+        testImplementation  'org.junit.jupiter:junit-jupiter:5.5.2'
+    }
+
+    test {
+        useJUnitPlatform()
+        testLogging {
+            events "passed", "skipped", "failed"
+        }
     }
 }

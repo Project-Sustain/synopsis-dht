@@ -1,6 +1,6 @@
 package synopsis2.client;
 
-import io.sigpipe.sing.serialization.SerializationOutputStream;
+import sustain.synopsis.sketch.serialization.SerializationOutputStream;
 import org.apache.log4j.Logger;
 import synopsis2.Strand;
 import synopsis2.common.kafka.Publisher;

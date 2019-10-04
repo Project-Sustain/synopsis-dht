@@ -1,15 +1,14 @@
 package synopsis2.client;
 
-import io.sigpipe.sing.dataset.analysis.Quantizer;
-import io.sigpipe.sing.dataset.feature.Feature;
 import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.common.KafkaFuture;
 import org.apache.log4j.Logger;
+import sustain.synopsis.sketch.dataset.Quantizer;
+import sustain.synopsis.sketch.dataset.feature.Feature;
 import synopsis2.dht.Context;
 import synopsis2.dht.ServerConstants;
 
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;

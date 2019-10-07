@@ -1,4 +1,4 @@
-package synopsis2.client;
+package sustain.synopsis.ingestion.client.core;
 
 import java.time.*;
 
@@ -14,9 +14,9 @@ public class TemporalQuantizer {
     }
 
     /**
-     * Return the first boundary after the given timestamp such that boundary > timestamp
+     * Return the first boundary after the given timestamp such that boundary >= timestamp
      *
-     * @param ts Epoch millisecond timestamp
+     * @param ts Epoch millisecond timestamp in UTC
      * @return Boundary as a epoch millisecond timestamp
      */
     public long getBoundary(long ts) {
@@ -27,7 +27,7 @@ public class TemporalQuantizer {
         }
         if (boundary.minus(interval).isAfter(dateTime)) { // an out of order event arrived after advancing the boundary
             LocalDateTime tempBoundary = boundary.minus(interval); // this is a rare case. So handle it explicitly by temporary reverting back the boundary to an older value
-            while (tempBoundary.isAfter(dateTime)) {    // find the last boundary before the ts
+            while (!tempBoundary.isBefore(dateTime)) {    // find the last boundary before the ts
                 tempBoundary = tempBoundary.minus(interval);
             }
             return localDateTimeToEpoch(tempBoundary.plus(interval));
@@ -38,12 +38,12 @@ public class TemporalQuantizer {
         return localDateTimeToEpoch(boundary);
     }
 
-    private long localDateTimeToEpoch(LocalDateTime localDateTime) {
+    public static long localDateTimeToEpoch(LocalDateTime localDateTime) {
         ZonedDateTime zdt = localDateTime.atZone(ZoneId.of("UTC"));
         return zdt.toInstant().toEpochMilli();
     }
 
-    private LocalDateTime epochToLocalDateTime(long startTS) {
+    public static LocalDateTime epochToLocalDateTime(long startTS) {
         return LocalDateTime.ofInstant(Instant.ofEpochMilli(startTS), ZoneId.of("UTC"));
     }
 }

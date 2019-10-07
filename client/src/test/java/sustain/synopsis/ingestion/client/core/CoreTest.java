@@ -7,7 +7,12 @@ import sustain.synopsis.sketch.stat.RunningStatisticsND;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-public class StrandTest {
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.Month;
+import java.time.temporal.Temporal;
+
+public class CoreTest {
 
     private Strand createStrand(Path path, String geohash, long ts, double ...features){
         path.add(new Feature("location", geohash));
@@ -25,7 +30,7 @@ public class StrandTest {
     }
 
     @Test
-    void testInitialization(){
+    void testStrandInitialization(){
         Path path = new Path(4);
         Strand strand = createStrand(path, "9xj", 1391216400000L, 1.34, 1.5);
 
@@ -35,7 +40,7 @@ public class StrandTest {
     }
 
     @Test
-    void testMerge(){
+    void testStrandMerge(){
         Path path1 = new Path(4);
         Strand strand1 = createStrand(path1,"9xj", 1391216400000L, 1.34, 1.5);
 
@@ -49,7 +54,7 @@ public class StrandTest {
     }
 
     @Test
-    void testMergeExceptions(){
+    void testStrandMergeExceptions(){
         Path path1 = new Path(4);
         Strand strand1 = createStrand(path1,"9xj", 1391216400000L, 1.34, 1.5);
 
@@ -62,5 +67,39 @@ public class StrandTest {
         path2 = new Path(4);
         final Strand strand3 = createStrand(path2, "9xj", 1391216400000L, 1.34, 1.6);
         Assertions.assertThrows(IllegalArgumentException.class, ()->{strand1.merge(strand3);});
+    }
+
+    @Test
+    void testTemporalQuantizer(){
+        TemporalQuantizer quantizer = new TemporalQuantizer(Duration.ofHours(1));
+        LocalDateTime ts1 = LocalDateTime.of(2019, Month.JANUARY, 12, 6, 21, 30);
+        long returned = quantizer.getBoundary( quantizer.getBoundary(TemporalQuantizer.localDateTimeToEpoch(ts1)));
+        long expectedBoundary = TemporalQuantizer.localDateTimeToEpoch(LocalDateTime.of(2019, Month.JANUARY,
+                12, 7, 0, 0));
+        Assertions.assertEquals(expectedBoundary, returned);
+
+        // simulate an out of order record - now the boundary is advanced to 07:00
+        ts1 = LocalDateTime.of(2019, Month.JANUARY, 12, 3, 21, 30);
+        returned = quantizer.getBoundary( quantizer.getBoundary(TemporalQuantizer.localDateTimeToEpoch(ts1)));
+        expectedBoundary = TemporalQuantizer.localDateTimeToEpoch(LocalDateTime.of(2019, Month.JANUARY,
+                12, 4, 0, 0));
+        System.out.println(TemporalQuantizer.epochToLocalDateTime(returned));
+        Assertions.assertEquals(expectedBoundary, returned);
+
+        // simulate a sparse observation
+        ts1 = LocalDateTime.of(2019, Month.JANUARY, 12, 17, 21, 30);
+        returned = quantizer.getBoundary( quantizer.getBoundary(TemporalQuantizer.localDateTimeToEpoch(ts1)));
+        expectedBoundary = TemporalQuantizer.localDateTimeToEpoch(LocalDateTime.of(2019, Month.JANUARY,
+                12, 18, 0, 0));
+        Assertions.assertEquals(expectedBoundary, returned);
+
+        // check the boundaries
+
+        ts1 = LocalDateTime.of(2019, Month.JANUARY, 12, 18, 0, 0);
+        returned = quantizer.getBoundary( quantizer.getBoundary(TemporalQuantizer.localDateTimeToEpoch(ts1)));
+        expectedBoundary = TemporalQuantizer.localDateTimeToEpoch(LocalDateTime.of(2019, Month.JANUARY,
+                12, 18, 0, 0));
+        System.out.println(TemporalQuantizer.epochToLocalDateTime(returned));
+        Assertions.assertEquals(expectedBoundary, returned);
     }
 }

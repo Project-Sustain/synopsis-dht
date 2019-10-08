@@ -16,11 +16,9 @@ public class Record {
      */
     private long timestamp;
     private Properties metadata;
-    private Map<String, Float> features;
 
     public Record() {
         metadata = new Properties();
-        features = new HashMap<>();
     }
 
     public void setLatitude(float latitude) {
@@ -37,9 +35,5 @@ public class Record {
 
     private void addMetadataProperty(String propName, String propValue){
         metadata.setProperty(propName, propValue);
-    }
-
-    private void addFeatureValue(String featureName, float featureValue){
-        features.put(featureName, featureValue);
     }
 }

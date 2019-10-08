@@ -1,4 +1,4 @@
-package synopsis2.client;
+package sustain.synopsis.ingestion.client.core;
 
 import sustain.synopsis.sketch.serialization.SerializationOutputStream;
 import org.apache.log4j.Logger;

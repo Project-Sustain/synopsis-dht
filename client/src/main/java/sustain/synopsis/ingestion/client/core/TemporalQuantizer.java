@@ -19,7 +19,7 @@ public class TemporalQuantizer {
      * @param ts Epoch millisecond timestamp in UTC
      * @return Boundary as a epoch millisecond timestamp
      */
-    public long getBoundary(long ts) {
+    public long[] getTemporalBoundaries(long ts) {
         LocalDateTime dateTime = epochToLocalDateTime(ts);
         if (boundary == null) {
             boundary = dateTime.minusHours(dateTime.getHour()).minusMinutes(dateTime.getMinute()).minusSeconds(
@@ -30,12 +30,13 @@ public class TemporalQuantizer {
             while (!tempBoundary.isBefore(dateTime)) {    // find the last boundary before the ts
                 tempBoundary = tempBoundary.minus(interval);
             }
-            return localDateTimeToEpoch(tempBoundary.plus(interval));
+            return new long[]{localDateTimeToEpoch(tempBoundary.minus(interval)),
+                    localDateTimeToEpoch(tempBoundary.plus(interval))};
         }
         while (boundary.isBefore(dateTime)) {   // find the first boundary after the timestamp - this also handles the case of sparse/missing timestamps
             boundary = boundary.plus(interval);
         }
-        return localDateTimeToEpoch(boundary);
+        return new long[]{localDateTimeToEpoch(boundary.minus(interval)), localDateTimeToEpoch(boundary)};
     }
 
     public static long localDateTimeToEpoch(LocalDateTime localDateTime) {

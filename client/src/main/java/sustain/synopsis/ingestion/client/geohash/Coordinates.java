@@ -23,7 +23,7 @@ any theory of liability, whether in contract, strict liability, or tort
 software, even if advised of the possibility of such damage.
 */
 
-package synopsis2.client.geohash;
+package sustain.synopsis.ingestion.client.geohash;
 
 /**
  * Encapsulates a point in space with latitude, longitude coordinates.

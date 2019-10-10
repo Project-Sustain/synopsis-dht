@@ -2,38 +2,44 @@ package sustain.synopsis.ingestion.client.core;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 
 /**
  * Represents a single spatio-temporal record that is being sketched.
  * {@link DataConnector}  generates records and passes to the {@link Driver}
  */
 public class Record {
-    private float latitude;
-    private float longitude;
+    private String geohash;
     /**
      * Epoch time (in UTC)
      */
     private long timestamp;
-    private Properties metadata;
+    private final Map<String, Double> features;
 
     public Record() {
-        metadata = new Properties();
-    }
-
-    public void setLatitude(float latitude) {
-        this.latitude = latitude;
-    }
-
-    public void setLongitude(float longitude) {
-        this.longitude = longitude;
+        features = new HashMap<>();
     }
 
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
     }
 
-    private void addMetadataProperty(String propName, String propValue){
-        metadata.setProperty(propName, propValue);
+    public void addFeatureValue(String featureName, double featureValue){
+        features.put(featureName, featureValue);
+    }
+
+    public void setGeohash(String geohash) {
+        this.geohash = geohash;
+    }
+
+    public String getGeohash() {
+        return geohash;
+    }
+
+    public long getTimestamp() {
+        return timestamp;
+    }
+
+    public Map<String, Double> getFeatures() {
+        return features;
     }
 }

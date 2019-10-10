@@ -110,6 +110,10 @@ public class Strand {
         return path;
     }
 
+    public String getKey() {
+        return key;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -125,7 +129,7 @@ public class Strand {
 
     private static String generateKey(String geohash, long fromTimeStamp, long toTimestamp, Path path) {
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(geohash).append(",").append(toTimestamp).append(",").append(fromTimeStamp);
+        stringBuilder.append(geohash).append(",").append(fromTimeStamp).append(",").append(toTimestamp);
         for (Vertex v : path) {
             Feature feature = v.getLabel();
             stringBuilder.append(",").append(feature.getName()).append("=").append(feature.dataToString());

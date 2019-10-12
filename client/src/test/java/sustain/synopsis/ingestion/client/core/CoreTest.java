@@ -2,13 +2,11 @@ package sustain.synopsis.ingestion.client.core;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import sustain.synopsis.sketch.dataset.feature.Feature;
 import sustain.synopsis.sketch.graph.DataContainer;
 import sustain.synopsis.sketch.graph.Path;
 import sustain.synopsis.sketch.serialization.SerializationException;
 import sustain.synopsis.sketch.serialization.SerializationInputStream;
 import sustain.synopsis.sketch.serialization.SerializationOutputStream;
-import sustain.synopsis.sketch.stat.RunningStatisticsND;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -17,23 +15,13 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.Month;
 
-class CoreTest {
+import static sustain.synopsis.ingestion.client.core.TestUtil.createStrand;
 
-    private Strand createStrand(Path path, String geohash, long ts, long to, double... features) {
-        path.add(new Feature("location", geohash));
-        path.add(new Feature("time", ts));
-        for (int i = 0; i < features.length; i++) {
-            path.add(new Feature("feature_" + (i + 1), features[i]));
-        }
-        RunningStatisticsND runningStats = new RunningStatisticsND(features);
-        DataContainer container = new DataContainer(runningStats);
-        path.get(path.size() - 1).setData(container);
-        return new Strand("9xj", ts, to, path);
-    }
+class CoreTest {
 
     @Test
     void testStrandInitialization() {
-        Path path = new Path(4);
+        Path path = new Path(2);
         Strand strand = createStrand(path, "9xj", (1391216400000L - 3600 * 1000), 1391216400000L, 1.34, 1.5);
 
         Assertions.assertEquals("9xj", strand.getGeohash());
@@ -44,10 +32,10 @@ class CoreTest {
 
     @Test
     void testStrandMerge() {
-        Path path1 = new Path(4);
+        Path path1 = new Path(2);
         Strand strand1 = createStrand(path1, "9xj", (1391216400000L - 3600 * 1000), 1391216400000L,1.34, 1.5);
 
-        Path path2 = new Path(4);
+        Path path2 = new Path(2);
         Strand strand2 = createStrand(path2, "9xj", (1391216400000L - 3600 * 1000), 1391216400000L,1.34, 1.5);
 
         strand1.merge(strand2);
@@ -58,7 +46,7 @@ class CoreTest {
 
     @Test
     void testStrandEquals(){
-        Path path = new Path(4);
+        Path path = new Path(2);
         Strand strand = createStrand(path, "9xj", (1391216400000L - 3600 * 1000), 1391216400000L,1.34, 1.5);
 
         Strand strand2 = new Strand("9xj", (1391216400000L - 3600 * 1000), 1391216400000L, path);
@@ -77,7 +65,7 @@ class CoreTest {
         Assertions.assertNotEquals(strand, strand5);
 
         // different path
-        Path path2 = new Path(5);
+        Path path2 = new Path(3);
         Strand strand6 = createStrand(path, "9xj", (1391216400000L - 3600 * 1000), 1391216400000L,1.34, 1.5, 4.6);
         Assertions.assertNotEquals(strand, strand6);
 
@@ -88,7 +76,7 @@ class CoreTest {
 
     @Test
     void testStrandSerialization() throws IOException, SerializationException {
-        Path path = new Path(4);
+        Path path = new Path(2);
         Strand strand = createStrand(path, "9xj", (1391216400000L - 3600 * 1000), 1391216400000L,1.34, 1.5);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         SerializationOutputStream sos = new SerializationOutputStream(baos);
@@ -103,18 +91,18 @@ class CoreTest {
 
     @Test
     void testStrandMergeExceptions() {
-        Path path1 = new Path(4);
+        Path path1 = new Path(2);
         Strand strand1 = createStrand(path1, "9xj", (1391216400000L - 3600 * 1000), 1391216400000L,1.34, 1.5);
 
         // different path lengths
-        Path path2 = new Path(3);
+        Path path2 = new Path(1);
         final Strand strand2 = createStrand(path2, "9xj", (1391216400000L - 3600 * 1000), 1391216400000L,1.34);
         Assertions.assertThrows(IllegalArgumentException.class, () -> {
             strand1.merge(strand2);
         });
 
         // different paths
-        path2 = new Path(4);
+        path2 = new Path(2);
         final Strand strand3 = createStrand(path2, "9xj", (1391216400000L - 3600 * 1000), 1391216400000L,1.34, 1.6);
         Assertions.assertThrows(IllegalArgumentException.class, () -> {
             strand1.merge(strand3);

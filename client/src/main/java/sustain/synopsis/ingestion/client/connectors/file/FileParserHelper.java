@@ -11,11 +11,11 @@ public interface FileParserHelper {
      * @param line Line provided by the {@link FileDataConnector}
      * @return {@link Record} object
      */
-    public Record parse(String line);
+    Record parse(String line);
 
     /**
      * Whether to skip the first line in a file, which can be a header especially in a CSV
      * @return <code>true</code> if the first line should be skipped from parsing
      */
-    public boolean skipHeader();
+    boolean skipHeader();
 }

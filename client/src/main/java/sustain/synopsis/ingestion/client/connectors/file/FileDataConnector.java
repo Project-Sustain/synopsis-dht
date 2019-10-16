@@ -75,7 +75,7 @@ public class FileDataConnector implements DataConnector, Runnable {
                     Record record = parserHelper.parse(line);
                     recordCallbackHandler.onRecordAvailability(record);
                     lineCount++;
-                }
+                    }
                 processedFileCount++;
                 logger.info("Completed processing " + f.getAbsolutePath() + ", Total lines: " + lineCount +
                         ", Total files processed: " + processedFileCount);
@@ -83,7 +83,10 @@ public class FileDataConnector implements DataConnector, Runnable {
                 logger.error("File not found. Path: " + f.getAbsolutePath(), e);
             } catch (IOException e) {
                 logger.error("Error reading from file. Path: " + f.getAbsolutePath(), e);
-            } finally {
+            } catch (Throwable e){
+                logger.error("Error during execution.", e);
+            }
+            finally {
                 if (fileReader != null) {
                     try {
                         fileReader.close();

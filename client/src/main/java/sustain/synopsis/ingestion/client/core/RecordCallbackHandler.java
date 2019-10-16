@@ -12,12 +12,13 @@ public interface RecordCallbackHandler {
     /**
      * Invokes this method if a record is available.
      * @param record {@link Record} object
+     * @return <code>true</code> if the record is successfully added, <code>False</code> otherwise.
      */
-    public void onRecordAvailability(Record record);
+    boolean onRecordAvailability(Record record);
 
     /**
      * Notifies the end of the dataset. Used by the {@link Driver} to flush any unfinished strand and initiate the
      * cleanup process.
      */
-    public void onTermination();
+    void onTermination();
 }

@@ -41,7 +41,7 @@ public class StrandRegistry {
             existing.merge(strand);
         }
         if (logger.isTraceEnabled()) {
-            logger.trace("[" + Thread.currentThread().getName() + "] Strands are merged. Key: " + strand.getKey() +
+            logger.trace("[" + Thread.currentThread().getName() + "] Strand is added. Key: " + strand.getKey() +
                     ", " + "Registry size: " + registry.size() + ", " + "Merged: " + (existing == null ? "false" :
                     "true"));
         }

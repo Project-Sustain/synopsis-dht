@@ -197,10 +197,6 @@ public class SpatialRange {
                 .floatToIntBits(other.upperLat)) {
             return false;
                 }
-        if (Float.floatToIntBits(upperLon) != Float
-                .floatToIntBits(other.upperLon)) {
-            return false;
-                }
-        return true;
+        return Float.floatToIntBits(upperLon) == Float.floatToIntBits(other.upperLon);
     }
 }

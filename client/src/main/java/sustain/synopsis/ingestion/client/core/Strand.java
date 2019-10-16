@@ -129,11 +129,18 @@ public class Strand {
 
     private static String generateKey(String geohash, long fromTimeStamp, long toTimestamp, Path path) {
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(geohash).append(",").append(fromTimeStamp).append(",").append(toTimestamp);
+        // when generating the key, we append the toTimestamp before the fromTimeStamp to do prefix search
+        // to publish the completed strands.
+        stringBuilder.append(geohash).append(",").append(toTimestamp).append(",").append(fromTimeStamp);
         for (Vertex v : path) {
             Feature feature = v.getLabel();
-            stringBuilder.append(",").append(feature.getName()).append("=").append(feature.dataToString());
+            stringBuilder.append(",").append(feature.getName()).append("=").append(feature.getDouble());
         }
         return stringBuilder.toString();
+    }
+
+    @Override
+    public String toString() {
+        return "Strand{" + "key='" + key + '\'' + '}';
     }
 }

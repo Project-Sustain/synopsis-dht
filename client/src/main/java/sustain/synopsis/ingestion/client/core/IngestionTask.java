@@ -23,21 +23,23 @@ public class IngestionTask implements Runnable {
     private final Duration duration;
     private AtomicBoolean terminate = new AtomicBoolean(false);
     private final Logger logger = Logger.getLogger(IngestionTask.class);
-    private final CountDownLatch latch;
+    private final CountDownLatch startupLatch;
+    private final CountDownLatch shutdownLatch;
 
     IngestionTask( StrandRegistry registry, ArrayBlockingQueue<Record> input, Map<String, Quantizer> quantizers,
-                         Duration duration, CountDownLatch latch) {
+                         Duration duration, CountDownLatch startupLatch, CountDownLatch shutdownLatch) {
         this.input = input;
         this.registry = registry;
         this.quantizers = quantizers;
         this.temporalQuantizerMap = new HashMap<>();
         this.duration = duration;
-        this.latch = latch;
+        this.startupLatch = startupLatch;
+        this.shutdownLatch = shutdownLatch;
     }
 
     @Override
     public void run() {
-        latch.countDown();
+        startupLatch.countDown();
         logger.info("[Thread id: " + Thread.currentThread().getName() + "] Starting the ingestion task.");
         while (!(terminate.get() && input.isEmpty())) {
             try {
@@ -55,6 +57,7 @@ public class IngestionTask implements Runnable {
         }
         registry.terminateSession();
         logger.info("[Thread id: " + Thread.currentThread().getName() + "] Terminating the ingestion task.");
+        shutdownLatch.countDown();
     }
 
     Strand convertToStrand(Record record) {

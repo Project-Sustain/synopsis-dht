@@ -42,7 +42,7 @@ class IngestionTest {
 
         TemporalQuantizer temporalQuantizer = new TemporalQuantizer(Duration.ofHours(1));
         IngestionTask ingestionTask = new IngestionTask(null, null, quantizers, Duration.ofHours(1),
-                new CountDownLatch(1));
+                new CountDownLatch(1), new CountDownLatch(1));
         Record record = new Record();
         record.setGeohash("9xj");
         long ts = TemporalQuantizer.localDateTimeToEpoch(LocalDateTime.of(2019, 2, 12, 1, 23));
@@ -81,7 +81,7 @@ class IngestionTest {
 
         ArrayBlockingQueue<Record> input = new ArrayBlockingQueue<>(5);
         IngestionTask ingestionTask = new IngestionTask(registryMock, input, quantizers, Duration.ofHours(1),
-                new CountDownLatch(1));
+                new CountDownLatch(1), new CountDownLatch(1));
         Thread t = new Thread(ingestionTask);
         t.start();
 

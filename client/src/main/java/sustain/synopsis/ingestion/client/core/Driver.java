@@ -23,6 +23,7 @@ public class Driver implements RecordCallbackHandler {
     private final Map<String, Quantizer> quantizerMap;
     private final Duration duration;
     private List<IngestionTask> ingestionTasks;
+    private final CountDownLatch shutdownLatch;
 
     public Driver(int parallelism, StrandPublisher strandPublisher, Map<String, Quantizer> quantizerMap,
                   Duration temporalBracketSize) {
@@ -36,6 +37,7 @@ public class Driver implements RecordCallbackHandler {
         executorService = Executors.newFixedThreadPool(parallelism);
         this.duration = temporalBracketSize;
         this.ingestionTasks = new ArrayList<>();
+        this.shutdownLatch = new CountDownLatch(parallelism);
     }
 
 
@@ -75,7 +77,7 @@ public class Driver implements RecordCallbackHandler {
         CountDownLatch startLatch = new CountDownLatch(parallelism);
         for (int i = 0; i < parallelism; i++) {
             IngestionTask ingestionTask = new IngestionTask(new StrandRegistry(strandPublisher), input.get(i), quantizerMap,
-                    this.duration, startLatch);
+                    this.duration, startLatch, shutdownLatch);
             ingestionTasks.add(ingestionTask);
             executorService.submit(ingestionTask);
         }
@@ -85,5 +87,16 @@ public class Driver implements RecordCallbackHandler {
 
         }
         logger.info("Number of ingestion tasks launched: " + parallelism);
+    }
+
+
+    public boolean awaitCompletion(){
+        try {
+            shutdownLatch.await();
+        } catch (InterruptedException e) {
+            logger.error("Error waiting for the driver to shutdown.");
+            return false;
+        }
+        return true;
     }
 }

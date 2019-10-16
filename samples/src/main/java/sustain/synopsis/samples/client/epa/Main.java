@@ -14,7 +14,6 @@ import java.time.*;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 
 public class Main {
     public static void main(String[] args) {
@@ -67,15 +66,11 @@ public class Main {
 
         Driver driver = new Driver(1, new ConsoleStrandPublisher(), getQuantizerMap(), Duration.ofHours(4));
         FileDataConnector fdConnector = new FileDataConnector(parserHelper, driver, input);
-        driver.start();
+        driver.start(); // blocking call to make sure all the ingestion workers are ready to accept data
         fdConnector.init();
-        fdConnector.start();
-        // This is temporary. Implement a proper shutdown scheme.
-        try {
-            new CountDownLatch(1).await();
-        } catch (InterruptedException e) {
-
-        }
+        fdConnector.start(); // start the connector
+        driver.awaitCompletion(); // blocking call to keep the main thread alive
+        fdConnector.terminate(); // terminate the connector
     }
 
     private static Map<String, Quantizer> getQuantizerMap() {

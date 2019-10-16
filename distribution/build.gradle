@@ -3,6 +3,7 @@ apply plugin: 'java-library-distribution'
 dependencies {
     compile project(':dht')
     compile project(':client')
+    compile project(':samples')
 }
 
 distributions {

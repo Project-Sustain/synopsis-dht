@@ -7,11 +7,10 @@ import sustain.synopsis.sketch.graph.DataContainer;
 import sustain.synopsis.sketch.graph.Path;
 import sustain.synopsis.sketch.stat.RunningStatisticsND;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.time.Duration;
+import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -20,20 +19,25 @@ public class IngestionTask implements Runnable {
     private final ArrayBlockingQueue<Record> input;
     private final StrandRegistry registry;
     private final Map<String, Quantizer> quantizers;
-    private final TemporalQuantizer temporalQuantizer;
+    private final Map<String, TemporalQuantizer> temporalQuantizerMap;
+    private final Duration duration;
     private AtomicBoolean terminate = new AtomicBoolean(false);
     private final Logger logger = Logger.getLogger(IngestionTask.class);
+    private final CountDownLatch latch;
 
     IngestionTask( StrandRegistry registry, ArrayBlockingQueue<Record> input, Map<String, Quantizer> quantizers,
-                         TemporalQuantizer temporalQuantizer) {
+                         Duration duration, CountDownLatch latch) {
         this.input = input;
         this.registry = registry;
         this.quantizers = quantizers;
-        this.temporalQuantizer = temporalQuantizer;
+        this.temporalQuantizerMap = new HashMap<>();
+        this.duration = duration;
+        this.latch = latch;
     }
 
     @Override
     public void run() {
+        latch.countDown();
         logger.info("[Thread id: " + Thread.currentThread().getName() + "] Starting the ingestion task.");
         while (!(terminate.get() && input.isEmpty())) {
             try {
@@ -42,9 +46,6 @@ public class IngestionTask implements Runnable {
                     continue;
                 }
                 Strand strand = convertToStrand(record);
-                if (logger.isTraceEnabled()) {
-                    logger.trace("[Thread id: " + Thread.currentThread().getName() + "] Added a new strand to the " + "registry. Strand key: " + strand.getKey());
-                }
                 registry.add(strand);
             } catch (InterruptedException ignore) {
 
@@ -57,7 +58,7 @@ public class IngestionTask implements Runnable {
     }
 
     Strand convertToStrand(Record record) {
-        Map<String, Double> features = record.getFeatures();
+        Map<String, Float> features = record.getFeatures();
         // we keep only the feature data in the path. spatio-temporal data is already stored in the path
         Path path = new Path(features.size());
         // need to sort the feature names alphabetically to support merging
@@ -68,7 +69,7 @@ public class IngestionTask implements Runnable {
         for (String featureName : featureNames) {
             Quantizer quantizer = quantizers.get(featureName);
             assert quantizer != null;
-            Double featureValue = features.get(featureName);
+            Float featureValue = features.get(featureName);
             Feature quantizedValue = quantizer.quantize(new Feature(featureValue));
             values[valueIndex++] = featureValue;
             path.add(new Feature(featureName, quantizedValue));
@@ -78,6 +79,13 @@ public class IngestionTask implements Runnable {
         DataContainer container = new DataContainer(rsnd);
         path.get(path.size() - 1).setData(container);
 
+        TemporalQuantizer temporalQuantizer;
+        if(!temporalQuantizerMap.containsKey(record.getGeohash())){
+            temporalQuantizer = new TemporalQuantizer(duration);
+            temporalQuantizerMap.put(record.getGeohash(), temporalQuantizer);
+        } else {
+            temporalQuantizer = temporalQuantizerMap.get(record.getGeohash());
+        }
         long[] boundaries = temporalQuantizer.getTemporalBoundaries(record.getTimestamp());
         return new Strand(record.getGeohash(), boundaries[0], boundaries[1], path);
     }

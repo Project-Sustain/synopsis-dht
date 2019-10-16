@@ -1,5 +1,6 @@
 package sustain.synopsis.ingestion.client.core;
 
+import org.apache.kafka.common.metrics.stats.Count;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -16,6 +17,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CountDownLatch;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -35,17 +37,18 @@ class IngestionTest {
     @Test
     void testRecordToStrandConversion() {
         Map<String, Quantizer> quantizers = new HashMap<>();
-        quantizers.put("feature_1", new Quantizer(new Feature(0.0), new Feature(10.0), new Feature(20.0)));
-        quantizers.put("feature_2", new Quantizer(new Feature(100.0), new Feature(200.0), new Feature(1000.0)));
+        quantizers.put("feature_1", new Quantizer(new Feature(0.0f), new Feature(10.0f), new Feature(20.0f)));
+        quantizers.put("feature_2", new Quantizer(new Feature(100.0f), new Feature(200.0f), new Feature(1000.0f)));
 
         TemporalQuantizer temporalQuantizer = new TemporalQuantizer(Duration.ofHours(1));
-        IngestionTask ingestionTask = new IngestionTask(null, null, quantizers, temporalQuantizer);
+        IngestionTask ingestionTask = new IngestionTask(null, null, quantizers, Duration.ofHours(1),
+                new CountDownLatch(1));
         Record record = new Record();
         record.setGeohash("9xj");
         long ts = TemporalQuantizer.localDateTimeToEpoch(LocalDateTime.of(2019, 2, 12, 1, 23));
         record.setTimestamp(ts);
-        record.addFeatureValue("feature_1", 3.0);
-        record.addFeatureValue("feature_2", 140.0);
+        record.addFeatureValue("feature_1", 3.0f);
+        record.addFeatureValue("feature_2", 140.0f);
         Strand strand = ingestionTask.convertToStrand(record);
 
         //  check the spatio-temporal attributes
@@ -64,7 +67,7 @@ class IngestionTest {
         assertNotNull(path.get(1).getData()); // check the data container
 
         // add a new feature that does not have a quantizer
-        record.addFeatureValue("feature_3", 3.01);
+        record.addFeatureValue("feature_3", 3.01f);
         assertThrows(AssertionError.class, () -> {
             ingestionTask.convertToStrand(record);
         });
@@ -73,27 +76,26 @@ class IngestionTest {
     @Test
     void testIngestionTaskExecution() {
         Map<String, Quantizer> quantizers = new HashMap<>();
-        quantizers.put("feature_1", new Quantizer(new Feature(0.0), new Feature(10.0), new Feature(20.0)));
-        quantizers.put("feature_2", new Quantizer(new Feature(100.0), new Feature(200.0), new Feature(1000.0)));
-
-        TemporalQuantizer temporalQuantizer = new TemporalQuantizer(Duration.ofHours(1));
+        quantizers.put("feature_1", new Quantizer(new Feature(0.0f), new Feature(10.0f), new Feature(20.0f)));
+        quantizers.put("feature_2", new Quantizer(new Feature(100.0f), new Feature(200.0f), new Feature(1000.0f)));
 
         ArrayBlockingQueue<Record> input = new ArrayBlockingQueue<>(5);
-        IngestionTask ingestionTask = new IngestionTask(registryMock, input, quantizers, temporalQuantizer);
+        IngestionTask ingestionTask = new IngestionTask(registryMock, input, quantizers, Duration.ofHours(1),
+                new CountDownLatch(1));
         Thread t = new Thread(ingestionTask);
         t.start();
 
         Record r1 = new Record();
         r1.setGeohash("9xj");
         r1.setTimestamp(TemporalQuantizer.localDateTimeToEpoch(LocalDateTime.of(2019, 2, 12, 1, 23)));
-        r1.addFeatureValue("feature_1", 20.0);
-        r1.addFeatureValue("feature_2", 200.0);
+        r1.addFeatureValue("feature_1", 20.0f);
+        r1.addFeatureValue("feature_2", 200.0f);
 
         Record r2 = new Record();
         r2.setGeohash("9xj");
         r2.setTimestamp(TemporalQuantizer.localDateTimeToEpoch(LocalDateTime.of(2019, 2, 12, 1, 24)));
-        r2.addFeatureValue("feature_1", 20.0);
-        r2.addFeatureValue("feature_2", 200.0);
+        r2.addFeatureValue("feature_1", 20.0f);
+        r2.addFeatureValue("feature_2", 200.0f);
 
         input.add(r1);
         input.add(r2);

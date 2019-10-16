@@ -13,7 +13,7 @@ public class Record {
      * Epoch time (in UTC)
      */
     private long timestamp;
-    private final Map<String, Double> features;
+    private final Map<String, Float> features;
 
     public Record() {
         features = new HashMap<>();
@@ -23,7 +23,7 @@ public class Record {
         this.timestamp = timestamp;
     }
 
-    public void addFeatureValue(String featureName, double featureValue){
+    public void addFeatureValue(String featureName, float featureValue){
         features.put(featureName, featureValue);
     }
 
@@ -39,7 +39,7 @@ public class Record {
         return timestamp;
     }
 
-    public Map<String, Double> getFeatures() {
+    public Map<String, Float> getFeatures() {
         return features;
     }
 }

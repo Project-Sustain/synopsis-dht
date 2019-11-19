@@ -1,4 +1,5 @@
 package sustain.synopsis.storage.lsmtree;
 
-public interface Mergeable {
+public interface Mergeable<T> {
+    void merge(T t);
 }

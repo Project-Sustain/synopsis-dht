@@ -13,8 +13,8 @@ import org.apache.log4j.Logger;
 import synopsis2.Strand;
 import synopsis2.client.Ingester;
 import synopsis2.client.IngestionConfig;
-import synopsis2.client.TemporalQuantizer;
-import synopsis2.client.geohash.GeoHash;
+import sustain.synopsis.ingestion.client.core.TemporalQuantizer;
+import sustain.synopsis.ingestion.client.geohash.GeoHash;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -92,7 +92,7 @@ public class NOAAIngester implements Ingester {
         StringBuilder keyBuilder = new StringBuilder();
 
         // path: time -> feature 1 -> ..... -> feature n -> geohash (data container)
-        long temporalBracket = temporalQuantizer.getBoundary(ts);
+        long temporalBracket = temporalQuantizer.getTemporalBoundaries(ts)[0];
         path.add(new Feature("time", temporalBracket));
         keyBuilder.append(temporalBracket);
         double[] values = new double[features.size()]; // skip time and location

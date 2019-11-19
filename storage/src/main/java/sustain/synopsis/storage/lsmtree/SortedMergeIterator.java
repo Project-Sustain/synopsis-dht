@@ -1,12 +1,21 @@
 package sustain.synopsis.storage.lsmtree;
 
-import com.sun.istack.internal.NotNull;
-
 import java.util.List;
 import java.util.Objects;
 import java.util.PriorityQueue;
 
-class MergeIterator<K extends Comparable<K>, V> implements TableIterator<K, V> {
+/**
+ * Given a set of {@link TableIterator} instances, merge them into a single iterator while ensuring the elements
+ * are returned in a sorted order. This class implements a K-way merge among the already sorted table iterators.
+ * Uses a min heap to keep the minimum element from each iterator at a given moment. Handles iterators of different
+ * sizes. Space complexity is O(k) where k is the number of iterators. Time complexity of next() is O(n log(n)) where
+ * n is the total number of elements from all table iterators.
+ * This implementation is not thread-safe.
+ *
+ * @param <K> key type that extend {@link Comparable}. All iterators should provide same type of keys.
+ * @param <V> value type.
+ */
+class SortedMergeIterator<K extends Comparable<K>, V> implements TableIterator<K, V> {
 
     private class TableEntryWrapper implements Comparable<TableEntryWrapper> {
         private TableEntry<K, V> entry;
@@ -40,7 +49,7 @@ class MergeIterator<K extends Comparable<K>, V> implements TableIterator<K, V> {
     private final PriorityQueue<TableEntryWrapper> minHeap;
     private boolean initialized;
 
-    MergeIterator(List<TableIterator<K, V>> iterators) {
+    SortedMergeIterator(List<TableIterator<K, V>> iterators) {
         this.iterators = iterators;
         minHeap = new PriorityQueue<>(iterators.size());
         initialized = false;
@@ -72,19 +81,10 @@ class MergeIterator<K extends Comparable<K>, V> implements TableIterator<K, V> {
         }
         TableEntryWrapper wrapper = minHeap.remove();
         TableIterator<K, V> iterator = iterators.get(wrapper.iteratorId);
+        // replace the removed element with the next element from the same table iterator
         if (iterator.hasNext()) {
             minHeap.add(new TableEntryWrapper(iterator.next(), wrapper.iteratorId));
         }
         return wrapper.entry;
-    }
-
-    @Override
-    public long count() {
-        return iterators.stream().map(TableIterator::count).reduce(0L, Long::sum);
-    }
-
-    @Override
-    public long estimatedSize() {
-        return iterators.stream().map(TableIterator::estimatedSize).reduce(0L, Long::sum);
     }
 }

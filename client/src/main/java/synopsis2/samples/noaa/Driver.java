@@ -1,10 +1,11 @@
 package synopsis2.samples.noaa;
 
+import sustain.synopsis.ingestion.client.core.Strand;
+import sustain.synopsis.ingestion.client.core.StrandPublisher;
 import sustain.synopsis.sketch.dataset.Quantizer;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import synopsis2.Strand;
 import synopsis2.client.IngestionConfig;
-import synopsis2.client.StrandRegistry;
+import sustain.synopsis.ingestion.client.core.StrandRegistry;
 import synopsis2.client.Util;
 import synopsis2.common.kafka.Publisher;
 import synopsis2.dht.Context;
@@ -13,9 +14,7 @@ import synopsis2.dht.ServerConstants;
 import java.io.FileReader;
 import java.io.IOException;
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 public class Driver {
     public static final String[] FEATURE_NAMES = {
@@ -65,8 +64,10 @@ public class Driver {
             Map<String, Quantizer> quantizerMap = Util.quantizerMapFromFile(binConfig);
             IngestionConfig ingestionConfig = new IngestionConfig(Arrays.asList(FEATURE_NAMES), quantizerMap, 4, Duration.ofHours(6));
             NOAAIngester ingester = new NOAAIngester(inputDir, ingestionConfig);
-            StrandRegistry registry = new StrandRegistry();
-            while (ingester.hasNext()) {
+            StrandRegistry registry = new StrandRegistry(strands -> {
+
+            });
+            /*while (ingester.hasNext()) {
                 Strand strand = ingester.next();
                 if (strand != null) {
                     int recordCount = registry.add(strand);
@@ -80,7 +81,7 @@ public class Driver {
                         registry.publish(topic, publisher);
                     }
                 }
-            }
+            }*/
         } catch (IOException e) {
             e.printStackTrace();
         } catch (Exception e) {

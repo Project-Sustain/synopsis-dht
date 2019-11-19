@@ -5,6 +5,7 @@ import sustain.synopsis.ingestion.client.connectors.file.FileParserHelper;
 import sustain.synopsis.ingestion.client.core.Driver;
 import sustain.synopsis.ingestion.client.core.Record;
 import sustain.synopsis.samples.client.ConsoleStrandPublisher;
+import sustain.synopsis.samples.client.PayloadSizeCalculator;
 import sustain.synopsis.sketch.dataset.Quantizer;
 import sustain.synopsis.sketch.dataset.feature.Feature;
 import sustain.synopsis.sketch.util.Geohash;
@@ -64,13 +65,15 @@ public class Main {
             }
         };
 
-        Driver driver = new Driver(1, new ConsoleStrandPublisher(), getQuantizerMap(), Duration.ofHours(4));
+        PayloadSizeCalculator payloadSizeCalculator = new PayloadSizeCalculator();
+        Driver driver = new Driver(5, payloadSizeCalculator, getQuantizerMap(), Duration.ofHours(24));
         FileDataConnector fdConnector = new FileDataConnector(parserHelper, driver, input);
         driver.start(); // blocking call to make sure all the ingestion workers are ready to accept data
         fdConnector.init();
         fdConnector.start(); // start the connector
         driver.awaitCompletion(); // blocking call to keep the main thread alive
         fdConnector.terminate(); // terminate the connector
+        System.out.println("total data transferred (MB): " + payloadSizeCalculator.getCumulativePayloadSize()/(1024* 1024.0));
     }
 
     private static Map<String, Quantizer> getQuantizerMap() {

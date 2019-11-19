@@ -1,4 +1,5 @@
-package sustain.synopsis.storage.lsmtree;
+package sustain.synopsis.storage.lsmtree.compress;
 
-public class BlockCompressor {
+public interface BlockCompressor {
+    byte[] compress(byte[] block);
 }

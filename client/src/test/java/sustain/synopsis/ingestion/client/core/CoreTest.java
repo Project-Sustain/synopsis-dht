@@ -40,7 +40,7 @@ class CoreTest {
 
         strand1.merge(strand2);
 
-        DataContainer container = strand1.getPath().get(3).getData();
+        DataContainer container = strand1.getPath().get(1).getData();
         Assertions.assertEquals(2, container.statistics.count());
     }
 

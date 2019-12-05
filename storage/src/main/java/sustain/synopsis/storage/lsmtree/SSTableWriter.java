@@ -7,8 +7,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 public class SSTableWriter<K extends Comparable<K> & Serializable, V extends Serializable> {
 
@@ -26,7 +24,6 @@ public class SSTableWriter<K extends Comparable<K> & Serializable, V extends Ser
         SortedMergeIterator<K, V> mergeIterator = new SortedMergeIterator<>(iterators);
         ByteArrayOutputStream baos = new ByteArrayOutputStream(blockSize);
         DataOutputStream dos = new DataOutputStream(baos);
-        Map<K, Integer> blockIndex = new TreeMap<>();
         K minKey = null;
         K maxKey = null;
         int blockCount = 0;
@@ -39,7 +36,7 @@ public class SSTableWriter<K extends Comparable<K> & Serializable, V extends Ser
                 if (logger.isDebugEnabled()) {
                     logger.debug("Updated block index. LZ4BlockCompressor Id: " + blockCount + ", Offset: " + blockOutputStream.size());
                 }
-                blockIndex.put(entry.getKey(), blockOutputStream.size());
+                metadata.addBlockIndex(entry.getKey(), blockOutputStream.size());
                 firstKey = entry.getKey();
             }
             // limits of the SSTable
@@ -94,7 +91,6 @@ public class SSTableWriter<K extends Comparable<K> & Serializable, V extends Ser
         // set the metadata
         metadata.setMin(minKey);
         metadata.setMax(maxKey);
-        metadata.setBlockIndex(blockIndex);
     }
 
     private byte[] compress(DataOutputStream blockOutputStream, BlockCompressor compressor, byte[] currentBlock) throws IOException {

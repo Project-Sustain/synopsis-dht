@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
-public class Metadata<K extends Comparable<K>> implements Serializable{
+public class Metadata<K extends Comparable<K>> implements Serializable {
     /**
      * Minimum key of a SSTable
      */
@@ -21,7 +21,7 @@ public class Metadata<K extends Comparable<K>> implements Serializable{
     /**
      * Index of the offset for each block and the first key of the block
      */
-    private Map<K,Integer> blockIndex = new TreeMap<>();
+    private Map<K, Integer> blockIndex = new TreeMap<>();
     private Map<K, byte[]> checksums = new TreeMap<>();
 
     public void setMin(K min) {
@@ -32,8 +32,8 @@ public class Metadata<K extends Comparable<K>> implements Serializable{
         this.max = max;
     }
 
-    public void setBlockIndex(Map<K, Integer> blockIndex) {
-        this.blockIndex = blockIndex;
+    public void addBlockIndex(K key, int offset) {
+        blockIndex.put(key, offset);
     }
 
     public K getMin() {
@@ -52,7 +52,7 @@ public class Metadata<K extends Comparable<K>> implements Serializable{
         return checksums;
     }
 
-    public void addChecksum(K key, byte[] checksum){
+    public void addChecksum(K key, byte[] checksum) {
         checksums.put(key, checksum);
     }
 

@@ -9,7 +9,7 @@
 .idea/**/usage.statistics.xml
 .idea/**/dictionaries
 .idea/**/shelf
-idea/**/*.xml
+.idea/**/*.xml
 
 # Sensitive or high-churn files
 .idea/**/dataSources/
@@ -91,6 +91,7 @@ Temporary Items
 ### Gradle template
 .gradle
 /build/
+**/build/**
 
 # Ignore Gradle GUI config
 gradle-app.setting

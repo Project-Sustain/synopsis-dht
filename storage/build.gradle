@@ -1,4 +1,3 @@
 dependencies {
-
+    implementation 'org.lz4:lz4-java:1.4.1'
 }
-

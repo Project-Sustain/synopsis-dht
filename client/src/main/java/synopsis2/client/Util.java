@@ -5,8 +5,8 @@ import org.apache.kafka.common.KafkaFuture;
 import org.apache.log4j.Logger;
 import sustain.synopsis.sketch.dataset.Quantizer;
 import sustain.synopsis.sketch.dataset.feature.Feature;
-import synopsis2.dht.Context;
-import synopsis2.dht.ServerConstants;
+import sustain.synopsis.dht.Context;
+import sustain.synopsis.dht.ServerConstants;
 
 import java.io.BufferedReader;
 import java.io.FileReader;

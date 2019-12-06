@@ -1,15 +1,13 @@
 package synopsis2.samples.noaa;
 
-import sustain.synopsis.ingestion.client.core.Strand;
-import sustain.synopsis.ingestion.client.core.StrandPublisher;
 import sustain.synopsis.sketch.dataset.Quantizer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import synopsis2.client.IngestionConfig;
 import sustain.synopsis.ingestion.client.core.StrandRegistry;
 import synopsis2.client.Util;
 import synopsis2.common.kafka.Publisher;
-import synopsis2.dht.Context;
-import synopsis2.dht.ServerConstants;
+import sustain.synopsis.dht.Context;
+import sustain.synopsis.dht.ServerConstants;
 
 import java.io.FileReader;
 import java.io.IOException;

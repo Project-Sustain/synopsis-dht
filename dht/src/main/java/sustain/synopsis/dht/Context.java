@@ -1,5 +1,6 @@
 package sustain.synopsis.dht;
 
+import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -13,6 +14,7 @@ public class Context {
     private static Context instance = new Context();
     private ConcurrentHashMap<String, String> properties = new ConcurrentHashMap<>();
     private Ring ring;
+    private NodeConfiguration nodeConfig;
 
     private Context() {
     }
@@ -25,6 +27,11 @@ public class Context {
         for (String prop : properties.stringPropertyNames()) {
             this.properties.put(prop, localize(properties.getProperty(prop)));
         }
+    }
+
+    public void initialize(Properties properties, String nodeConfigPath) throws FileNotFoundException {
+        initialize(properties);
+        nodeConfig = NodeConfiguration.fromYamlFile(nodeConfigPath);
     }
 
     private String localize(String propertyName) {
@@ -58,5 +65,9 @@ public class Context {
 
     public void setRing(Ring ring) {
         this.ring = ring;
+    }
+
+    public NodeConfiguration getNodeConfig() {
+        return nodeConfig;
     }
 }

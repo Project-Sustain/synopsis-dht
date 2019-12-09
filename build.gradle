@@ -15,14 +15,18 @@ subprojects {
         maven{
             url 'https://github.com/Project-Sustain/synopsis-sketch/raw/mvn-repository'
         }
+        maven{
+            url 'https://repo1.maven.org/maven2'
+        }
+        dependencies {
+            compile 'log4j:log4j:1.2.17'
+            compile 'com.google.guava:guava:28.1-jre'
+            compile 'org.yaml:snakeyaml:1.25'
+            testCompile 'org.mockito:mockito-core:2.+'
+            testImplementation  'org.junit.jupiter:junit-jupiter:5.5.2'
+        }
     }
 
-    dependencies {
-        compile 'log4j:log4j:1.2.17'
-        compile 'com.google.guava:guava:28.1-jre'
-        testCompile 'org.mockito:mockito-core:2.+'
-        testImplementation  'org.junit.jupiter:junit-jupiter:5.5.2'
-    }
 
     test {
         useJUnitPlatform()

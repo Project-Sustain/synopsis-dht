@@ -5,6 +5,7 @@ import org.yaml.snakeyaml.constructor.Constructor;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -25,10 +26,16 @@ public class NodeConfiguration {
     private List<String> storageDirs;
 
     public List<String> getStorageDirs() {
-        return storageDirs;
+        if(this.storageDirs != null) {
+            return Collections.unmodifiableList(this.storageDirs);
+        } else {
+            return null;
+        }
     }
 
     public void setStorageDirs(List<String> storageDirs) {
-        this.storageDirs = storageDirs;
+        if (this.storageDirs == null) {
+            this.storageDirs = storageDirs;
+        }
     }
 }

@@ -1,4 +1,4 @@
 ---
 storageDirs:
-  - /sustain/data/a
-  - /sustain/data/b
+  /sustain/data/a : 10
+  /sustain/data/b : 10

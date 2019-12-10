@@ -1,6 +1,5 @@
 package sustain.synopsis.storage.lsmtree;
 
-import com.google.common.collect.Iterables;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import sustain.synopsis.storage.lsmtree.compress.BlockCompressor;

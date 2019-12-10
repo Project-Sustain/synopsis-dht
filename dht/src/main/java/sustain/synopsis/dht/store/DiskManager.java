@@ -1,5 +1,6 @@
 package sustain.synopsis.dht.store;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 import sustain.synopsis.dht.Context;
 import sustain.synopsis.dht.NodeConfiguration;
@@ -7,6 +8,7 @@ import sustain.synopsis.dht.NodeConfiguration;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class DiskManager {
 
@@ -29,11 +31,15 @@ public class DiskManager {
 
     static class StorageDirectory {
         String path;
-        long availableCapacity;
+        long allocatedCapacity;
+        long occupiedCapacity;
+        long availableSpace;
 
-        public StorageDirectory(String path, long availableCapacity) {
+        public StorageDirectory(String path, long allocatedCapacity, long occupiedCapacity, long availableSpace) {
             this.path = path;
-            this.availableCapacity = availableCapacity;
+            this.allocatedCapacity = allocatedCapacity;
+            this.occupiedCapacity = occupiedCapacity;
+            this.availableSpace = availableSpace;
         }
     }
 
@@ -48,17 +54,17 @@ public class DiskManager {
             logger.error("Error initializing the DiskManager. A Node Configuration is not provided.");
             return false;
         }
-        List<String> paths = nodeConfiguration.getStorageDirs();
+        Set<String> paths = nodeConfiguration.getStorageDirs().keySet();
         long totalAvailableSpace = 0;
         for (String path : paths) {
-            StorageDirectory storageDirectory = processPath(new File(path));
+            StorageDirectory storageDirectory = processPath(new File(path), nodeConfiguration.getStorageDirs().get(path));
             if (storageDirectory == null) {
                 continue;
             }
             directories.add(storageDirectory);
-            totalAvailableSpace += storageDirectory.availableCapacity;
+            totalAvailableSpace += storageDirectory.allocatedCapacity;
             if (logger.isDebugEnabled()) {
-                logger.debug("Added path: " + storageDirectory.path + ", capacity: " + storageDirectory.availableCapacity);
+                logger.debug("Added path: " + storageDirectory.path + ", capacity: " + storageDirectory.allocatedCapacity);
             }
         }
         if (directories.size() == 0) {
@@ -69,8 +75,9 @@ public class DiskManager {
         return true;
     }
 
-    StorageDirectory processPath(File f) {
+    StorageDirectory processPath(File f, long allocatedSpace) {
         System.out.println("processing path " + f.getAbsolutePath());
+        long occupiedSpace = 0;
         if (!f.exists()) { // path does not exist. Attempt top create the path
             boolean status = f.mkdirs();
             if (!status) {
@@ -82,13 +89,24 @@ public class DiskManager {
                 logger.error("Provided path is not a directory. Path: " + f.getAbsolutePath());
                 return null;
             }
+            // check if the allocated disk space is available
+            occupiedSpace = getDirectorySize(f);
+            if (occupiedSpace >= allocatedSpace) {
+                logger.warn("Allocated space < occupied space for path: " + f.getAbsolutePath() + ". Allocated " +
+                        "space: " + allocatedSpace + ", Occupied space: " + occupiedSpace);
+            }
         }
         long availableSpace = f.getFreeSpace();
         if (availableSpace == 0) { // no disk space
             logger.error("No available space in path: " + f.getAbsolutePath());
             return null;
         }
-        return new StorageDirectory(f.getAbsolutePath(), availableSpace);
+        return new StorageDirectory(f.getAbsolutePath(), allocatedSpace, occupiedSpace, availableSpace);
+    }
+
+
+    public long getDirectorySize(File directory) {
+        return FileUtils.sizeOfDirectory(directory);
     }
 
     String allocate(int size) {

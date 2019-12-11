@@ -155,4 +155,11 @@ public class DiskManagerTest {
         Assertions.assertNull(policy.select(128, dirs));
     }
 
+    @Test
+    void testAllocationPolicyFactory() {
+        Assertions.assertEquals(RoundRobinAllocationPolicy.class,
+                AllocationPolicyFactory.getAllocationPolicy("round" + "-robin").getClass());
+        Assertions.assertNull(AllocationPolicyFactory.getAllocationPolicy("unknown"));
+    }
+
 }

@@ -14,12 +14,17 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 public class DiskManagerTest {
 
     @Mock
     File mockFile;
+
+    @Mock
+    File mockFile2;
 
     @TempDir
     Path tempDir;
@@ -104,7 +109,7 @@ public class DiskManagerTest {
     }
 
     @Test
-    void allocateTest() {
+    void testAllocate() {
         // successful allocation
         DiskManager.StorageDirectory dir = new DiskManager.StorageDirectory(new File("/tmp/"), 1024, 0, 2048);
         Assertions.assertTrue(dir.allocate(512));
@@ -125,6 +130,29 @@ public class DiskManagerTest {
         dir = new DiskManager.StorageDirectory(mockFile, 1024, 0, 2048);
         dir.allocate(512);
         Assertions.assertTrue(dir.availableSpace < 2048);
+    }
+
+    @Test
+    void testRoundRobinAllocationPolicy() {
+        RoundRobinAllocationPolicy policy = new RoundRobinAllocationPolicy();
+        List<DiskManager.StorageDirectory> dirs = new ArrayList<>(3);
+        dirs.add(0, new DiskManager.StorageDirectory(mockFile, 1024, 0, 2048));
+        dirs.add(1, new DiskManager.StorageDirectory(mockFile2, 1024, 0, 2048));
+
+        Mockito.when(mockFile.getUsableSpace()).thenReturn(2048L);
+        Mockito.when(mockFile2.getUsableSpace()).thenReturn(2048L);
+        Assertions.assertEquals(dirs.get(0), policy.select(128, dirs));
+        Assertions.assertEquals(dirs.get(1), policy.select(128, dirs));
+        Assertions.assertEquals(dirs.get(0), policy.select(128, dirs));
+
+        // first dir does not have enough space
+        Mockito.when(mockFile.getUsableSpace()).thenReturn(10L);
+        policy = new RoundRobinAllocationPolicy();
+        Assertions.assertEquals(dirs.get(1), policy.select(128, dirs));
+
+        // both dirs do not have enough space
+        Mockito.when(mockFile2.getUsableSpace()).thenReturn(10L);
+        Assertions.assertNull(policy.select(128, dirs));
     }
 
 }

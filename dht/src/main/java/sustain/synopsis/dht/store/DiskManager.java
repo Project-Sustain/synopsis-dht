@@ -44,7 +44,7 @@ public class DiskManager {
         }
 
         synchronized boolean allocate(int requestedCapacity) {
-            if(occupiedCapacity >= allocatedCapacity){
+            if (occupiedCapacity >= allocatedCapacity) {
                 return false;
             }
             // check if it exceeds allocated space significantly
@@ -66,6 +66,7 @@ public class DiskManager {
 
     private final Logger logger = Logger.getLogger(DiskManager.class);
     private List<StorageDirectory> directories = Collections.synchronizedList(new ArrayList<>());
+    private AllocationPolicy allocationPolicy;
 
     private DiskManager() {
     }
@@ -75,6 +76,15 @@ public class DiskManager {
             logger.error("Error initializing the DiskManager. A Node Configuration is not provided.");
             return false;
         }
+
+        this.allocationPolicy =
+                AllocationPolicyFactory.getAllocationPolicy(nodeConfiguration.getStorageAllocationPolicy());
+        if (this.allocationPolicy == null) {
+            logger.error("Unable to find a matching storage allocation policy for the provided option: " +
+                    nodeConfiguration.getStorageAllocationPolicy());
+            return false;
+        }
+
         Set<String> paths = nodeConfiguration.getStorageDirs().keySet();
         long totalAvailableSpace = 0;
         for (String path : paths) {
@@ -132,6 +142,6 @@ public class DiskManager {
     }
 
     String allocate(int size) {
-        return null;
+        return allocationPolicy.select(size, directories).path.getAbsolutePath();
     }
 }

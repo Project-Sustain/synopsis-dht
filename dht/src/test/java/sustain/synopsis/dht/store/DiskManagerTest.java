@@ -40,6 +40,7 @@ public class DiskManagerTest {
         fw.append("---\n");
         fw.append("storageDirs:\n");
         fw.append("  /tmp/ : 1024\n");
+        fw.append("storageAllocationPolicy: 'round-robin'\n");
         fw.flush();
         fw.close();
         Context.getInstance().initialize(new Properties(), nodeConfigFilePath.toAbsolutePath().toString());
@@ -95,11 +96,9 @@ public class DiskManagerTest {
     }
 
     @Test
-    void testSingletonInstanceWithFailedInit() throws StorageException {
+    void testSingletonInstanceWithFailedInit() {
         Context.getInstance().initialize(new Properties());
-        Assertions.assertThrows(StorageException.class, () -> {
-            DiskManager.getInstance();
-        });
+        Assertions.assertThrows(StorageException.class, DiskManager::getInstance);
     }
 
     @Test

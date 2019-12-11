@@ -2,3 +2,5 @@
 storageDirs:
   /sustain/data/a : 10
   /sustain/data/b : 10
+
+storageAllocationPolicy: 'round-robin'

@@ -24,6 +24,7 @@ public class NodeConfiguration {
     }
 
     private Map<String, Long> storageDirs;
+    private String storageAllocationPolicy;
 
     public Map<String, Long> getStorageDirs() {
         if(this.storageDirs != null) {
@@ -36,6 +37,16 @@ public class NodeConfiguration {
     public void setStorageDirs(Map<String, Long> storageDirs) {
         if (this.storageDirs == null) {
             this.storageDirs = storageDirs;
+        }
+    }
+
+    public String getStorageAllocationPolicy() {
+        return storageAllocationPolicy;
+    }
+
+    public void setStorageAllocationPolicy(String storageAllocationPolicy) {
+        if(this.storageAllocationPolicy == null) {
+            this.storageAllocationPolicy = storageAllocationPolicy;
         }
     }
 }

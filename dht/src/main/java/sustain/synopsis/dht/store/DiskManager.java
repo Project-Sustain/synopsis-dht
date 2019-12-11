@@ -7,6 +7,7 @@ import sustain.synopsis.dht.NodeConfiguration;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -30,21 +31,41 @@ public class DiskManager {
     }
 
     static class StorageDirectory {
-        String path;
+        File path;
         long allocatedCapacity;
         long occupiedCapacity;
         long availableSpace;
 
-        public StorageDirectory(String path, long allocatedCapacity, long occupiedCapacity, long availableSpace) {
+        StorageDirectory(File path, long allocatedCapacity, long occupiedCapacity, long availableSpace) {
             this.path = path;
             this.allocatedCapacity = allocatedCapacity;
             this.occupiedCapacity = occupiedCapacity;
             this.availableSpace = availableSpace;
         }
+
+        synchronized boolean allocate(int requestedCapacity) {
+            if(occupiedCapacity >= allocatedCapacity){
+                return false;
+            }
+            // check if it exceeds allocated space significantly
+            if ((occupiedCapacity + requestedCapacity) > (allocatedCapacity * 1.10)) { // allow a 10% buffer. to
+                // reduce fragmentation.
+                return false;
+            }
+            // there can be disk writes from other entities/processes
+            availableSpace = path.getUsableSpace();
+            if (availableSpace < requestedCapacity) {
+                return false;
+            }
+            occupiedCapacity += requestedCapacity;
+            availableSpace -= requestedCapacity;
+            // check if there is space in the disk
+            return true;
+        }
     }
 
     private final Logger logger = Logger.getLogger(DiskManager.class);
-    private List<StorageDirectory> directories = new ArrayList<>();
+    private List<StorageDirectory> directories = Collections.synchronizedList(new ArrayList<>());
 
     private DiskManager() {
     }
@@ -57,7 +78,8 @@ public class DiskManager {
         Set<String> paths = nodeConfiguration.getStorageDirs().keySet();
         long totalAvailableSpace = 0;
         for (String path : paths) {
-            StorageDirectory storageDirectory = processPath(new File(path), nodeConfiguration.getStorageDirs().get(path));
+            StorageDirectory storageDirectory = processPath(new File(path),
+                    nodeConfiguration.getStorageDirs().get(path));
             if (storageDirectory == null) {
                 continue;
             }
@@ -101,7 +123,7 @@ public class DiskManager {
             logger.error("No available space in path: " + f.getAbsolutePath());
             return null;
         }
-        return new StorageDirectory(f.getAbsolutePath(), allocatedSpace, occupiedSpace, availableSpace);
+        return new StorageDirectory(f, allocatedSpace, occupiedSpace, availableSpace);
     }
 
 

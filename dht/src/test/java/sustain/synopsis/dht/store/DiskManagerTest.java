@@ -74,7 +74,7 @@ public class DiskManagerTest {
         Mockito.when(mockFile.getAbsolutePath()).thenReturn("/a/b/c");
         DiskManager.StorageDirectory directory = diskManager.processPath(mockFile, 1024);
         Assertions.assertNotNull(directory);
-        Assertions.assertEquals("/a/b/c", directory.path);
+        Assertions.assertEquals("/a/b/c", directory.path.getAbsolutePath());
         Assertions.assertEquals(100L, directory.availableSpace);
         Assertions.assertEquals(1024, directory.allocatedCapacity);
     }
@@ -101,6 +101,30 @@ public class DiskManagerTest {
     void testSingletonInstanceWithSuccessfulInit() throws StorageException, IOException {
         initContext();
         Assertions.assertNotNull(DiskManager.getInstance());
+    }
+
+    @Test
+    void allocateTest() {
+        // successful allocation
+        DiskManager.StorageDirectory dir = new DiskManager.StorageDirectory(new File("/tmp/"), 1024, 0, 2048);
+        Assertions.assertTrue(dir.allocate(512));
+        Assertions.assertTrue(dir.allocate(512));
+        Assertions.assertFalse(dir.allocate(100));
+
+        // check the buffer
+        dir = new DiskManager.StorageDirectory(new File("/tmp/"), 1024, 0, 2048);
+        Assertions.assertFalse(dir.allocate(1127));
+        Assertions.assertTrue(dir.allocate(1100));
+
+        // available space is low
+        Mockito.when(mockFile.getUsableSpace()).thenReturn(512L);
+        dir = new DiskManager.StorageDirectory(mockFile, 1024, 0, 512);
+        Assertions.assertFalse(dir.allocate(768));
+
+        // check if the available space is updated during an allocation
+        dir = new DiskManager.StorageDirectory(mockFile, 1024, 0, 2048);
+        dir.allocate(512);
+        Assertions.assertTrue(dir.availableSpace < 2048);
     }
 
 }

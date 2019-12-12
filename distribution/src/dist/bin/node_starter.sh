@@ -36,4 +36,4 @@ java_opts=${java_opts}' -Dlog4j.configuration='${log4j_conf_file}
 java \
     ${java_opts} \
     -cp ${SYN_CLASSPATH} \
-    synopsis2.dht.NodeStarter ${SYN_HOME}/conf/synopsis2.properties
+    NodeStarter ${SYN_HOME}/conf/synopsis2.properties

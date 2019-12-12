@@ -84,6 +84,10 @@ public class MemTable<K extends Comparable<K> & Serializable, V extends Serializ
         }
     }
 
+    public long getEstimatedSize(){
+        return estimatedEntrySize * elements.size();
+    }
+
     public void setReadOnly() {
         try {
             lock.writeLock().lock();

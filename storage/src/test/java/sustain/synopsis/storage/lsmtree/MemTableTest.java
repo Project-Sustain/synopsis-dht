@@ -72,4 +72,12 @@ class MemTableTest {
             i++;
         }
     }
+
+    @Test
+    void testGetEstimatedSize(){
+        MemTable<LSMTestKey, LSMTestValue> memTable = new MemTable<>(1024); // 1 KB
+        Assertions.assertEquals(0L, memTable.getEstimatedSize());
+        memTable.add(new LSMTestKey(1), new LSMTestValue(32));
+        Assertions.assertEquals(40L, memTable.getEstimatedSize());
+    }
 }

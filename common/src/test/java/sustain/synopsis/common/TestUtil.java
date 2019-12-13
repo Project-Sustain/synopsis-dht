@@ -1,4 +1,4 @@
-package sustain.synopsis.ingestion.client.core;
+package sustain.synopsis.common;
 
 import sustain.synopsis.sketch.dataset.feature.Feature;
 import sustain.synopsis.sketch.graph.DataContainer;

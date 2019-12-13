@@ -1,14 +1,16 @@
 package sustain.synopsis.ingestion.client.core;
 
-import org.apache.kafka.common.metrics.stats.Count;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import sustain.synopsis.common.Strand;
 import sustain.synopsis.sketch.dataset.Quantizer;
 import sustain.synopsis.sketch.dataset.feature.Feature;
+import sustain.synopsis.sketch.graph.DataContainer;
 import sustain.synopsis.sketch.graph.Path;
+import sustain.synopsis.sketch.stat.RunningStatisticsND;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -111,7 +113,7 @@ class IngestionTest {
     void testStrandRegistryAdd() {
         LocalDateTime from = LocalDateTime.of(2019, 2, 12, 1, 0, 0);
         LocalDateTime to = LocalDateTime.of(2019, 2, 12, 1, 1, 0);
-        Strand strand1 = TestUtil.createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
+        Strand strand1 = createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
                 TemporalQuantizer.localDateTimeToEpoch(to), 1.0, 2.0);
         StrandRegistry registry = new StrandRegistry(strands -> {
             //ignore
@@ -119,12 +121,12 @@ class IngestionTest {
         assertEquals(1, registry.add(strand1));
 
         // add a different strand
-        Strand strand2 = TestUtil.createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
+        Strand strand2 = createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
                 TemporalQuantizer.localDateTimeToEpoch(to), 1.1, 2.0);
         assertEquals(2, registry.add(strand2));
 
         // add a strand for merging
-        Strand similarStrand = TestUtil.createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
+        Strand similarStrand = createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
                 TemporalQuantizer.localDateTimeToEpoch(to), 1.0, 2.0);
         assertEquals(2, registry.add(similarStrand));
     }
@@ -133,16 +135,16 @@ class IngestionTest {
     void testStrandRegistryPrefixFiltering(){
         LocalDateTime from = LocalDateTime.of(2019, 2, 12, 1, 0, 0);
         LocalDateTime to = LocalDateTime.of(2019, 2, 12, 1, 1, 0);
-        Strand strand1 = TestUtil.createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
+        Strand strand1 = createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
                 TemporalQuantizer.localDateTimeToEpoch(to), 1.0, 2.0);
-        Strand strand2 = TestUtil.createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
+        Strand strand2 = createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
                 TemporalQuantizer.localDateTimeToEpoch(to), 1.1, 2.0);
         // different geohash
-        Strand strand3 = TestUtil.createStrand(new Path(), "9xi", TemporalQuantizer.localDateTimeToEpoch(from),
+        Strand strand3 = createStrand(new Path(), "9xi", TemporalQuantizer.localDateTimeToEpoch(from),
                 TemporalQuantizer.localDateTimeToEpoch(to), 1.0, 2.0);
 
         // increments the timestamp for the prefix 9xj. Should publish strand 1 and strand 2
-        Strand strand4 = TestUtil.createStrand(new Path(), "9xj",
+        Strand strand4 = createStrand(new Path(), "9xj",
                 TemporalQuantizer.localDateTimeToEpoch(from.plusMinutes(1)),
                 TemporalQuantizer.localDateTimeToEpoch(to.plusMinutes(1)), 1.0, 2.0);
         Map<String, Strand> strandMap  = new HashMap<>();
@@ -166,16 +168,16 @@ class IngestionTest {
     void testStrandPublishing() {
         LocalDateTime from = LocalDateTime.of(2019, 2, 12, 1, 0, 0);
         LocalDateTime to = LocalDateTime.of(2019, 2, 12, 1, 1, 0);
-        Strand strand1 = TestUtil.createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
+        Strand strand1 = createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
                 TemporalQuantizer.localDateTimeToEpoch(to), 1.0, 2.0);
         // same geohash and temporal bounds, different feature values.
-        Strand strand2 = TestUtil.createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
+        Strand strand2 = createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
                 TemporalQuantizer.localDateTimeToEpoch(to), 1.1, 2.0);
         // different geohash
-        Strand strand3 = TestUtil.createStrand(new Path(), "9xi", TemporalQuantizer.localDateTimeToEpoch(from),
+        Strand strand3 = createStrand(new Path(), "9xi", TemporalQuantizer.localDateTimeToEpoch(from),
                 TemporalQuantizer.localDateTimeToEpoch(to), 1.0, 2.0);
         // increments the timestamp for the prefix 9xj. Should trigger publishing strand 1 and strand 2
-        Strand strand4 = TestUtil.createStrand(new Path(), "9xj",
+        Strand strand4 = createStrand(new Path(), "9xj",
                 TemporalQuantizer.localDateTimeToEpoch(from.plusMinutes(1)),
                 TemporalQuantizer.localDateTimeToEpoch(to.plusMinutes(1)), 1.0, 2.0);
 
@@ -199,5 +201,15 @@ class IngestionTest {
         expectedOutput.add(strand3);
         expectedOutput.add(strand4);
         Mockito.verify(publisherMock, Mockito.timeout(1)).publish(expectedOutput);
+    }
+
+    private Strand createStrand(Path path, String geohash, long ts, long to, double... features) {
+        for (int i = 0; i < features.length; i++) {
+            path.add(new Feature("feature_" + (i + 1), features[i]));
+        }
+        RunningStatisticsND runningStats = new RunningStatisticsND(features);
+        DataContainer container = new DataContainer(runningStats);
+        path.get(path.size() - 1).setData(container);
+        return new Strand(geohash, ts, to, path);
     }
 }

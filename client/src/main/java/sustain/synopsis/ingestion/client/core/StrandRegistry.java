@@ -1,8 +1,11 @@
 package sustain.synopsis.ingestion.client.core;
 
 import org.apache.log4j.Logger;
+import sustain.synopsis.common.Strand;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**

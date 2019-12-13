@@ -1,6 +1,7 @@
 package sustain.synopsis.ingestion.client.core;
 
 import org.apache.log4j.Logger;
+import sustain.synopsis.common.Strand;
 import sustain.synopsis.sketch.dataset.Quantizer;
 import sustain.synopsis.sketch.dataset.feature.Feature;
 import sustain.synopsis.sketch.graph.DataContainer;

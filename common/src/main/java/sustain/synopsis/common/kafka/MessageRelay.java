@@ -1,4 +1,4 @@
-package synopsis2.common.kafka;
+package sustain.synopsis.common.kafka;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 

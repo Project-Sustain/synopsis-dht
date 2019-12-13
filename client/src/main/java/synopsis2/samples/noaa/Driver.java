@@ -5,7 +5,7 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import synopsis2.client.IngestionConfig;
 import sustain.synopsis.ingestion.client.core.StrandRegistry;
 import synopsis2.client.Util;
-import synopsis2.common.kafka.Publisher;
+import sustain.synopsis.common.kafka.Publisher;
 import sustain.synopsis.dht.Context;
 import sustain.synopsis.dht.ServerConstants;
 

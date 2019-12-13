@@ -1,4 +1,4 @@
-package sustain.synopsis.ingestion.client.core;
+package sustain.synopsis.common;
 
 import sustain.synopsis.sketch.dataset.feature.Feature;
 import sustain.synopsis.sketch.graph.Path;
@@ -14,7 +14,7 @@ import java.util.Properties;
 public class Strand {
     private final String geohash;
     /**
-     * Upper temporal boundary as provided by the {@link TemporalQuantizer}
+     * Upper temporal boundary
      */
     private final long toTimestamp;
 

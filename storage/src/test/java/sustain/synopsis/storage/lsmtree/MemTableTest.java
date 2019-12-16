@@ -80,4 +80,24 @@ class MemTableTest {
         memTable.add(new LSMTestKey(1), new LSMTestValue(32));
         Assertions.assertEquals(40L, memTable.getEstimatedSize());
     }
+
+    @Test
+    void testFirstAndLastKeys(){
+        MemTable<LSMTestKey, LSMTestValue> memTable = new MemTable<>(1024);
+        for(int i = 0; i < 5; i++){
+            memTable.add(new LSMTestKey(i), new LSMTestValue(32));
+        }
+        Assertions.assertEquals(new LSMTestKey(0), memTable.getFirstKey());
+        Assertions.assertEquals(new LSMTestKey(4), memTable.getLastKey());
+    }
+
+    @Test
+    void testEntryCount(){
+        MemTable<LSMTestKey, LSMTestValue> memTable = new MemTable<>(1024);
+        Assertions.assertEquals(0, memTable.getEntryCount());
+        for(int i = 0; i < 5; i++){
+            memTable.add(new LSMTestKey(i), new LSMTestValue(32));
+        }
+        Assertions.assertEquals(5, memTable.getEntryCount());
+    }
 }

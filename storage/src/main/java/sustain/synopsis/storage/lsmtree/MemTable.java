@@ -20,18 +20,18 @@ public class MemTable<K extends Comparable<K> & Serializable, V extends Serializ
      * In such cases, set the upper bound in terms of the number of entries.
      */
     private final int maxEntryCount;
-    private int maxSizeInBytes;
+    private long maxSizeInBytes;
     private int estimatedEntrySize = -1;
 
     private NavigableMap<K, V> elements = new TreeMap<>();
     private boolean readOnly;
     private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
-    public MemTable(int maxSizeInBytes) {
+    public MemTable(long maxSizeInBytes) {
         this(maxSizeInBytes, DEFAULT_MAX_ENTRY_COUNT);
     }
 
-    public MemTable(int maxSizeInBytes, int maxEntryCount) {
+    public MemTable(long maxSizeInBytes, int maxEntryCount) {
         this.maxSizeInBytes = maxSizeInBytes;
         this.maxEntryCount = maxEntryCount;
         this.readOnly = false;
@@ -121,5 +121,17 @@ public class MemTable<K extends Comparable<K> & Serializable, V extends Serializ
         } finally {
             lock.readLock().unlock();
         }
+    }
+
+    public K getFirstKey(){
+        return elements.firstKey();
+    }
+
+    public K getLastKey(){
+        return elements.lastKey();
+    }
+
+    public int getEntryCount(){
+        return elements.size();
     }
 }

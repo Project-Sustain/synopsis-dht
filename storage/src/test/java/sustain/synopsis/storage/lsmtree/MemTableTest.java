@@ -102,4 +102,17 @@ class MemTableTest {
         }
         Assertions.assertEquals(5, memTable.getEntryCount());
     }
+
+    @Test
+    void testClear(){
+        MemTable<LSMTestKey, LSMTestValue> memTable = new MemTable<>(1024);
+        for(int i = 0; i < 5; i++){
+            memTable.add(new LSMTestKey(i), new LSMTestValue(32));
+        }
+        Assertions.assertEquals(5, memTable.getEntryCount());
+        memTable.clear();
+        Assertions.assertEquals(0, memTable.getEntryCount());
+        Assertions.assertNull(memTable.getFirstKey());
+        Assertions.assertNull(memTable.getLastKey());
+    }
 }

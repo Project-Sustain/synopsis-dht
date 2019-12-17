@@ -84,7 +84,7 @@ public class MemTable<K extends Comparable<K> & Serializable, V extends Serializ
         }
     }
 
-    public long getEstimatedSize(){
+    public long getEstimatedSize() {
         return estimatedEntrySize * elements.size();
     }
 
@@ -123,15 +123,21 @@ public class MemTable<K extends Comparable<K> & Serializable, V extends Serializ
         }
     }
 
-    public K getFirstKey(){
-        return elements.firstKey();
+    public K getFirstKey() {
+        if (elements.size() > 0) {
+            return elements.firstKey();
+        }
+        return null;
     }
 
-    public K getLastKey(){
-        return elements.lastKey();
+    public K getLastKey() {
+        if(elements.size() > 0) {
+            return elements.lastKey();
+        }
+        return null;
     }
 
-    public int getEntryCount(){
+    public int getEntryCount() {
         return elements.size();
     }
 

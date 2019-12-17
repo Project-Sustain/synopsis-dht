@@ -84,6 +84,8 @@ class MemTableTest {
     @Test
     void testFirstAndLastKeys(){
         MemTable<LSMTestKey, LSMTestValue> memTable = new MemTable<>(1024);
+        Assertions.assertNull(memTable.getFirstKey());
+        Assertions.assertNull(memTable.getLastKey());
         for(int i = 0; i < 5; i++){
             memTable.add(new LSMTestKey(i), new LSMTestValue(32));
         }

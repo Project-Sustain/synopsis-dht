@@ -134,4 +134,8 @@ public class MemTable<K extends Comparable<K> & Serializable, V extends Serializ
     public int getEntryCount(){
         return elements.size();
     }
+
+    public void clear() {
+        elements.clear();
+    }
 }

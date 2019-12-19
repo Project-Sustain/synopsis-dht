@@ -60,7 +60,7 @@ public class EntityStore {
         // initialize metadata store
         this.diskManager = DiskManager.getInstance();
         try {
-            this.checksumGenerator = new ChecksumGenerator();       
+            this.checksumGenerator = new ChecksumGenerator();
         } catch (ChecksumGenerator.ChecksumError checksumError) {
             logger.error(checksumError.getMessage(), checksumError);
             throw new StorageException(checksumError.getMessage(), checksumError);

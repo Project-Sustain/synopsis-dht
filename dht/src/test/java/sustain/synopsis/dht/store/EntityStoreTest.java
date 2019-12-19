@@ -23,7 +23,7 @@ public class EntityStoreTest {
 
     @Test
     void testSerializedFilePath() throws StorageException {
-        EntityStore store = new EntityStore("9xj", "/tmp", 20, 50);
+        EntityStore store = new EntityStore("9xj", "/tmp", 1024, 50);
         store.init(new CountDownLatch(1));
         StrandStorageKey key1 = new StrandStorageKey(1391216400000L, 1391216400100L);
         StrandStorageValue value1 = new StrandStorageValue(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,
@@ -43,7 +43,7 @@ public class EntityStoreTest {
     void testToSSTable() throws StorageException {
         MockitoAnnotations.initMocks(this);
         Mockito.when(diskManagerMock.allocate(Mockito.anyLong())).thenReturn(storageDir.getAbsolutePath());
-        EntityStore entityStore = new EntityStore("9xj", "/tmp", 20, 50);
+        EntityStore entityStore = new EntityStore("9xj", "/tmp", 1024, 50);
         entityStore.init(new CountDownLatch(1));
         StrandStorageKey key1 = new StrandStorageKey(1391216400000L, 1391216400100L);
         StrandStorageValue value1 = new StrandStorageValue(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,

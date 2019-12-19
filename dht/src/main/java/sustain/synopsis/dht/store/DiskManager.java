@@ -43,7 +43,7 @@ public class DiskManager {
             this.availableSpace = availableSpace;
         }
 
-        synchronized boolean allocate(int requestedCapacity) {
+        synchronized boolean allocate(long requestedCapacity) {
             if (occupiedCapacity >= allocatedCapacity) {
                 return false;
             }
@@ -141,7 +141,11 @@ public class DiskManager {
         return FileUtils.sizeOfDirectory(directory);
     }
 
-    String allocate(int size) {
-        return allocationPolicy.select(size, directories).path.getAbsolutePath();
+    public String allocate(long size) throws StorageException {
+        StorageDirectory directory = allocationPolicy.select(size, directories);
+        if(directory == null){
+            throw new StorageException("Could not find a storage location.");
+        }
+        return directory.path.getAbsolutePath();
     }
 }

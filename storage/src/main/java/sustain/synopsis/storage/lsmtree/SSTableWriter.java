@@ -12,9 +12,9 @@ public class SSTableWriter<K extends Comparable<K> & Serializable, V extends Ser
 
     private final Logger logger = Logger.getLogger(SSTableWriter.class);
     private List<TableIterator<K, V>> iterators;
-    private int blockSize;
+    private long blockSize;
 
-    public SSTableWriter(int blockSize, List<TableIterator<K, V>> iterators) {
+    public SSTableWriter(long blockSize, List<TableIterator<K, V>> iterators) {
         this.blockSize = blockSize;
         this.iterators = iterators;
     }
@@ -22,7 +22,7 @@ public class SSTableWriter<K extends Comparable<K> & Serializable, V extends Ser
     public void serialize(DataOutputStream blockOutputStream, Metadata<K> metadata, BlockCompressor compressor,
                           ChecksumGenerator checksumGenerator) throws IOException {
         SortedMergeIterator<K, V> mergeIterator = new SortedMergeIterator<>(iterators);
-        ByteArrayOutputStream baos = new ByteArrayOutputStream(blockSize);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream((int)blockSize);
         DataOutputStream dos = new DataOutputStream(baos);
         K minKey = null;
         K maxKey = null;

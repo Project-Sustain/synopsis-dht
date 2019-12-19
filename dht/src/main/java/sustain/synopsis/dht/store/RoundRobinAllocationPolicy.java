@@ -16,7 +16,7 @@ public class RoundRobinAllocationPolicy implements AllocationPolicy {
     private int lastUsedIndex = 0;
 
     @Override
-    public DiskManager.StorageDirectory select(int requestedCapacity, List<DiskManager.StorageDirectory> dirs) {
+    public DiskManager.StorageDirectory select(long requestedCapacity, List<DiskManager.StorageDirectory> dirs) {
         for (int i = 0; i < dirs.size(); i++) {
             DiskManager.StorageDirectory next = dirs.get((lastUsedIndex++) % dirs.size());
             if (next.allocate(requestedCapacity)) {

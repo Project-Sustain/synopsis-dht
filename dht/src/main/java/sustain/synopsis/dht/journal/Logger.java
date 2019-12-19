@@ -1,6 +1,5 @@
-package sustain.synopsis.dht;
+package sustain.synopsis.dht.journal;
 
-import org.apache.log4j.Logger;
 import sustain.synopsis.dht.store.StorageException;
 import sustain.synopsis.storage.lsmtree.ChecksumGenerator;
 
@@ -11,7 +10,7 @@ import java.util.Iterator;
  * Logging functionality for journaling the storage activities.
  * This implementation is not thread-safe - it assumes a single writer model.
  */
-public class JournalLog implements Iterable<byte[]> {
+public class Logger implements Iterable<byte[]> {
     class JournalLogIterator implements Iterator<byte[]> {
 
         // we need a pushback stream to support hasNext().
@@ -82,13 +81,13 @@ public class JournalLog implements Iterable<byte[]> {
     private DataOutputStream dos;
     private ChecksumGenerator checksumGenerator;
     private boolean initialized = false;
-    private Logger logger = Logger.getLogger(JournalLog.class);
+    private org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(Logger.class);
 
-    public JournalLog(String filePath) {
+    public Logger(String filePath) {
         this.filePath = filePath;
     }
 
-    public JournalLog(String filePath, ChecksumGenerator checksumGenerator) {
+    public Logger(String filePath, ChecksumGenerator checksumGenerator) {
         this.filePath = filePath;
         this.checksumGenerator = checksumGenerator; // used for mocking in unit tests
     }

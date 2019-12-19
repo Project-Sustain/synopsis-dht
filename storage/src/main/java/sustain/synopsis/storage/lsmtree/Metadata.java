@@ -3,7 +3,6 @@ package sustain.synopsis.storage.lsmtree;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 

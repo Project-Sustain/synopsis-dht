@@ -1,18 +1,20 @@
 package synopsis2.samples.noaa;
 
-import sustain.synopsis.sketch.dataset.Quantizer;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import synopsis2.client.IngestionConfig;
-import sustain.synopsis.ingestion.client.core.StrandRegistry;
-import synopsis2.client.Util;
 import sustain.synopsis.common.kafka.Publisher;
 import sustain.synopsis.dht.Context;
 import sustain.synopsis.dht.ServerConstants;
+import sustain.synopsis.ingestion.client.core.StrandRegistry;
+import sustain.synopsis.sketch.dataset.Quantizer;
+import synopsis2.client.IngestionConfig;
+import synopsis2.client.Util;
 
 import java.io.FileReader;
 import java.io.IOException;
 import java.time.Duration;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Properties;
 
 public class Driver {
     public static final String[] FEATURE_NAMES = {

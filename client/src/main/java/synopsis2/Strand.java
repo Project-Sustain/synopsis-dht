@@ -4,7 +4,6 @@ import sustain.synopsis.sketch.graph.Path;
 import sustain.synopsis.sketch.graph.Vertex;
 import sustain.synopsis.sketch.serialization.SerializationOutputStream;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
 
 public class Strand {

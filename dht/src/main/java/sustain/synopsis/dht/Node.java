@@ -13,14 +13,14 @@ import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
+import sustain.synopsis.common.kafka.BlockingQueueBackedMessageRelay;
+import sustain.synopsis.common.kafka.Consumer;
+import sustain.synopsis.common.kafka.MessageRelay;
 import sustain.synopsis.dht.tcp.recv.MessageReceiver;
 import sustain.synopsis.dht.tcp.recv.ProtocolFactory;
 import sustain.synopsis.dht.tcp.recv.ServerHandler;
 import sustain.synopsis.dht.zk.ZKError;
 import sustain.synopsis.dht.zk.ZooKeeperAgent;
-import synopsis2.common.kafka.BlockingQueueBackedMessageRelay;
-import synopsis2.common.kafka.Consumer;
-import synopsis2.common.kafka.MessageRelay;
 
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;

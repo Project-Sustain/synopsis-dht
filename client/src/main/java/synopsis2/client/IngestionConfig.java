@@ -1,6 +1,6 @@
 package synopsis2.client;
 
-import sustain.synopsis.sketch.dataset  .Quantizer;
+import sustain.synopsis.sketch.dataset.Quantizer;
 
 import java.time.Duration;
 import java.util.List;

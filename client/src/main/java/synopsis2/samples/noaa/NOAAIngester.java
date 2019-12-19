@@ -1,5 +1,8 @@
 package synopsis2.samples.noaa;
 
+import org.apache.log4j.Logger;
+import sustain.synopsis.ingestion.client.core.TemporalQuantizer;
+import sustain.synopsis.ingestion.client.geohash.GeoHash;
 import sustain.synopsis.sketch.dataset.Metadata;
 import sustain.synopsis.sketch.dataset.Quantizer;
 import sustain.synopsis.sketch.dataset.feature.Feature;
@@ -9,12 +12,9 @@ import sustain.synopsis.sketch.serialization.SerializationException;
 import sustain.synopsis.sketch.serialization.SerializationInputStream;
 import sustain.synopsis.sketch.serialization.Serializer;
 import sustain.synopsis.sketch.stat.RunningStatisticsND;
-import org.apache.log4j.Logger;
 import synopsis2.Strand;
 import synopsis2.client.Ingester;
 import synopsis2.client.IngestionConfig;
-import sustain.synopsis.ingestion.client.core.TemporalQuantizer;
-import sustain.synopsis.ingestion.client.geohash.GeoHash;
 
 import java.io.BufferedInputStream;
 import java.io.File;

@@ -4,7 +4,6 @@ import sustain.synopsis.ingestion.client.connectors.file.FileDataConnector;
 import sustain.synopsis.ingestion.client.connectors.file.FileParserHelper;
 import sustain.synopsis.ingestion.client.core.Driver;
 import sustain.synopsis.ingestion.client.core.Record;
-import sustain.synopsis.samples.client.ConsoleStrandPublisher;
 import sustain.synopsis.samples.client.PayloadSizeCalculator;
 import sustain.synopsis.sketch.dataset.Quantizer;
 import sustain.synopsis.sketch.dataset.feature.Feature;

@@ -1,7 +1,7 @@
 package sustain.synopsis.dht.dispersion;
 
-import sustain.synopsis.dht.Util;
 import sustain.synopsis.dht.Ring;
+import sustain.synopsis.dht.Util;
 
 import java.math.BigInteger;
 import java.util.ArrayList;

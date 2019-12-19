@@ -6,10 +6,10 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import sustain.synopsis.ingestion.client.core.Record;
-import sustain.synopsis.ingestion.client.core.RecordCallbackHandler;
 import sustain.synopsis.ingestion.client.connectors.file.FileDataConnector;
 import sustain.synopsis.ingestion.client.connectors.file.FileParserHelper;
+import sustain.synopsis.ingestion.client.core.Record;
+import sustain.synopsis.ingestion.client.core.RecordCallbackHandler;
 
 import java.io.File;
 import java.io.FileWriter;

@@ -2,7 +2,9 @@ package sustain.synopsis.common.kafka;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
-import java.util.concurrent.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 public class BlockingQueueBackedMessageRelay<K, V> implements MessageRelay<K, V> {
 

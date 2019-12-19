@@ -3,10 +3,10 @@ package synopsis2.client;
 import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.common.KafkaFuture;
 import org.apache.log4j.Logger;
-import sustain.synopsis.sketch.dataset.Quantizer;
-import sustain.synopsis.sketch.dataset.feature.Feature;
 import sustain.synopsis.dht.Context;
 import sustain.synopsis.dht.ServerConstants;
+import sustain.synopsis.sketch.dataset.Quantizer;
+import sustain.synopsis.sketch.dataset.feature.Feature;
 
 import java.io.BufferedReader;
 import java.io.FileReader;

@@ -94,7 +94,13 @@ class StrandStorageKeyValueTest {
         }
     }
 
-    private Strand createStrand(String geohash, long ts, long to, double... features) {
+    @Test
+    void testStrandStorageKeyToString(){
+        StrandStorageKey key = new StrandStorageKey(from, to);
+        Assertions.assertEquals(from + "_" + to, key.toString());
+    }
+
+    static Strand createStrand(String geohash, long ts, long to, double... features) {
         Path path = new Path(features.length);
         for (int i = 0; i < features.length; i++) {
             path.add(new Feature("feature_" + (i + 1), features[i]));

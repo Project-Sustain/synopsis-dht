@@ -55,4 +55,8 @@ public class StrandStorageKey implements Comparable<StrandStorageKey>, Serializa
         this.startTS = dataInputStream.readLong();
         this.endTS = dataInputStream.readLong();
     }
+
+    public String toString(){
+        return startTS + "_" + endTS;
+    }
 }

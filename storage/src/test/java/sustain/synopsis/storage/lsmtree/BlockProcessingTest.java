@@ -85,15 +85,18 @@ class BlockProcessingTest {
         Metadata<LSMTestKey> deserialized = new Metadata<>();
         deserialized.deserialize(dis, LSMTestKey.class);
 
-        Assertions.assertEquals(metadata.getMin(), deserialized.getMin());
-        Assertions.assertEquals(metadata.getMax(), deserialized.getMax());
-        Assertions.assertEquals(metadata.getBlockIndex(), deserialized.getBlockIndex());
+        Assertions.assertEquals(new LSMTestKey(1), deserialized.getMin());
+        Assertions.assertEquals(new LSMTestKey(10), deserialized.getMax());
+        Map<LSMTestKey, Integer> deserializedBlockIndex = deserialized.getBlockIndex();
+        Assertions.assertEquals(3, deserializedBlockIndex.size());
+        Assertions.assertEquals(0, deserializedBlockIndex.get(new LSMTestKey(1)));
+        Assertions.assertEquals(50, deserializedBlockIndex.get(new LSMTestKey(5)));
+        Assertions.assertEquals(80, deserializedBlockIndex.get(new LSMTestKey(8)));
+
         Map<LSMTestKey, byte[]> deserializedChecksums = deserialized.getChecksums();
-        // we need to do compare byte[] individually because assertEquals on the map instance does not compare array
-        // contents
         Assertions.assertEquals(3, deserializedChecksums.size());
         Assertions.assertArrayEquals(checksum1, deserializedChecksums.get(new LSMTestKey(1)));
-        Assertions.assertArrayEquals(checksum2, deserializedChecksums.get(new LSMTestKey(2)));
-        Assertions.assertArrayEquals(checksum3, deserializedChecksums.get(new LSMTestKey(3)));
+        Assertions.assertArrayEquals(checksum2, deserializedChecksums.get(new LSMTestKey(5)));
+        Assertions.assertArrayEquals(checksum3, deserializedChecksums.get(new LSMTestKey(8)));
     }
 }

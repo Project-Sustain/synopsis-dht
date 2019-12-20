@@ -6,7 +6,9 @@ import org.junit.jupiter.api.Test;
 import sustain.synopsis.storage.lsmtree.compress.BlockCompressor;
 import sustain.synopsis.storage.lsmtree.compress.LZ4BlockCompressor;
 
+import java.io.*;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Random;
 
 class BlockProcessingTest {
@@ -49,5 +51,49 @@ class BlockProcessingTest {
         }
         modified[0] = (byte) (~modified[0] & mask);
         return modified;
+    }
+
+    @Test
+    void testMetadataSerialization() throws IOException, InstantiationException, IllegalAccessException {
+        Metadata<LSMTestKey> metadata = new Metadata<>();
+        metadata.setMin(new LSMTestKey(1));
+        metadata.setMax(new LSMTestKey(10));
+        metadata.addBlockIndex(new LSMTestKey(1), 0);
+        metadata.addBlockIndex(new LSMTestKey(5), 50);
+        metadata.addBlockIndex(new LSMTestKey(8), 80);
+
+        Random random = new Random(123);
+        byte[] checksum1 = new byte[10];
+        byte[] checksum2 = new byte[10];
+        byte[] checksum3 = new byte[10];
+        random.nextBytes(checksum1);
+        random.nextBytes(checksum2);
+        random.nextBytes(checksum3);
+        metadata.addChecksum(new LSMTestKey(1), checksum1);
+        metadata.addChecksum(new LSMTestKey(5), checksum2);
+        metadata.addChecksum(new LSMTestKey(8), checksum3);
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(baos);
+        metadata.serialize(dos);
+        dos.flush();
+        baos.flush();
+
+        byte[] serializedMetadata = baos.toByteArray();
+        ByteArrayInputStream bais = new ByteArrayInputStream(serializedMetadata);
+        DataInputStream dis = new DataInputStream(bais);
+        Metadata<LSMTestKey> deserialized = new Metadata<>();
+        deserialized.deserialize(dis, LSMTestKey.class);
+
+        Assertions.assertEquals(metadata.getMin(), deserialized.getMin());
+        Assertions.assertEquals(metadata.getMax(), deserialized.getMax());
+        Assertions.assertEquals(metadata.getBlockIndex(), deserialized.getBlockIndex());
+        Map<LSMTestKey, byte[]> deserializedChecksums = deserialized.getChecksums();
+        // we need to do compare byte[] individually because assertEquals on the map instance does not compare array
+        // contents
+        Assertions.assertEquals(3, deserializedChecksums.size());
+        Assertions.assertArrayEquals(checksum1, deserializedChecksums.get(new LSMTestKey(1)));
+        Assertions.assertArrayEquals(checksum2, deserializedChecksums.get(new LSMTestKey(2)));
+        Assertions.assertArrayEquals(checksum3, deserializedChecksums.get(new LSMTestKey(3)));
     }
 }

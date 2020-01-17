@@ -24,7 +24,21 @@ public class Metadata<K extends Comparable<K> & Serializable> {
      * Index of the offset for each block and the first key of the block
      */
     private Map<K, Integer> blockIndex = new TreeMap<>();
+
+    /**
+     * Checksums for each block
+     */
     private Map<K, byte[]> checksums = new TreeMap<>();
+
+    private String path;
+
+    public String getPath() {
+        return path;
+    }
+
+    public void setPath(String path) {
+        this.path = path;
+    }
 
     public void setMin(K min) {
         this.min = min;
@@ -75,9 +89,10 @@ public class Metadata<K extends Comparable<K> & Serializable> {
             dataOutputStream.writeInt(checksum.length);
             dataOutputStream.write(checksum);
         }
+        dataOutputStream.writeUTF(path);
     }
 
-    public void deserialize(DataInputStream dataInputStream, Class<K> clazz) throws IOException, IllegalAccessException, InstantiationException {
+    public void deserialize(DataInputStream dataInputStream, Class<K> clazz) throws IOException {
         try {
             this.min = clazz.newInstance();
             min.deserialize(dataInputStream);
@@ -99,9 +114,10 @@ public class Metadata<K extends Comparable<K> & Serializable> {
                 dataInputStream.readFully(checksum);
                 checksums.put(key, checksum);
             }
+            this.path = dataInputStream.readUTF();
         } catch (InstantiationException | IllegalAccessException e) {
             logger.error("Error instantiating key instance.", e);
-            throw e;
+            throw new IOException(e);
         }
     }
 }

@@ -61,6 +61,7 @@ class BlockProcessingTest {
         metadata.addBlockIndex(new LSMTestKey(1), 0);
         metadata.addBlockIndex(new LSMTestKey(5), 50);
         metadata.addBlockIndex(new LSMTestKey(8), 80);
+        metadata.setPath("/test/path");
 
         Random random = new Random(123);
         byte[] checksum1 = new byte[10];
@@ -98,5 +99,6 @@ class BlockProcessingTest {
         Assertions.assertArrayEquals(checksum1, deserializedChecksums.get(new LSMTestKey(1)));
         Assertions.assertArrayEquals(checksum2, deserializedChecksums.get(new LSMTestKey(5)));
         Assertions.assertArrayEquals(checksum3, deserializedChecksums.get(new LSMTestKey(8)));
+        Assertions.assertEquals("/test/path", deserialized.getPath());
     }
 }

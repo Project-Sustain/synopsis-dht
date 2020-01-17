@@ -10,7 +10,7 @@ import sustain.synopsis.sketch.stat.RunningStatisticsND;
 
 import java.io.*;
 
-class StrandStorageKeyValueTest {
+public class StrandStorageKeyValueTest {
     private long from = 1391216400000L;
     private long to = from + 100;
 
@@ -100,7 +100,7 @@ class StrandStorageKeyValueTest {
         Assertions.assertEquals(from + "_" + to, key.toString());
     }
 
-    static Strand createStrand(String geohash, long ts, long to, double... features) {
+    public static Strand createStrand(String geohash, long ts, long to, double... features) {
         Path path = new Path(features.length);
         for (int i = 0; i < features.length; i++) {
             path.add(new Feature("feature_" + (i + 1), features[i]));

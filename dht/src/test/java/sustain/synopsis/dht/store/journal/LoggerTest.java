@@ -48,7 +48,7 @@ public class LoggerTest {
     }
 
     @Test
-    void testAppendToExisingFile() throws StorageException {
+    void testAppendToExisingFile() throws StorageException, IOException {
         File f = new File(root.getAbsolutePath() + File.separator + "journal_log");
         Logger log = new Logger(f.getAbsolutePath());
         log.append("activity1".getBytes());
@@ -111,11 +111,6 @@ public class LoggerTest {
         class TestActivity extends AbstractActivity {
             short type = 0;
             int member = 10;
-
-            @Override
-            public void setType(short type) {
-                this.type = type;
-            }
 
             @Override
             public void serializeMembers(DataOutputStream dataOutputStream) throws IOException {

@@ -8,7 +8,7 @@ import java.io.IOException;
 
 public class StartSessionActivity extends AbstractActivity {
 
-    public static final byte TYPE = 0;
+    public static final short TYPE = 0;
     private String user;
     private long ingestionTimeStamp;
     private long sessionId;
@@ -20,11 +20,6 @@ public class StartSessionActivity extends AbstractActivity {
         this.user = user;
         this.ingestionTimeStamp = ingestionTimeStamp;
         this.sessionId = sessionId;
-    }
-
-    @Override
-    public void setType(short type) {
-
     }
 
     @Override

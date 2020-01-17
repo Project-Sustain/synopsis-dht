@@ -24,17 +24,10 @@ public abstract class AbstractActivity implements Activity {
     public void deserialize(byte[] serializedData) throws IOException {
         try (ByteArrayInputStream bais = new ByteArrayInputStream(serializedData); DataInputStream dis =
                 new DataInputStream(bais);) {
-            setType(dis.readShort());
+            dis.readShort(); // read and ignore the type
             deserializeMembers(dis);
         }
     }
-
-    /**
-     * Sets the type of the activity
-     *
-     * @param type Unique activity identifier of type <code>short</code>
-     */
-    public abstract void setType(short type);
 
     /**
      * Serialize activity specific member variables

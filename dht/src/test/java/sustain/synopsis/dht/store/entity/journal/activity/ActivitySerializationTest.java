@@ -26,6 +26,7 @@ public class ActivitySerializationTest {
         Metadata<StrandStorageKey> metadata = new Metadata<>();
         metadata.setMin(new StrandStorageKey(10L, 15L));
         metadata.setMax(new StrandStorageKey(30L, 35L));
+        metadata.setPath("/test/path");
         SerializeSSTableActivity serializeActivity = new SerializeSSTableActivity(123L, metadata);
         byte[] serialized = serializeActivity.serialize();
 
@@ -46,5 +47,20 @@ public class ActivitySerializationTest {
         deserialized.deserialize(serialized);
 
         Assertions.assertEquals(123L, deserialized.getSessionId());
+    }
+
+    void testJournalLogFactory() throws IOException {
+        try {
+            StartSessionActivity startSessionActivity = new StartSessionActivity("bob", 1234L, 567L);
+            Activity activity = JournalLogFactory.parse(startSessionActivity.serialize());
+            Assertions.assertEquals(StartSessionActivity.TYPE, activity.getType());
+
+            //SerializeSSTableActivity serializeSSTableActivity = new SerializeSSTableActivity()
+
+            // check if deserialize method is called
+        } catch (JournalingException ignore) {
+
+        }
+
     }
 }

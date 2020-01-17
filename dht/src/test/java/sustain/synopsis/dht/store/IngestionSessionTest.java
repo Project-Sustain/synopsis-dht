@@ -35,6 +35,7 @@ public class IngestionSessionTest {
             dos1.writeLong(1);
             dos1.writeLong(0);
             dos1.writeLong(1);
+            dos1.writeUTF("/test/path");
             dos1.writeInt(0);
             dos1.writeInt(0);
             return null;

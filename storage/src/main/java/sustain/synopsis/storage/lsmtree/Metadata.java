@@ -75,6 +75,7 @@ public class Metadata<K extends Comparable<K> & Serializable> {
     public void serialize(DataOutputStream dataOutputStream) throws IOException {
         min.serialize(dataOutputStream);
         max.serialize(dataOutputStream);
+        dataOutputStream.writeUTF(path);
         // block index
         dataOutputStream.writeInt(blockIndex.size());
         for (K key : blockIndex.keySet()) {
@@ -89,7 +90,6 @@ public class Metadata<K extends Comparable<K> & Serializable> {
             dataOutputStream.writeInt(checksum.length);
             dataOutputStream.write(checksum);
         }
-        dataOutputStream.writeUTF(path);
     }
 
     public void deserialize(DataInputStream dataInputStream, Class<K> clazz) throws IOException {
@@ -98,6 +98,7 @@ public class Metadata<K extends Comparable<K> & Serializable> {
             min.deserialize(dataInputStream);
             this.max = clazz.newInstance();
             max.deserialize(dataInputStream);
+            this.path = dataInputStream.readUTF();
             // block index
             int blockIndexSize = dataInputStream.readInt();
             for (int i = 0; i < blockIndexSize; i++) {
@@ -114,7 +115,6 @@ public class Metadata<K extends Comparable<K> & Serializable> {
                 dataInputStream.readFully(checksum);
                 checksums.put(key, checksum);
             }
-            this.path = dataInputStream.readUTF();
         } catch (InstantiationException | IllegalAccessException e) {
             logger.error("Error instantiating key instance.", e);
             throw new IOException(e);

@@ -1,9 +1,9 @@
 package sustain.synopsis.samples.client;
 
 import org.apache.log4j.Logger;
+import sustain.synopsis.common.Strand;
 import sustain.synopsis.ingestion.client.core.StrandPublisher;
 import sustain.synopsis.sketch.serialization.SerializationOutputStream;
-import synopsis2.common.kafka.Strand;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

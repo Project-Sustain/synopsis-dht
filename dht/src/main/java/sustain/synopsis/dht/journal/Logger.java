@@ -28,7 +28,7 @@ public class Logger implements Iterable<byte[]> {
                 FileInputStream fis = new FileInputStream(filePath);
                 pushbackInputStream = new PushbackInputStream(fis);
                 dis = new DataInputStream(pushbackInputStream);
-                if(checksumGenerator == null){
+                if (checksumGenerator == null) {
                     checksumGenerator = new ChecksumGenerator();
                 }
                 this.initialized = true;
@@ -87,9 +87,9 @@ public class Logger implements Iterable<byte[]> {
         this.filePath = filePath;
     }
 
-    public Logger(String filePath, ChecksumGenerator checksumGenerator) {
+    public Logger(String filePath, ChecksumGenerator checksumGenerator) { // used for mocking in unit tests
         this.filePath = filePath;
-        this.checksumGenerator = checksumGenerator; // used for mocking in unit tests
+        this.checksumGenerator = checksumGenerator;
     }
 
     private void initAppenders() throws StorageException {
@@ -105,24 +105,19 @@ public class Logger implements Iterable<byte[]> {
         }
     }
 
-    public void append(byte[] payload) throws StorageException {
+    public void append(byte[] payload) throws StorageException, IOException {
         if (!initialized) {
             initAppenders();
         }
-        if(payload == null){
-            throw new StorageException("Null values are not allowed to the logger.");
-        }
+        /* todo: we need to support atomic writes in this method. If there is an error in the middle, we
+         should revert back the partial write. */
         byte[] checkSum = checksumGenerator.calculateChecksum(payload);
-        try {
-            dos.writeInt(payload.length);
-            dos.write(payload);
-            dos.writeInt(checkSum.length);
-            dos.write(checkSum);
-            dos.flush();
-            fos.flush();
-        } catch (IOException e) {
-            throw new StorageException("Error writing to the journal.", e);
-        }
+        dos.writeInt(payload.length);
+        dos.write(payload);
+        dos.writeInt(checkSum.length);
+        dos.write(checkSum);
+        dos.flush();
+        fos.flush();
     }
 
 
@@ -136,7 +131,7 @@ public class Logger implements Iterable<byte[]> {
 
     public void close() throws StorageException {
         try {
-            if(!initialized){
+            if (!initialized) {
                 initAppenders(); // we need to write an empty file even if we close a log without appending any records
             }
             this.dos.close();

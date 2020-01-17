@@ -40,42 +40,47 @@ public class EntityStore {
         this.sequenceId = 0;
         this.compressor = new LZ4BlockCompressor();
         this.memTableSize = memTableSize;
-        this.metaStore = new EntityMetaStore();
+        this.metaStore = new EntityMetaStore(entityId, metadataDir);
     }
 
     public boolean init(CountDownLatch latch) throws StorageException {
-        // todo: move to EntityMetadataStore
-        File metadataFile = new File(getMetadataFileName());
-        // empty store
-        if (!metadataFile.exists() || (metadataFile.isFile() && metadataFile.length() == 0)) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("Instantiating a new entity store for: " + entityId + ", metadata dir: " + metadataFile);
-            }
-            latch.countDown();
-            return true;
-        }
-        // read from an existing store
+        this.diskManager = DiskManager.getInstance();
+        return init(latch, this.diskManager);
+    }
+
+    // used for unit testing by injecting the disk manager
+    public boolean init(CountDownLatch latch, DiskManager diskManager) throws StorageException {
         // TODO:
         // read last used sequence id
-        // initialize metadata store
-        this.diskManager = DiskManager.getInstance();
         try {
             this.checksumGenerator = new ChecksumGenerator();
+            this.diskManager = diskManager;
+            this.metaStore.init();
         } catch (ChecksumGenerator.ChecksumError checksumError) {
             logger.error(checksumError.getMessage(), checksumError);
             throw new StorageException(checksumError.getMessage(), checksumError);
         }
-        return false;
+        return true;
     }
 
-    public void startSession(IngestionSession session){
-        metaStore.startSession(session);
+    public boolean startSession(IngestionSession session) {
+        if (activeSessions.containsKey(session)) {
+            logger.warn("Trying to initiate already existing session. Session id: " + session.getSessionId());
+            return true;
+        }
+        try {
+            metaStore.startSession(session); // log first
+            activeSessions.put(session, new MemTable<>(memTableSize));
+            return true;
+        } catch (IOException | StorageException e) {
+           logger.error("Error initializing the session. ", e);
+            return false;
+        }
     }
 
-    public void store(IngestionSession session, StrandStorageKey key, StrandStorageValue value) throws StorageException {
+    public boolean store(IngestionSession session, StrandStorageKey key, StrandStorageValue value) throws StorageException, IOException {
         // todo: data should be first written to a WAL
         // todo: handle error
-        activeSessions.putIfAbsent(session, new MemTable<>(memTableSize));
         MemTable<StrandStorageKey, StrandStorageValue> memTable = activeSessions.get(session);
         boolean isMemTableFull = memTable.add(key, value);
         if (isMemTableFull) {
@@ -84,9 +89,10 @@ public class EntityStore {
             metaStore.addSerializedSSTable(session, metadata);
             memTable.clear();
         }
+        return true;
     }
 
-    public void endSession(IngestionSession session) throws StorageException {
+    public boolean endSession(IngestionSession session) throws StorageException, IOException {
         // todo: better exception handling
         MemTable<StrandStorageKey, StrandStorageValue> memTable = activeSessions.get(session);
         if (memTable.getEntryCount() > 0) {
@@ -96,6 +102,7 @@ public class EntityStore {
         }
         metaStore.endSession(session);
         activeSessions.remove(session);
+        return true;
     }
 
     // we inject a disk manager instance for unit testing purposes
@@ -112,15 +119,11 @@ public class EntityStore {
             ssTableWriter.serialize(dos, metadata, compressor, checksumGenerator);
             dos.flush();
             fos.flush();
-            // todo: serialize metadata
+            metadata.setPath(storagePath);
         } catch (IOException e) {
             logger.error("Error converting memTable to SSTable.", e);
             throw new StorageException("Error converting memTable to SSTable.", e);
         }
-    }
-
-    private String getMetadataFileName() {
-        return metadataDir + File.separator + entityId + "_metadata.slog";
     }
 
     public String getSSTableOutputPath(IngestionSession session, String path) {

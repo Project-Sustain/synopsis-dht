@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import sustain.synopsis.dht.journal.Activity;
 import sustain.synopsis.dht.store.StrandStorageKey;
+import sustain.synopsis.dht.store.entity.journal.JournalLogFactory;
+import sustain.synopsis.dht.store.entity.journal.JournalingException;
 import sustain.synopsis.storage.lsmtree.Metadata;
 
 import java.io.IOException;
@@ -49,15 +51,27 @@ public class ActivitySerializationTest {
         Assertions.assertEquals(123L, deserialized.getSessionId());
     }
 
+    @Test
     void testJournalLogFactory() throws IOException {
         try {
             StartSessionActivity startSessionActivity = new StartSessionActivity("bob", 1234L, 567L);
             Activity activity = JournalLogFactory.parse(startSessionActivity.serialize());
             Assertions.assertEquals(StartSessionActivity.TYPE, activity.getType());
 
-            //SerializeSSTableActivity serializeSSTableActivity = new SerializeSSTableActivity()
+            Metadata<StrandStorageKey> metadata = new Metadata<>();
+            metadata.setMin(new StrandStorageKey(10L, 15L));
+            metadata.setMax(new StrandStorageKey(30L, 35L));
+            metadata.setPath("/test/path");
+            SerializeSSTableActivity serializeSSTableActivity = new SerializeSSTableActivity(124L, metadata);
+            activity = JournalLogFactory.parse(serializeSSTableActivity.serialize());
+            Assertions.assertEquals(SerializeSSTableActivity.TYPE, activity.getType());
+
+            EndSessionActivity endSessionActivity = new EndSessionActivity(1224L);
+            activity = JournalLogFactory.parse(endSessionActivity.serialize());
+            Assertions.assertEquals(EndSessionActivity.TYPE, activity.getType());
 
             // check if deserialize method is called
+            Assertions.assertEquals(1224L, ((EndSessionActivity)activity).getSessionId());
         } catch (JournalingException ignore) {
 
         }

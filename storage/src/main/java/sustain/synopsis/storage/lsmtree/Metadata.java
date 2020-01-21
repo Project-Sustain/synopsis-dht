@@ -120,4 +120,9 @@ public class Metadata<K extends Comparable<K> & Serializable> {
             throw new IOException(e);
         }
     }
+
+    @Override
+    public String toString() {
+        return "Metadata{" + "min=" + min + ", max=" + max + ", path='" + path + '\'' + '}';
+    }
 }

@@ -9,7 +9,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 public class  SerializeSSTableActivity extends AbstractActivity {
-    private final short TYPE = 1;
+    public static final short TYPE = 1;
     private long sessionId;
     private Metadata<StrandStorageKey> metadata;
 
@@ -46,5 +46,10 @@ public class  SerializeSSTableActivity extends AbstractActivity {
 
     public Metadata<StrandStorageKey> getMetadata() {
         return metadata;
+    }
+
+    @Override
+    public String toString() {
+        return "SerializeSSTableActivity{" + "sessionId=" + sessionId + ", metadata=" + metadata + '}';
     }
 }

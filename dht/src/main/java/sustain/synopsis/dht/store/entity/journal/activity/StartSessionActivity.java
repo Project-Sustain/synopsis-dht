@@ -52,4 +52,10 @@ public class StartSessionActivity extends AbstractActivity {
     public long getSessionId() {
         return sessionId;
     }
+
+    @Override
+    public String toString() {
+        return "StartSessionActivity{" + "user='" + user + '\'' + ", ingestionTimeStamp=" + ingestionTimeStamp + ", " +
+                "sessionId=" + sessionId + '}';
+    }
 }

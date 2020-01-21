@@ -8,7 +8,7 @@ import java.io.IOException;
 
 public class EndSessionActivity extends AbstractActivity {
 
-    private final short TYPE = 2;
+    public static final short TYPE = 2;
     private long sessionId;
 
     public EndSessionActivity() {
@@ -36,5 +36,10 @@ public class EndSessionActivity extends AbstractActivity {
 
     public long getSessionId() {
         return sessionId;
+    }
+
+    @Override
+    public String toString() {
+        return "EndSessionActivity{" + "sessionId=" + sessionId + '}';
     }
 }

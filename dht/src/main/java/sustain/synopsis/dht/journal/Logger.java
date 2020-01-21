@@ -68,6 +68,8 @@ public class Logger implements Iterable<byte[]> {
                 dis.readFully(checkSum);
                 if (checksumGenerator.validateChecksum(payload, checkSum)) {
                     return payload;
+                } else {
+                    logger.warn("Corrupt log record is detected. Checksum validation failed.");
                 }
             } catch (IOException e) {
                 logger.error("Error in the iterator", e);

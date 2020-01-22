@@ -41,6 +41,15 @@ public class ActivitySerializationTest {
     }
 
     @Test
+    void testSerializeIncSeqIdActivity() throws IOException{
+        IncSeqIdActivity activity = new IncSeqIdActivity(1);
+        byte[] serialized = activity.serialize();
+        IncSeqIdActivity deserializedActivity = new IncSeqIdActivity();
+        deserializedActivity.deserialize(serialized);
+        Assertions.assertEquals(1, deserializedActivity.getSequenceId());
+    }
+
+    @Test
     void testEndSession() throws IOException {
         EndSessionActivity endSessionActivity = new EndSessionActivity(123L);
         byte[] serialized = endSessionActivity.serialize();
@@ -72,6 +81,10 @@ public class ActivitySerializationTest {
 
             // check if deserialize method is called
             Assertions.assertEquals(1224L, ((EndSessionActivity)activity).getSessionId());
+
+            IncSeqIdActivity incrementSeqIdActivity = new IncSeqIdActivity(1);
+            activity= JournalLogFactory.parse(incrementSeqIdActivity.serialize());
+            Assertions.assertEquals(IncSeqIdActivity.class, activity.getClass());
         } catch (JournalingException ignore) {
 
         }

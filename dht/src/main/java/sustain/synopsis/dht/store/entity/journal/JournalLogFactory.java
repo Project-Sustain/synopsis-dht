@@ -2,6 +2,7 @@ package sustain.synopsis.dht.store.entity.journal;
 
 import sustain.synopsis.dht.journal.Activity;
 import sustain.synopsis.dht.store.entity.journal.activity.EndSessionActivity;
+import sustain.synopsis.dht.store.entity.journal.activity.IncSeqIdActivity;
 import sustain.synopsis.dht.store.entity.journal.activity.SerializeSSTableActivity;
 import sustain.synopsis.dht.store.entity.journal.activity.StartSessionActivity;
 
@@ -21,6 +22,9 @@ public class JournalLogFactory {
                 break;
             case EndSessionActivity.TYPE:
                 activity = new EndSessionActivity();
+                break;
+            case IncSeqIdActivity.TYPE:
+                activity = new IncSeqIdActivity();
                 break;
             default:
                 throw new JournalingException("Unsupported record type: " + type);

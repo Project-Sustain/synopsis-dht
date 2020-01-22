@@ -8,6 +8,7 @@ import sustain.synopsis.dht.store.StrandStorageKey;
 import sustain.synopsis.dht.store.entity.journal.JournalLogFactory;
 import sustain.synopsis.dht.store.entity.journal.JournalingException;
 import sustain.synopsis.dht.store.entity.journal.activity.EndSessionActivity;
+import sustain.synopsis.dht.store.entity.journal.activity.IncSeqIdActivity;
 import sustain.synopsis.dht.store.entity.journal.activity.SerializeSSTableActivity;
 import sustain.synopsis.dht.store.entity.journal.activity.StartSessionActivity;
 import sustain.synopsis.storage.lsmtree.Metadata;
@@ -151,8 +152,11 @@ public class EntityMetaStore {
         journal.append(serializeSSTableActivity.serialize());
     }
 
-    private String getMetadataFileName() {
-        return metadataRoot + File.separator + entityId + "_metadata.slog";
+    public void incrementSequenceId(int newSequenceId) throws IOException, StorageException {
+        journal.append(new IncSeqIdActivity(newSequenceId).serialize());
     }
 
+    String getMetadataFileName() {
+        return metadataRoot + File.separator + entityId + "_metadata.slog";
+    }
 }

@@ -11,7 +11,6 @@ import sustain.synopsis.storage.lsmtree.Metadata;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.concurrent.CountDownLatch;
 
 import static sustain.synopsis.dht.store.StrandStorageKeyValueTest.createStrand;
 
@@ -19,13 +18,16 @@ public class EntityStoreTest {
     @TempDir
     File storageDir;
 
+    @TempDir
+    File metadataDir;
+
     @Mock
     DiskManager diskManagerMock;
 
     @Test
     void testSerializedFilePath() throws StorageException, IOException {
-        EntityStore store = new EntityStore("9xj", "/tmp", 1024, 50);
-        store.init(new CountDownLatch(1), diskManagerMock);
+        EntityStore store = new EntityStore("9xj", metadataDir.getAbsolutePath(), 1024, 50);
+        Assertions.assertTrue(store.init(diskManagerMock));
         StrandStorageKey key1 = new StrandStorageKey(1391216400000L, 1391216400100L);
         StrandStorageValue value1 = new StrandStorageValue(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,
                 2.0));
@@ -34,14 +36,12 @@ public class EntityStoreTest {
                 2.0));
         IngestionSession session = new IngestionSession("bob", System.currentTimeMillis(), 0);
         store.startSession(session);
-        store.startSession(session);
-        store.startSession(session);
-        store.startSession(session);
-        store.startSession(session);
         store.store(session, key1, value1);
         store.store(session, key2, value2);
-        String returned = store.getSSTableOutputPath(session,"/tmp");
-        String expected = "/tmp/9xj_" + key1.toString() + "_" + key2.toString() + "_0.sd";
+        String returned = store.getSSTableOutputPath(session, storageDir.getAbsolutePath());
+        String expected =
+                storageDir.getAbsolutePath() + File.separator + "9xj_" + key1.toString() + "_" + key2.toString() +
+                        "_1.sd";
         Assertions.assertEquals(expected, returned);
     }
 
@@ -49,8 +49,8 @@ public class EntityStoreTest {
     void testToSSTable() throws StorageException, IOException {
         MockitoAnnotations.initMocks(this);
         Mockito.when(diskManagerMock.allocate(Mockito.anyLong())).thenReturn(storageDir.getAbsolutePath());
-        EntityStore entityStore = new EntityStore("9xj", "/tmp", 1024, 50);
-        entityStore.init(new CountDownLatch(1), diskManagerMock);
+        EntityStore entityStore = new EntityStore("9xj", metadataDir.getAbsolutePath(), 1024, 50);
+        entityStore.init(diskManagerMock);
         StrandStorageKey key1 = new StrandStorageKey(1391216400000L, 1391216400100L);
         StrandStorageValue value1 = new StrandStorageValue(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,
                 2.0));
@@ -68,8 +68,8 @@ public class EntityStoreTest {
         Metadata<StrandStorageKey> metadata = new Metadata<>();
         entityStore.toSSTable(session, diskManagerMock, metadata);
 
-        File serializedSSTable = new File(storageDir.getAbsolutePath() + File.separator + "9xj" + "_" +
-               key1.toString() + "_" + key2.toString() + "_" + 0 + ".sd");
+        File serializedSSTable =
+                new File(storageDir.getAbsolutePath() + File.separator + "9xj" + "_" + key1.toString() + "_" + key2.toString() + "_1.sd");
         Assertions.assertTrue(serializedSSTable.exists());
         Assertions.assertTrue(serializedSSTable.isFile());
         Assertions.assertTrue(serializedSSTable.length() > 0);

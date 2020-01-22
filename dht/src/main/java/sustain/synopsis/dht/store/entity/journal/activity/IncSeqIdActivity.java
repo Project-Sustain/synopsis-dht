@@ -38,4 +38,9 @@ public class IncSeqIdActivity extends AbstractActivity {
     public int getSequenceId() {
         return sequenceId;
     }
+
+    @Override
+    public String toString() {
+        return "IncSeqIdActivity{" + "sequenceId=" + sequenceId + '}';
+    }
 }

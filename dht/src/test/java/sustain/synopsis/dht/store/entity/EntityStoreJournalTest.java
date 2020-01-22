@@ -1,5 +1,6 @@
 package sustain.synopsis.dht.store.entity;
 
+import junit.framework.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -9,6 +10,7 @@ import sustain.synopsis.dht.store.StorageException;
 import sustain.synopsis.dht.store.StrandStorageKey;
 import sustain.synopsis.dht.store.entity.journal.JournalingException;
 import sustain.synopsis.dht.store.entity.journal.activity.EndSessionActivity;
+import sustain.synopsis.dht.store.entity.journal.activity.IncSeqIdActivity;
 import sustain.synopsis.dht.store.entity.journal.activity.SerializeSSTableActivity;
 import sustain.synopsis.dht.store.entity.journal.activity.StartSessionActivity;
 import sustain.synopsis.storage.lsmtree.Metadata;
@@ -18,10 +20,17 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class EntityMetaStoreTest {
+public class EntityStoreJournalTest {
 
     @TempDir
     File tempDir;
+
+    @Test
+    void testGetJournalFilePath(){
+        EntityStoreJournal metaStore = new EntityStoreJournal("entity1", "/tmp");
+        Assertions.assertEquals("/tmp" + File.separator + "entity1_metadata.slog",
+                metaStore.getJournalFilePath());
+    }
 
     @Test
     void testValidateSerializeSSTableActivity() throws IOException {
@@ -29,7 +38,7 @@ public class EntityMetaStoreTest {
         sessions.put(1000L, new IngestionSession("bob", 123L, 1000L));
         sessions.put(1001L, new IngestionSession("alice", 678L, 1001L));
 
-        EntityMetaStore metaStore = new EntityMetaStore("", "");
+        EntityStoreJournal metaStore = new EntityStoreJournal("", "");
 
         // invalid session id
         SerializeSSTableActivity activity = new SerializeSSTableActivity(1002L, new Metadata<>());
@@ -63,7 +72,7 @@ public class EntityMetaStoreTest {
         Map<Long, IngestionSession> sessions = new HashMap<>();
         sessions.put(1000L, new IngestionSession("bob", 123L, 1000L));
 
-        EntityMetaStore metaStore = new EntityMetaStore("", "");
+        EntityStoreJournal metaStore = new EntityStoreJournal("", "");
         // invalid session id
         Assertions.assertFalse(metaStore.validateEndSessionActivity(sessions, new EndSessionActivity(1001L)));
         // valid session
@@ -85,6 +94,7 @@ public class EntityMetaStoreTest {
         metadata1.setPath(f.getAbsolutePath());
         SerializeSSTableActivity serializeSSTableActivity = new SerializeSSTableActivity(1000L, metadata1);
         logger.append(serializeSSTableActivity.serialize());
+        logger.append(new IncSeqIdActivity(1).serialize());
 
         metadata1.setMin(new StrandStorageKey(30L, 35L));
         metadata1.setMin(new StrandStorageKey(50L, 55L));
@@ -95,11 +105,12 @@ public class EntityMetaStoreTest {
 
         logger.append(new StartSessionActivity("alice", 567L, 2000L).serialize());
         logger.append(new EndSessionActivity(2000L).serialize());
-
+        logger.append(new IncSeqIdActivity(2).serialize());
         logger.close();
 
-        EntityMetaStore metaStore = new EntityMetaStore("", "");
-        Map<Long, IngestionSession> sessions = metaStore.parseJournal(logger.iterator());
+        EntityStoreJournal metaStore = new EntityStoreJournal("", "");
+        metaStore.parseJournal(logger.iterator());
+        Map<Long, IngestionSession> sessions = metaStore.getSessions();
 
         Assertions.assertEquals(2, sessions.size());
         IngestionSession session1 = sessions.get(1000L);
@@ -110,6 +121,7 @@ public class EntityMetaStoreTest {
         IngestionSession session2 = sessions.get(2000L);
         Assertions.assertNotNull(session2);
         Assertions.assertTrue(session2.isComplete());
+        Assert.assertEquals(2, metaStore.getSequenceId());
     }
 
     @Test
@@ -129,7 +141,7 @@ public class EntityMetaStoreTest {
         logger.append(new EndSessionActivity(1000L).serialize());
         logger.close();
 
-        EntityMetaStore metaStore = new EntityMetaStore("", "");
+        EntityStoreJournal metaStore = new EntityStoreJournal("", "");
         Assertions.assertThrows(JournalingException.class, () -> metaStore.parseJournal(logger.iterator()));
 
         Logger logger2 = new Logger(tempDir.getAbsolutePath() + File.separator + "test2.slog");

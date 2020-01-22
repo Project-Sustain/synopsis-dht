@@ -19,19 +19,21 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-public class EntityMetaStore {
-    private Logger logger = Logger.getLogger(EntityMetaStore.class);
+public class EntityStoreJournal {
+    private Logger logger = Logger.getLogger(EntityStoreJournal.class);
     private final String metadataRoot;
     private final String entityId;
     private sustain.synopsis.dht.journal.Logger journal;
+    private Map<Long, IngestionSession> sessions = new HashMap<>();
+    private int sequenceId = 0;
 
-    public EntityMetaStore(String entityId, String metaStoreDir) {
+    public EntityStoreJournal(String entityId, String metaStoreDir) {
         this.metadataRoot = metaStoreDir;
         this.entityId = entityId;
     }
 
     public boolean init() {
-        File metadataFile = new File(getMetadataFileName());
+        File metadataFile = new File(getJournalFilePath());
         if (!metadataFile.exists() || (metadataFile.isFile() && metadataFile.length() == 0)) { // empty store
             if (logger.isDebugEnabled()) {
                 logger.debug("Instantiating a logger: " + entityId + ", metadata dir: " + metadataFile);
@@ -49,9 +51,7 @@ public class EntityMetaStore {
         return true;
     }
 
-    Map<Long, IngestionSession> parseJournal(Iterator<byte[]> iterator) throws IOException, JournalingException {
-        Map<Long, IngestionSession> sessions = new HashMap<>();
-
+    void parseJournal(Iterator<byte[]> iterator) throws IOException, JournalingException {
         // counters used for debugging
         int completeSessionCount = 0;
         int serializedSSTableCount = 0;
@@ -76,8 +76,7 @@ public class EntityMetaStore {
                     SerializeSSTableActivity serializeSSTableActivity = (SerializeSSTableActivity) activity;
                     boolean valid = validateSerializeSSTableActivity(sessions, serializeSSTableActivity);
                     if (valid) {
-                        sessions.get(serializeSSTableActivity.getSessionId()).addSerializedSSTable(
-                                serializeSSTableActivity.getMetadata());
+                        sessions.get(serializeSSTableActivity.getSessionId()).addSerializedSSTable(serializeSSTableActivity.getMetadata());
                         serializedSSTableCount++;
                         if (logger.isDebugEnabled()) {
                             logger.debug("Parsed Serialize SSTable Activity. " + serializeSSTableActivity);
@@ -94,7 +93,7 @@ public class EntityMetaStore {
                     if (valid) {
                         completeSessionCount++;
                         sessions.get(endSessionActivity.getSessionId()).setComplete();
-                        if(logger.isDebugEnabled()){
+                        if (logger.isDebugEnabled()) {
                             logger.debug("Parsed End Session Activity. " + endSessionActivity);
                         }
                     } else {
@@ -102,11 +101,19 @@ public class EntityMetaStore {
                         throw new JournalingException("Invalid End Session Activity. Aborting parsing the " +
                                 "journal");
                     }
+                    break;
+                case IncSeqIdActivity.TYPE:
+                    IncSeqIdActivity incrementSeqIdActivity = (IncSeqIdActivity) activity;
+                    sequenceId = incrementSeqIdActivity.getSequenceId();
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Sequence Id increment record is detected. " + incrementSeqIdActivity);
+                    }
+                    break;
             }
         }
-        logger.info("Successfully parsed the journal. Total session count: " + sessions.size() + ", completed session" +
-                " count: " + completeSessionCount + ", Valid serialized SSTable count: " + serializedSSTableCount);
-        return sessions;
+        logger.info("Successfully parsed the journal. Total session count: " + sessions.size() + ", completed " +
+                "session" + " count: " + completeSessionCount + ", Valid serialized SSTable count: " + serializedSSTableCount +
+                ", last used sequence id: " + sequenceId);
     }
 
     boolean validateSerializeSSTableActivity(Map<Long, IngestionSession> sessions, SerializeSSTableActivity activity) {
@@ -156,7 +163,15 @@ public class EntityMetaStore {
         journal.append(new IncSeqIdActivity(newSequenceId).serialize());
     }
 
-    String getMetadataFileName() {
+    String getJournalFilePath() {
         return metadataRoot + File.separator + entityId + "_metadata.slog";
+    }
+
+    public Map<Long, IngestionSession> getSessions() {
+        return sessions;
+    }
+
+    public int getSequenceId() {
+        return sequenceId;
     }
 }

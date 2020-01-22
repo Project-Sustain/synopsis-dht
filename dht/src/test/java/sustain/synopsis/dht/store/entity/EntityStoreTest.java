@@ -27,18 +27,10 @@ public class EntityStoreTest {
     @Test
     void testSerializedFilePath() throws StorageException, IOException {
         EntityStore store = new EntityStore("9xj", metadataDir.getAbsolutePath(), 1024, 50);
-        Assertions.assertTrue(store.init(diskManagerMock));
+        store.init();
         StrandStorageKey key1 = new StrandStorageKey(1391216400000L, 1391216400100L);
-        StrandStorageValue value1 = new StrandStorageValue(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,
-                2.0));
         StrandStorageKey key2 = new StrandStorageKey(1391216400100L, 1391216400200L);
-        StrandStorageValue value2 = new StrandStorageValue(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,
-                2.0));
-        IngestionSession session = new IngestionSession("bob", System.currentTimeMillis(), 0);
-        store.startSession(session);
-        store.store(session, key1, value1);
-        store.store(session, key2, value2);
-        String returned = store.getSSTableOutputPath(session, storageDir.getAbsolutePath());
+        String returned = store.getSSTableOutputPath(key1, key2, storageDir.getAbsolutePath());
         String expected =
                 storageDir.getAbsolutePath() + File.separator + "9xj_" + key1.toString() + "_" + key2.toString() +
                         "_1.sd";

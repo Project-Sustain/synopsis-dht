@@ -111,7 +111,7 @@ public class EntityStore {
         memTable.setReadOnly();
         // we throw the exception for the time being - verify once the upper layer is implemented
         String dir = diskManager.allocate(memTable.getEstimatedSize());
-        String storagePath = getSSTableOutputPath(session, dir);
+        String storagePath = getSSTableOutputPath(memTable.getFirstKey(), memTable.getLastKey(), dir);
         try (FileOutputStream fos = new FileOutputStream(storagePath); DataOutputStream dos =
                 new DataOutputStream(fos)) {
             SSTableWriter<StrandStorageKey, StrandStorageValue> ssTableWriter = new SSTableWriter<>(blockSize,
@@ -126,9 +126,9 @@ public class EntityStore {
         }
     }
 
-    public String getSSTableOutputPath(IngestionSession session, String path) throws IOException, StorageException {
-        MemTable<StrandStorageKey, StrandStorageValue> memTable = activeSessions.get(session);
+    public String getSSTableOutputPath(StrandStorageKey firstKey, StrandStorageKey lastKey, String path) throws IOException,
+            StorageException {
         entityStoreJournal.incrementSequenceId(++sequenceId);
-        return path + File.separator + entityId + "_" + memTable.getFirstKey() + "_" + memTable.getLastKey() + "_" + sequenceId + ".sd";
+        return path + File.separator + entityId + "_" + firstKey + "_" + lastKey + "_" + sequenceId + ".sd";
     }
 }

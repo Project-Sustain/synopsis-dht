@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class EntityStore {
     private final Logger logger = Logger.getLogger(EntityStore.class);
@@ -54,7 +55,10 @@ public class EntityStore {
                 return false;
             }
             this.sequenceId = entityStoreJournal.getSequenceId();
-            this.completedSessions = entityStoreJournal.getSessions();
+            Map<Long, IngestionSession> sessions = entityStoreJournal.getSessions();
+            this.completedSessions =
+                    sessions.entrySet().stream().filter(k -> k.getValue().isComplete()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            // todo: how to handle sessions  active during the node crash/shutdown?
         } catch (ChecksumGenerator.ChecksumError checksumError) {
             logger.error(checksumError.getMessage(), checksumError);
             throw new StorageException(checksumError.getMessage(), checksumError);
@@ -85,8 +89,8 @@ public class EntityStore {
         boolean isMemTableFull = memTable.add(key, value);
         if (isMemTableFull) {
             Metadata<StrandStorageKey> metadata = new Metadata<>();
-            toSSTable(session, diskManager, metadata);
             entityStoreJournal.addSerializedSSTable(session, metadata);
+            toSSTable(session, diskManager, metadata);
             memTable.clear();
         }
         return true;
@@ -96,8 +100,8 @@ public class EntityStore {
         MemTable<StrandStorageKey, StrandStorageValue> memTable = activeSessions.get(session);
         if (memTable.getEntryCount() > 0) {
             Metadata<StrandStorageKey> metadata = new Metadata<>();
-            toSSTable(session, diskManager, metadata);
             entityStoreJournal.addSerializedSSTable(session, metadata);
+            toSSTable(session, diskManager, metadata);
         }
         entityStoreJournal.endSession(session);
         activeSessions.remove(session);
@@ -126,8 +130,7 @@ public class EntityStore {
         }
     }
 
-    public String getSSTableOutputPath(StrandStorageKey firstKey, StrandStorageKey lastKey, String path) throws IOException,
-            StorageException {
+    public String getSSTableOutputPath(StrandStorageKey firstKey, StrandStorageKey lastKey, String path) throws IOException, StorageException {
         entityStoreJournal.incrementSequenceId(++sequenceId);
         return path + File.separator + entityId + "_" + firstKey + "_" + lastKey + "_" + sequenceId + ".sd";
     }

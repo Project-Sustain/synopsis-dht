@@ -28,6 +28,21 @@ public class StrandTest {
     }
 
     @Test
+    void testStrandMetadata(){
+        Path path = new Path(2);
+        Strand strand = createStrand(path, "9xj", (1391216400000L - 3600 * 1000), 1391216400000L, 1.34, 1.5);
+        strand.addMetadata("key1", "val1");
+        strand.addMetadata("key2", "val2");
+        Assertions.assertEquals("val1", strand.getMetadata("key1"));
+        Assertions.assertEquals("val2", strand.getMetadata("key2"));
+        // test overriding
+        strand.addMetadata("key2", "new_val");
+        Assertions.assertEquals("new_val", strand.getMetadata("key2"));
+
+        Assertions.assertNull(strand.getMetadata("key3"));
+    }
+
+    @Test
     void testStrandMerge() {
         Path path1 = new Path(2);
         Strand strand1 = createStrand(path1, "9xj", (1391216400000L - 3600 * 1000), 1391216400000L,1.34, 1.5);

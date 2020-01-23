@@ -79,6 +79,10 @@ public class Strand {
         metadata.setProperty(key, val);
     }
 
+    public String getMetadata(String key) {
+        return metadata.getProperty(key);
+    }
+
     public void serialize(SerializationOutputStream dos) throws IOException {
         dos.writeUTF(geohash);
         dos.writeLong(fromTimeStamp);
@@ -98,7 +102,7 @@ public class Strand {
         return geohash;
     }
 
-    public long getFromTimeStamp(){
+    public long getFromTimeStamp() {
         return fromTimeStamp;
     }
 

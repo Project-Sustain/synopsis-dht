@@ -7,6 +7,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.Collections;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * User provided configuration for a storage node. This bean class is a direct mapping between
@@ -16,6 +17,8 @@ import java.util.Map;
 @SuppressWarnings("unused")
 public class NodeConfiguration {
 
+    public static final String HOSTNAME_PLACEHOLDER = "$HOSTNAME";
+
     static NodeConfiguration fromYamlFile(String filePath) throws FileNotFoundException {
         FileInputStream fis;
         fis = new FileInputStream(filePath);
@@ -23,12 +26,15 @@ public class NodeConfiguration {
         return yaml.load(fis);
     }
 
+
+    private String hostname = Util.getHostname();
     private Map<String, Long> storageDirs;
     private String storageAllocationPolicy;
+    private String rootJournalLoc;
 
     public Map<String, Long> getStorageDirs() {
         if(this.storageDirs != null) {
-            return Collections.unmodifiableMap(this.storageDirs);
+            return this.storageDirs;
         } else {
             return null;
         }
@@ -36,7 +42,8 @@ public class NodeConfiguration {
 
     public void setStorageDirs(Map<String, Long> storageDirs) {
         if (this.storageDirs == null) {
-            this.storageDirs = storageDirs;
+            this.storageDirs = Collections.unmodifiableMap(storageDirs).entrySet().stream().collect(
+                    Collectors.toMap(x -> x.getKey().replace(HOSTNAME_PLACEHOLDER, hostname), Map.Entry::getValue));;
         }
     }
 
@@ -45,8 +52,16 @@ public class NodeConfiguration {
     }
 
     public void setStorageAllocationPolicy(String storageAllocationPolicy) {
-        if(this.storageAllocationPolicy == null) {
+        if (this.storageAllocationPolicy == null) {
             this.storageAllocationPolicy = storageAllocationPolicy;
         }
+    }
+
+    public String getRootJournalLoc() {
+        return rootJournalLoc;
+    }
+
+    public void setRootJournalLoc(String rootJournalLoc) {
+        this.rootJournalLoc = rootJournalLoc.replace(HOSTNAME_PLACEHOLDER, hostname);
     }
 }

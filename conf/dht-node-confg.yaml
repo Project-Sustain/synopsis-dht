@@ -4,3 +4,5 @@ storageDirs:
   /sustain/data/b : 10
 
 storageAllocationPolicy: 'round-robin'
+
+rootJournalLoc: '/tmp/$HOSTNAME-root-journal.slog'

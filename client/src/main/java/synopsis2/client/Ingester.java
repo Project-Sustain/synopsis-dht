@@ -1,6 +1,6 @@
 package synopsis2.client;
 
-import synopsis2.Strand;
+import sustain.synopsis.common.Strand;
 
 public interface Ingester {
     public void initialize();

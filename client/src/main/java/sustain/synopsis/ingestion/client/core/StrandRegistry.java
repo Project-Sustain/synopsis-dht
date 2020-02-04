@@ -38,7 +38,7 @@ public class StrandRegistry {
      * @param strand New strand to be added
      * @return Current number of strands in the registry
      */
-    int add(Strand strand) {
+    public int add(Strand strand) {
         Strand existing = registry.putIfAbsent(strand.getKey(), strand);
         if (existing != null) {
             existing.merge(strand);
@@ -92,7 +92,7 @@ public class StrandRegistry {
      * Terminate the current ingestion session. Send all the remaining strands in the registry to the cloud.
      * @return Total number of strands ingested during the session.
      */
-    int terminateSession() {
+    public int terminateSession() {
         publisher.publish(new HashSet<>(registry.values()));
         totalPublishedStrandCount += registry.size();
         logger.info("[" + Thread.currentThread().getName() + "] Publishing all strands. Published strand count: " +

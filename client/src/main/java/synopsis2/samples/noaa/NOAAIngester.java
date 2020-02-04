@@ -1,6 +1,7 @@
 package synopsis2.samples.noaa;
 
 import org.apache.log4j.Logger;
+import sustain.synopsis.common.Strand;
 import sustain.synopsis.ingestion.client.core.TemporalQuantizer;
 import sustain.synopsis.ingestion.client.geohash.GeoHash;
 import sustain.synopsis.sketch.dataset.Metadata;
@@ -12,7 +13,6 @@ import sustain.synopsis.sketch.serialization.SerializationException;
 import sustain.synopsis.sketch.serialization.SerializationInputStream;
 import sustain.synopsis.sketch.serialization.Serializer;
 import sustain.synopsis.sketch.stat.RunningStatisticsND;
-import synopsis2.Strand;
 import synopsis2.client.Ingester;
 import synopsis2.client.IngestionConfig;
 
@@ -89,12 +89,9 @@ public class NOAAIngester implements Ingester {
     private Strand constructStrand(String geohash, long ts, Metadata metadata) {
         List<String> features = ingestionConfig.getFeatures();
         Path path = new Path(features.size() + 2); // additional vertices for time and location
-        StringBuilder keyBuilder = new StringBuilder();
 
         // path: time -> feature 1 -> ..... -> feature n -> geohash (data container)
-        long temporalBracket = temporalQuantizer.getTemporalBoundaries(ts)[0];
-        path.add(new Feature("time", temporalBracket));
-        keyBuilder.append(temporalBracket);
+        long[] temporalBracket = temporalQuantizer.getTemporalBoundaries(ts);
         double[] values = new double[features.size()]; // skip time and location
         int i = 0;
         for (String feature : features) {
@@ -102,15 +99,12 @@ public class NOAAIngester implements Ingester {
             Feature quantizedVal = quantizer.quantize(metadata.getAttribute(feature));
             values[i++] = metadata.getAttribute(feature).getDouble();
             path.add(new Feature(feature, quantizedVal));
-            keyBuilder.append(quantizedVal.getDouble());
         }
-        path.add(new Feature("location", geohash));
-        keyBuilder.append(geohash);
         // create the data container and set as the data of the last vertex
         RunningStatisticsND rsnd = new RunningStatisticsND(values);
         DataContainer container = new DataContainer(rsnd);
         path.get(path.size() - 1).setData(container);
-        return new Strand(geohash, ts, path, keyBuilder.toString());
+        return new Strand(geohash, temporalBracket[0], temporalBracket[1], path);
     }
 
     private File[] getInputFilesInDir(String dataDirPath) {
@@ -128,10 +122,12 @@ public class NOAAIngester implements Ingester {
             return;
         }
         try {
-            FileInputStream fIn = new FileInputStream(inputFiles[index++]);
+            File currentFile = inputFiles[index++];
+            FileInputStream fIn = new FileInputStream(currentFile);
             BufferedInputStream bIn = new BufferedInputStream(fIn);
             this.inStream = new SerializationInputStream(bIn);
             this.recordCount = inStream.readInt();
+            logger.info("Ingesting data from file: " + currentFile.getAbsolutePath() + ", Record Count: " + recordCount);
         } catch (IOException e) {
             logger.error("Error opening the new file.", e);
         }

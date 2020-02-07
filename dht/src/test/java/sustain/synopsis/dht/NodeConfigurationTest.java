@@ -25,6 +25,7 @@ public class NodeConfigurationTest {
         fw.append("rootJournalLoc: '/tmp/root-journal.slog'\n");
         fw.append("memTableSize: 50\n");
         fw.append("blockSize: 10\n");
+        fw.append("metadataStoreDir: '/tmp'\n");
         fw.flush();
         fw.close();
         NodeConfiguration configuration = NodeConfiguration.fromYamlFile(nodeConfigFilePath.toAbsolutePath().toString());

@@ -33,6 +33,7 @@ public class NodeConfiguration {
     private String rootJournalLoc;
     private int memTableSize;
     private int blockSize;
+    private String metadataStoreDir;
 
     public Map<String, Long> getStorageDirs() {
         if(this.storageDirs != null) {
@@ -81,5 +82,13 @@ public class NodeConfiguration {
 
     public void setBlockSize(int blockSize) {
         this.blockSize = blockSize;
+    }
+
+    public String getMetadataStoreDir() {
+        return metadataStoreDir;
+    }
+
+    public void setMetadataStoreDir(String metadataStoreDir) {
+        this.metadataStoreDir = metadataStoreDir;
     }
 }

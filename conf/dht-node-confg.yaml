@@ -15,3 +15,6 @@ memTableSize: 50
 
 # block size used when creating on-disk ssTables (in MB)
 blockSize: 10
+
+# metadata storage directory - used for storing metadata of entity stores (e.g.: commit logs)
+metadataStoreDir: '/tmp/'

@@ -1,5 +1,5 @@
 ---
-# storage directories and the upper limits on the usage (in GB) used for storing data
+# storage directories and the upper limits on the usage used for storing data (in GB)
 storageDirs:
   /sustain/data/a : 10
   /sustain/data/b : 10
@@ -9,3 +9,9 @@ storageAllocationPolicy: 'round-robin'
 
 # location of the root commit log
 rootJournalLoc: '/tmp/$HOSTNAME-root-journal.slog'
+
+# upper limit on the memory utilization by a memTable (in MB)
+memTableSize: 50
+
+# block size used when creating on-disk ssTables (in MB)
+blockSize: 10

@@ -31,6 +31,8 @@ public class NodeConfiguration {
     private Map<String, Long> storageDirs;
     private String storageAllocationPolicy;
     private String rootJournalLoc;
+    private int memTableSize;
+    private int blockSize;
 
     public Map<String, Long> getStorageDirs() {
         if(this.storageDirs != null) {
@@ -63,5 +65,21 @@ public class NodeConfiguration {
 
     public void setRootJournalLoc(String rootJournalLoc) {
         this.rootJournalLoc = rootJournalLoc.replace(HOSTNAME_PLACEHOLDER, hostname);
+    }
+
+    public int getMemTableSize() {
+        return memTableSize;
+    }
+
+    public void setMemTableSize(int memTableSize) {
+        this.memTableSize = memTableSize;
+    }
+
+    public int getBlockSize() {
+        return blockSize;
+    }
+
+    public void setBlockSize(int blockSize) {
+        this.blockSize = blockSize;
     }
 }

@@ -23,6 +23,8 @@ public class NodeConfigurationTest {
         fw.append("  /tmp/ : 1024\n");
         fw.append("storageAllocationPolicy: 'round-robin'\n");
         fw.append("rootJournalLoc: '/tmp/root-journal.slog'\n");
+        fw.append("memTableSize: 50\n");
+        fw.append("blockSize: 10\n");
         fw.flush();
         fw.close();
         NodeConfiguration configuration = NodeConfiguration.fromYamlFile(nodeConfigFilePath.toAbsolutePath().toString());
@@ -30,10 +32,10 @@ public class NodeConfigurationTest {
         Map<String, Long> storageDirs = configuration.getStorageDirs();
         Assertions.assertEquals(1, storageDirs.size());
         Assertions.assertEquals(1024L, storageDirs.get("/tmp/"));
-
         Assertions.assertEquals("round-robin", configuration.getStorageAllocationPolicy());
-
         Assertions.assertEquals("/tmp/root-journal.slog", configuration.getRootJournalLoc());
+        Assertions.assertEquals(50, configuration.getMemTableSize());
+        Assertions.assertEquals(10, configuration.getBlockSize());
     }
 
     @Test

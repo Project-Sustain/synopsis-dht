@@ -1,8 +1,11 @@
 ---
+# storage directories and the upper limits on the usage (in GB) used for storing data
 storageDirs:
   /sustain/data/a : 10
   /sustain/data/b : 10
 
+# how the storage directories are chosen from available options listed under 'storageDirs'
 storageAllocationPolicy: 'round-robin'
 
+# location of the root commit log
 rootJournalLoc: '/tmp/$HOSTNAME-root-journal.slog'

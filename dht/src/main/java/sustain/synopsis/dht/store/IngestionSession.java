@@ -2,9 +2,6 @@ package sustain.synopsis.dht.store;
 
 import sustain.synopsis.storage.lsmtree.Metadata;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -22,6 +19,10 @@ public class IngestionSession implements Comparable<IngestionSession> {
         this.sessionId = sessionId;
         this.complete = false;
         this.serializedSSTables = new ArrayList<>();
+    }
+
+    public IngestionSession(long ingestionTime) {
+        this.ingestionTime = ingestionTime;
     }
 
     public void setComplete() {
@@ -48,36 +49,6 @@ public class IngestionSession implements Comparable<IngestionSession> {
     @Override
     public int compareTo(IngestionSession o) {
         return Long.compare(this.sessionId, o.sessionId);
-    }
-
-    public void serialize(DataOutputStream dos) throws IOException {
-        dos.writeUTF(ingestionUser);
-        dos.writeLong(ingestionTime);
-        dos.writeLong(sessionId);
-        dos.writeBoolean(complete);
-        dos.writeInt(serializedSSTables.size());
-        for (Metadata<StrandStorageKey> metadata : serializedSSTables) {
-            metadata.serialize(dos);
-        }
-    }
-
-    public static IngestionSession deserialize(DataInputStream dis) throws IOException, InstantiationException,
-            IllegalAccessException {
-        String ingestionUser = dis.readUTF();
-        long ingestionTime = dis.readLong();
-        long sessionId = dis.readLong();
-
-        IngestionSession ingestionSession = new IngestionSession(ingestionUser, ingestionTime, sessionId);
-        if (dis.readBoolean()) {
-            ingestionSession.setComplete();
-        }
-        int ssTableCount = dis.readInt();
-        for (int i = 0; i < ssTableCount; i++) {
-            Metadata<StrandStorageKey> metadata = new Metadata<>();
-            metadata.deserialize(dis, StrandStorageKey.class);
-            ingestionSession.addSerializedSSTable(metadata);
-        }
-        return ingestionSession;
     }
 
     public String getIngestionUser() {

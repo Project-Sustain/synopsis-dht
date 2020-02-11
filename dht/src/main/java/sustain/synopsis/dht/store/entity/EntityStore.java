@@ -13,17 +13,18 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class EntityStore {
     private final Logger logger = Logger.getLogger(EntityStore.class);
     private final String entityId;
     public final long blockSize;
+    /**
+     * There can be multiple active ingestion sessions at a given time for a single entity.
+     */
     private Map<IngestionSession, MemTable<StrandStorageKey, StrandStorageValue>> activeSessions;
-    private Map<Long, IngestionSession> completedSessions;
+    private Map<IngestionSession, List<Metadata<StrandStorageKey>>> activeMetadata;
     private DiskManager diskManager;
     private int sequenceId;
     // todo: these should be read from the config
@@ -31,14 +32,17 @@ public class EntityStore {
     private ChecksumGenerator checksumGenerator;
     private EntityStoreJournal entityStoreJournal;
     private long memTableSize;
+    private List<Metadata<StrandStorageKey>> queryiableMetadata;
 
     public EntityStore(String entityId, String metadataDir, long memTableSize, long blockSize) {
         this.entityId = entityId;
         this.blockSize = blockSize;
         this.activeSessions = new HashMap<>();
+        this.activeMetadata = new HashMap<>();
         this.compressor = new LZ4BlockCompressor();
         this.memTableSize = memTableSize;
         this.entityStoreJournal = new EntityStoreJournal(entityId, metadataDir);
+        this.queryiableMetadata = new ArrayList<>();
     }
 
     public boolean init() throws StorageException {
@@ -55,10 +59,11 @@ public class EntityStore {
                 return false;
             }
             this.sequenceId = entityStoreJournal.getSequenceId();
-            Map<Long, IngestionSession> sessions = entityStoreJournal.getSessions();
-            this.completedSessions =
-                    sessions.entrySet().stream().filter(k -> k.getValue().isComplete()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            List<Metadata<StrandStorageKey>> metadataList = entityStoreJournal.getMetadata();
+            this.queryiableMetadata =
+                    metadataList.stream().filter(Metadata::isSessionComplete).collect(Collectors.toList());
             // todo: how to handle sessions  active during the node crash/shutdown?
+            // todo: populate activeSessions and activeMetadata
         } catch (ChecksumGenerator.ChecksumError checksumError) {
             logger.error(checksumError.getMessage(), checksumError);
             throw new StorageException(checksumError.getMessage(), checksumError);
@@ -66,47 +71,62 @@ public class EntityStore {
         return true;
     }
 
-    public boolean startSession(IngestionSession session) {
+    public void startSession(IngestionSession session) throws IOException, StorageException {
         if (activeSessions.containsKey(session)) {
             logger.warn("Trying to initiate already existing session. Session id: " + session.getSessionId());
-            return true;
+            return;
         }
         try {
             entityStoreJournal.startSession(session); // log first
             activeSessions.put(session, new MemTable<>(memTableSize));
-            return true;
+            activeMetadata.put(session, new ArrayList<>());
         } catch (IOException | StorageException e) {
             logger.error("Error initializing the session. ", e);
+            throw e;
+        }
+    }
+
+    public boolean store(IngestionSession session, StrandStorageKey key, StrandStorageValue value) {
+        // todo: data should be first written to a WAL
+        try {
+            if (!activeSessions.containsKey(session)) {
+                startSession(session);
+            }
+            MemTable<StrandStorageKey, StrandStorageValue> memTable = activeSessions.get(session);
+            boolean isMemTableFull = memTable.add(key, value);
+            if (isMemTableFull) {
+                purgeMemTable(session, memTable);
+            }
+        } catch (IOException | StorageException e) {
+            logger.error("Error storing the strand.", e);
             return false;
         }
-    }
-
-    public boolean store(IngestionSession session, StrandStorageKey key, StrandStorageValue value) throws StorageException, IOException {
-        // todo: data should be first written to a WAL
-        // todo: handle error
-        // todo: check if the session is valid
-        MemTable<StrandStorageKey, StrandStorageValue> memTable = activeSessions.get(session);
-        boolean isMemTableFull = memTable.add(key, value);
-        if (isMemTableFull) {
-            Metadata<StrandStorageKey> metadata = new Metadata<>();
-            entityStoreJournal.addSerializedSSTable(session, metadata);
-            toSSTable(session, diskManager, metadata);
-            memTable.clear();
-        }
         return true;
     }
 
-    public boolean endSession(IngestionSession session) throws StorageException, IOException {
+    private void purgeMemTable(IngestionSession session, MemTable<StrandStorageKey, StrandStorageValue> memTable) throws IOException, StorageException {
+        Metadata<StrandStorageKey> metadata = new Metadata<>();
+        metadata.setSessionId(session.getSessionId());
+        metadata.setUser(session.getIngestionUser());
+        metadata.setSessionStartTS(session.getSessionStartTS());
+        entityStoreJournal.addSerializedSSTable(session, metadata);
+        toSSTable(session, diskManager, metadata);
+        activeMetadata.get(session).add(metadata);
+        memTable.clear();
+    }
+
+    public void endSession(IngestionSession session) throws StorageException, IOException {
+        if (!activeSessions.containsKey(session)) {
+            return;
+        }
         MemTable<StrandStorageKey, StrandStorageValue> memTable = activeSessions.get(session);
         if (memTable.getEntryCount() > 0) {
-            Metadata<StrandStorageKey> metadata = new Metadata<>();
-            entityStoreJournal.addSerializedSSTable(session, metadata);
-            toSSTable(session, diskManager, metadata);
+            purgeMemTable(session, memTable);
         }
         entityStoreJournal.endSession(session);
+        queryiableMetadata.addAll(activeMetadata.get(session));
         activeSessions.remove(session);
-        completedSessions.put(session.getSessionId(), session);
-        return true;
+        activeMetadata.remove(session);
     }
 
     // we inject a disk manager instance for unit testing purposes
@@ -133,5 +153,9 @@ public class EntityStore {
     public String getSSTableOutputPath(StrandStorageKey firstKey, StrandStorageKey lastKey, String path) throws IOException, StorageException {
         entityStoreJournal.incrementSequenceId(++sequenceId);
         return path + File.separator + entityId + "_" + firstKey + "_" + lastKey + "_" + sequenceId + ".sd";
+    }
+
+    public String getJournalFilePath() {
+        return entityStoreJournal.getJournalFilePath();
     }
 }

@@ -1,6 +1,8 @@
 package sustain.synopsis.dht.store.node;
 
 import sustain.synopsis.common.Strand;
+
+
 import sustain.synopsis.dht.Context;
 import sustain.synopsis.dht.NodeConfiguration;
 import sustain.synopsis.dht.Util;
@@ -102,9 +104,6 @@ public class NodeStore {
      */
     public void store(String userId, String datasetId, String entityId, long sessionId, long sessionCreationTs,
                       Strand strand) throws StorageException, IOException {
-        if (!initialized.get()) {
-            init();
-        }
         // check if the session is new. If it's a new session validate.
         // It's not necessary to record this in the commit log. A session can revalidated and cached in case
         // of node failure/restart.

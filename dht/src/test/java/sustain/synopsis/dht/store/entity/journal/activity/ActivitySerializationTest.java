@@ -13,13 +13,11 @@ import java.io.IOException;
 public class ActivitySerializationTest {
     @Test
     void testStartSessionActivity() throws IOException {
-        Activity sessionActivity = new StartSessionActivity("bob", 12345L, 100032L);
+        Activity sessionActivity = new StartSessionActivity(100032L);
         byte[] arr = sessionActivity.serialize();
 
         StartSessionActivity deserializedSessionActivity = new StartSessionActivity();
         deserializedSessionActivity.deserialize(arr);
-        Assertions.assertEquals("bob", deserializedSessionActivity.getUser());
-        Assertions.assertEquals(12345L, deserializedSessionActivity.getIngestionTimeStamp());
         Assertions.assertEquals(100032L, deserializedSessionActivity.getSessionId());
     }
 
@@ -29,6 +27,9 @@ public class ActivitySerializationTest {
         metadata.setMin(new StrandStorageKey(10L, 15L));
         metadata.setMax(new StrandStorageKey(30L, 35L));
         metadata.setPath("/test/path");
+        metadata.setSessionId(12345L);
+        metadata.setUser("bob");
+        metadata.setSessionStartTS(System.currentTimeMillis());
         SerializeSSTableActivity serializeActivity = new SerializeSSTableActivity(123L, metadata);
         byte[] serialized = serializeActivity.serialize();
 
@@ -63,7 +64,7 @@ public class ActivitySerializationTest {
     @Test
     void testJournalLogFactory() throws IOException {
         try {
-            StartSessionActivity startSessionActivity = new StartSessionActivity("bob", 1234L, 567L);
+            StartSessionActivity startSessionActivity = new StartSessionActivity(12345L);
             Activity activity = JournalLogFactory.parse(startSessionActivity.serialize());
             Assertions.assertEquals(StartSessionActivity.TYPE, activity.getType());
 
@@ -71,16 +72,20 @@ public class ActivitySerializationTest {
             metadata.setMin(new StrandStorageKey(10L, 15L));
             metadata.setMax(new StrandStorageKey(30L, 35L));
             metadata.setPath("/test/path");
-            SerializeSSTableActivity serializeSSTableActivity = new SerializeSSTableActivity(124L, metadata);
+            metadata.setPath("/test/path");
+            metadata.setSessionId(12345L);
+            metadata.setUser("bob");
+            metadata.setSessionStartTS(System.currentTimeMillis());
+            SerializeSSTableActivity serializeSSTableActivity = new SerializeSSTableActivity(12345L, metadata);
             activity = JournalLogFactory.parse(serializeSSTableActivity.serialize());
             Assertions.assertEquals(SerializeSSTableActivity.TYPE, activity.getType());
 
-            EndSessionActivity endSessionActivity = new EndSessionActivity(1224L);
+            EndSessionActivity endSessionActivity = new EndSessionActivity(12345L);
             activity = JournalLogFactory.parse(endSessionActivity.serialize());
             Assertions.assertEquals(EndSessionActivity.TYPE, activity.getType());
 
             // check if deserialize method is called
-            Assertions.assertEquals(1224L, ((EndSessionActivity)activity).getSessionId());
+            Assertions.assertEquals(12345L, ((EndSessionActivity)activity).getSessionId());
 
             IncSeqIdActivity incrementSeqIdActivity = new IncSeqIdActivity(1);
             activity= JournalLogFactory.parse(incrementSeqIdActivity.serialize());

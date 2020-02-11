@@ -30,7 +30,18 @@ public class Metadata<K extends Comparable<K> & Serializable> {
      */
     private Map<K, byte[]> checksums = new TreeMap<>();
 
+    /**
+     * On-disk storage path
+     */
     private String path;
+
+    private long sessionId;
+
+    private String user;
+
+    private long sessionStartTS;
+
+    private boolean isSessionComplete = false;
 
     public String getPath() {
         return path;
@@ -72,10 +83,46 @@ public class Metadata<K extends Comparable<K> & Serializable> {
         checksums.put(key, checksum);
     }
 
+    public long getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(long sessionId) {
+        this.sessionId = sessionId;
+    }
+
+    public boolean isSessionComplete() {
+        return isSessionComplete;
+    }
+
+    public void setSessionComplete(boolean sessionComplete) {
+        isSessionComplete = sessionComplete;
+    }
+
+    public String getUser() {
+        return user;
+    }
+
+    public void setUser(String user) {
+        this.user = user;
+    }
+
+    public long getSessionStartTS() {
+        return sessionStartTS;
+    }
+
+    public void setSessionStartTS(long sessionStartTS) {
+        this.sessionStartTS = sessionStartTS;
+    }
+
     public void serialize(DataOutputStream dataOutputStream) throws IOException {
         min.serialize(dataOutputStream);
         max.serialize(dataOutputStream);
         dataOutputStream.writeUTF(path);
+        dataOutputStream.writeLong(sessionId);
+        dataOutputStream.writeBoolean(isSessionComplete);
+        dataOutputStream.writeUTF(user);
+        dataOutputStream.writeLong(sessionStartTS);
         // block index
         dataOutputStream.writeInt(blockIndex.size());
         for (K key : blockIndex.keySet()) {
@@ -99,6 +146,10 @@ public class Metadata<K extends Comparable<K> & Serializable> {
             this.max = clazz.newInstance();
             max.deserialize(dataInputStream);
             this.path = dataInputStream.readUTF();
+            this.sessionId = dataInputStream.readLong();
+            this.isSessionComplete = dataInputStream.readBoolean();
+            this.user = dataInputStream.readUTF();
+            this.sessionStartTS = dataInputStream.readLong();
             // block index
             int blockIndexSize = dataInputStream.readInt();
             for (int i = 0; i < blockIndexSize; i++) {

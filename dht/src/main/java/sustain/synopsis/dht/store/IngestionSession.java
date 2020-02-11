@@ -8,21 +8,21 @@ import java.util.Objects;
 
 public class IngestionSession implements Comparable<IngestionSession> {
     private String ingestionUser;
-    private long ingestionTime;
+    private long sessionStartTS;
     private long sessionId;
     private boolean complete;
     private List<Metadata<StrandStorageKey>> serializedSSTables;
 
-    public IngestionSession(String ingestionUser, long ingestionTime, long sessionId) {
+    public IngestionSession(String ingestionUser, long sessionStartTS, long sessionId) {
         this.ingestionUser = ingestionUser;
-        this.ingestionTime = ingestionTime;
+        this.sessionStartTS = sessionStartTS;
         this.sessionId = sessionId;
         this.complete = false;
         this.serializedSSTables = new ArrayList<>();
     }
 
-    public IngestionSession(long ingestionTime) {
-        this.ingestionTime = ingestionTime;
+    public IngestionSession(long sessionStartTS) {
+        this.sessionStartTS = sessionStartTS;
     }
 
     public void setComplete() {
@@ -55,8 +55,8 @@ public class IngestionSession implements Comparable<IngestionSession> {
         return ingestionUser;
     }
 
-    public long getIngestionTime() {
-        return ingestionTime;
+    public long getSessionStartTS() {
+        return sessionStartTS;
     }
 
     public long getSessionId() {

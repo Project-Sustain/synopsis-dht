@@ -1,8 +1,6 @@
 package sustain.synopsis.dht.store.node;
 
 import sustain.synopsis.common.Strand;
-
-
 import sustain.synopsis.dht.Context;
 import sustain.synopsis.dht.NodeConfiguration;
 import sustain.synopsis.dht.Util;
@@ -12,19 +10,25 @@ import sustain.synopsis.dht.store.entity.EntityStore;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Orchestrates data storage within a storage node. Keeps track of various entity stores, organized by the dataset.
  * Creation of entity stores is recorded in a commit log to withstand node crashes and restarts.
  *
- * Concurrency model: Writes to each entity store is handled by a single writer. There can be multiple reader threads
- * for a given entity store.
+ * Concurrency model: Writes to each entity store is handled by a single writer. However, there can be
+ * multiple concurrent write requests (using the #store()) at a NodeStore. There can be multiple reader threads
+ * for a given entity store. The node initialization is handled by the main thread during the startup of the node.
  */
 public class NodeStore {
     private org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(NodeStore.class);
+    private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     private Map<String, Map<String, EntityStore>> entityStoreMap = new ConcurrentHashMap<>();
     private Set<Long> validatedSessionIds = Collections.synchronizedSet(new HashSet<>());
     private SessionValidator sessionValidator;
@@ -78,7 +82,7 @@ public class NodeStore {
                     logger.debug("Completed initializing entity store: " + createEntityStore.getEntityId() + ", " +
                             "elapsed time (s): " + (entityStoreEndTS - entityStoreStartTS) / (1000.0));
                 }
-                entityStoreMap.putIfAbsent(createEntityStore.getDataSetId(), new HashMap<>());
+                entityStoreMap.putIfAbsent(createEntityStore.getDataSetId(), new ConcurrentHashMap<>());
                 entityStoreMap.get(createEntityStore.getDataSetId()).put(createEntityStore.getEntityId(), entityStore);
             } catch (IOException | StorageException e) {
                 logger.error(e);
@@ -107,6 +111,8 @@ public class NodeStore {
         // check if the session is new. If it's a new session validate.
         // It's not necessary to record this in the commit log. A session can revalidated and cached in case
         // of node failure/restart.
+        // It is possible that there will be multiple concurrent request to validate the same session in this code
+        // which is acceptable and will not affect the accuracy of the program.
         if (!validatedSessionIds.contains(sessionId)) {
             boolean validSession = sessionValidator.validate(userId, datasetId, sessionId);
             if (!validSession) {
@@ -118,25 +124,37 @@ public class NodeStore {
         }
 
         // retrieve entity store
-        entityStoreMap.putIfAbsent(datasetId, new HashMap<>());
-        EntityStore entityStore;
-        if (entityStoreMap.get(datasetId).containsKey(entityId)) {
-            entityStore = entityStoreMap.get(datasetId).get(entityId);
-        } else {
-            entityStore = new EntityStore(entityId, metadataStoreDir, memTableSize, blockSize);
+        if (!entityStoreMap.containsKey(datasetId)) {
             try {
-                entityStore.init();
+                lock.writeLock().lock();
+                entityStoreMap.putIfAbsent(datasetId, new ConcurrentHashMap<>());
+            } finally {
+                lock.writeLock().unlock();
+            }
+        }
+        EntityStore entityStore;
+        if (!entityStoreMap.get(datasetId).containsKey(entityId)) {
+            try {
+                lock.writeLock().lock();
+                // we need to check again if a previous invocation using a different thread have successfully
+                // initialized the entity store
+                if (!entityStoreMap.get(datasetId).containsKey(entityId)) {
+                    entityStore = new EntityStore(entityId, metadataStoreDir, memTableSize, blockSize);
+                    entityStore.init();
+                    // If a new entity store is created, journal its metadata location
+                    CreateEntityStoreActivity createEntityStoreActivity = new CreateEntityStoreActivity(datasetId,
+                            entityId, entityStore.getJournalFilePath());
+                    rootLogger.append(createEntityStoreActivity.serialize());
+                    entityStoreMap.get(datasetId).put(entityId, entityStore);
+                }
             } catch (StorageException e) {
                 logger.error("Error initializing a new entity store.", e);
                 throw e;
+            } finally {
+                lock.writeLock().unlock();
             }
-            // If a new entity store is created, journal its metadata location
-            CreateEntityStoreActivity createEntityStoreActivity = new CreateEntityStoreActivity(datasetId, entityId,
-                    entityStore.getJournalFilePath());
-            rootLogger.append(createEntityStoreActivity.serialize());
-            entityStoreMap.get(datasetId).put(entityId, entityStore);
         }
-
+        entityStore = entityStoreMap.get(datasetId).get(entityId);
         // Store the strand - check the status of the storage
         // we create a new instance of IngestionSession because each entity store uses separate IngestionSession
         // objects. Two IngestionSession objects are considered the same if they have the same session id.
@@ -156,13 +174,13 @@ public class NodeStore {
         // Acknowledge every entity store of the dataset
         // There may be sessions that did not receive any data for this session - this case is handled by the entity
         // store.
-        entityStoreMap.get(datasetId).forEach((key, value) -> {
+        entityStoreMap.get(datasetId).forEach((entityId, entityStore) -> {
             try {
                 // we use the IngestionSession constructor with the session id here. It is used only for
                 // looking up a session.
-                value.endSession(new IngestionSession(sessionId));
+                entityStore.endSession(new IngestionSession(sessionId));
             } catch (StorageException | IOException e) {
-                logger.error("Error terminating session on the entity store. Dataset Id: " + datasetId + ", session " + "id:" + sessionId + ", entity id: " + key);
+                logger.error("Error terminating session on the entity store. Dataset Id: " + datasetId + ", session " + "id:" + sessionId + ", entity id: " + entityId);
             }
         });
     }

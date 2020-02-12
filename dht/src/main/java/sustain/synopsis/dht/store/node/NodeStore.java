@@ -21,7 +21,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 /**
  * Orchestrates data storage within a storage node. Keeps track of various entity stores, organized by the dataset.
  * Creation of entity stores is recorded in a commit log to withstand node crashes and restarts.
- *
+ * <p>
  * Concurrency model: Writes to each entity store is handled by a single writer. However, there can be
  * multiple concurrent write requests (using the #store()) at a NodeStore. There can be multiple reader threads
  * for a given entity store. The node initialization is handled by the main thread during the startup of the node.
@@ -128,6 +128,9 @@ public class NodeStore {
             try {
                 lock.writeLock().lock();
                 entityStoreMap.putIfAbsent(datasetId, new ConcurrentHashMap<>());
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Adding a new dataset. Dataset Id: " + datasetId);
+                }
             } finally {
                 lock.writeLock().unlock();
             }
@@ -146,6 +149,10 @@ public class NodeStore {
                             entityId, entityStore.getJournalFilePath());
                     rootLogger.append(createEntityStoreActivity.serialize());
                     entityStoreMap.get(datasetId).put(entityId, entityStore);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Added and initialized a new entity store. Dataset id: " + datasetId + ", " +
+                                "entity id: " + entityId);
+                    }
                 }
             } catch (StorageException e) {
                 logger.error("Error initializing a new entity store.", e);
@@ -180,9 +187,13 @@ public class NodeStore {
                 // looking up a session.
                 entityStore.endSession(new IngestionSession(sessionId));
             } catch (StorageException | IOException e) {
-                logger.error("Error terminating session on the entity store. Dataset Id: " + datasetId + ", session " + "id:" + sessionId + ", entity id: " + entityId);
+                logger.error("Error terminating session on the entity store. Dataset Id: " + datasetId +
+                        ", session " + "id:" + sessionId + ", entity id: " + entityId);
             }
         });
+        if (logger.isDebugEnabled()) {
+            logger.debug("Processed end session message. Dataset id: " + datasetId + ", session id: " + sessionId);
+        }
     }
 
 

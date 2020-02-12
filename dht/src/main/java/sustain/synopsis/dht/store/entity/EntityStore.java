@@ -14,8 +14,14 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
+/**
+ * Concurrency model: Main thread of a node will run the initialization code. There is a single writer thread
+ * and multiple reader threads.
+ */
 public class EntityStore {
     private final Logger logger = Logger.getLogger(EntityStore.class);
     private final String entityId;
@@ -26,13 +32,17 @@ public class EntityStore {
     private Map<IngestionSession, MemTable<StrandStorageKey, StrandStorageValue>> activeSessions;
     private Map<IngestionSession, List<Metadata<StrandStorageKey>>> activeMetadata;
     private DiskManager diskManager;
-    private int sequenceId;
+    private AtomicInteger sequenceId;
     // todo: these should be read from the config
     private BlockCompressor compressor;
     private ChecksumGenerator checksumGenerator;
     private EntityStoreJournal entityStoreJournal;
     private long memTableSize;
+    /**
+     * Queryiable metadata is accessed by both the reader threads and the writer threads
+     */
     private List<Metadata<StrandStorageKey>> queryiableMetadata;
+    private ReentrantReadWriteLock lock;
 
     public EntityStore(String entityId, String metadataDir, long memTableSize, long blockSize) {
         this.entityId = entityId;
@@ -43,6 +53,8 @@ public class EntityStore {
         this.memTableSize = memTableSize;
         this.entityStoreJournal = new EntityStoreJournal(entityId, metadataDir);
         this.queryiableMetadata = new ArrayList<>();
+        this.sequenceId = new AtomicInteger(-1);
+        this.lock = new ReentrantReadWriteLock();
     }
 
     public boolean init() throws StorageException {
@@ -58,8 +70,8 @@ public class EntityStore {
             if (!success) {
                 return false;
             }
-            this.sequenceId = entityStoreJournal.getSequenceId();
             List<Metadata<StrandStorageKey>> metadataList = entityStoreJournal.getMetadata();
+            this.sequenceId.set(entityStoreJournal.getSequenceId());
             this.queryiableMetadata =
                     metadataList.stream().filter(Metadata::isSessionComplete).collect(Collectors.toList());
             // todo: how to handle sessions  active during the node crash/shutdown?
@@ -124,7 +136,12 @@ public class EntityStore {
             purgeMemTable(session, memTable);
         }
         entityStoreJournal.endSession(session);
-        queryiableMetadata.addAll(activeMetadata.get(session));
+        try {
+            lock.writeLock().lock();
+            queryiableMetadata.addAll(activeMetadata.get(session));
+        } finally {
+            lock.writeLock().unlock();
+        }
         activeSessions.remove(session);
         activeMetadata.remove(session);
     }
@@ -151,7 +168,7 @@ public class EntityStore {
     }
 
     public String getSSTableOutputPath(StrandStorageKey firstKey, StrandStorageKey lastKey, String path) throws IOException, StorageException {
-        entityStoreJournal.incrementSequenceId(++sequenceId);
+        entityStoreJournal.incrementSequenceId(sequenceId.incrementAndGet());
         return path + File.separator + entityId + "_" + firstKey + "_" + lastKey + "_" + sequenceId + ".sd";
     }
 

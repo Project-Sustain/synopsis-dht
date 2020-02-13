@@ -123,4 +123,52 @@ public class EntityStoreTest {
         Assertions.assertEquals(0, entityStore.activeSessions.size());
     }
 
+    @Test
+    void testNodeRestart() throws IOException, StorageException {
+        MockitoAnnotations.initMocks(this);
+        Mockito.when(diskManagerMock.allocate(Mockito.anyLong())).thenReturn(storageDir.getAbsolutePath());
+        EntityStore entityStore = new EntityStore("noaa:9xj", metadataDir.getAbsolutePath(), 200, 50);
+        entityStore.init(diskManagerMock);
+        IngestionSession session = new IngestionSession("bob", System.currentTimeMillis(), 0);
+        entityStore.startSession(session);
+        StrandStorageKey key1 = new StrandStorageKey(1391216400000L, 1391216400100L);
+        StrandStorageValue value1 = new StrandStorageValue(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,
+                2.0));
+        entityStore.store(session, key1, value1); // this should fill up the memTable
+        StrandStorageKey key2 = new StrandStorageKey(1391216400100L, 1391216400200L);
+        StrandStorageValue value2 = new StrandStorageValue(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,
+                2.0));
+        entityStore.store(session, key2, value2);
+        StrandStorageKey key3 = new StrandStorageKey(1391216400200L, 1391216400300L);
+        StrandStorageValue value3 = new StrandStorageValue(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,
+                2.0));
+        entityStore.store(session, key3, value3);
+        // end session
+        entityStore.endSession(session);
+
+        // Simulate a node restart
+        EntityStore restartedEntityStore = new EntityStore("noaa:9xj", metadataDir.getAbsolutePath(), 200, 50);
+        restartedEntityStore.init(diskManagerMock);
+        // there were two SSTables written before. So the sequence ID should start from 2.
+        Assertions.assertEquals(2, restartedEntityStore.sequenceId.get());
+        Assertions.assertEquals(2, restartedEntityStore.queryiableMetadata.size());
+
+        // write some more data
+        session = new IngestionSession("bob", System.currentTimeMillis(), 1);
+        StrandStorageKey key4 = new StrandStorageKey(1391216400300L, 1391216400400L);
+        StrandStorageValue value4 = new StrandStorageValue(createStrand("9xj", 1391216400300L, 1391216400400L, 1.0,
+                2.0));
+        restartedEntityStore.store(session, key4, value4); // this should fill up the memTable
+        StrandStorageKey key5 = new StrandStorageKey(1391216400400L, 1391216400500L);
+        StrandStorageValue value5 = new StrandStorageValue(createStrand("9xj", 1391216400400L, 1391216400500L, 1.0,
+                2.0));
+        restartedEntityStore.store(session, key5, value5); // this should fill up the memTable
+
+        Assertions.assertEquals(3, restartedEntityStore.sequenceId.get());
+        Assertions.assertEquals(2, restartedEntityStore.queryiableMetadata.size());
+        Assertions.assertEquals(1, restartedEntityStore.activeSessions.size());
+        Assertions.assertEquals(1, restartedEntityStore.activeMetadata.size());
+        restartedEntityStore.endSession(session);
+        Assertions.assertEquals(3, restartedEntityStore.queryiableMetadata.size());
+    }
 }

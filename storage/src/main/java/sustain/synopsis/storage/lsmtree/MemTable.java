@@ -24,7 +24,6 @@ public class MemTable<K extends Comparable<K> & Serializable, V extends Serializ
     private int estimatedEntrySize = -1;
 
     private NavigableMap<K, V> elements = new TreeMap<>();
-    private boolean readOnly;
     private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
     public MemTable(long maxSizeInBytes) {
@@ -34,15 +33,11 @@ public class MemTable<K extends Comparable<K> & Serializable, V extends Serializ
     public MemTable(long maxSizeInBytes, int maxEntryCount) {
         this.maxSizeInBytes = maxSizeInBytes;
         this.maxEntryCount = maxEntryCount;
-        this.readOnly = false;
     }
 
     public boolean add(K key, V value) {
         try {
             lock.writeLock().lock();
-            if (readOnly) {
-                throw new RuntimeException("Attempting to modify a read-only MemTable");
-            }
             if (elements.containsKey(key)) {
                 elements.get(key).merge(value);
             } else {
@@ -88,21 +83,9 @@ public class MemTable<K extends Comparable<K> & Serializable, V extends Serializ
         return estimatedEntrySize * elements.size();
     }
 
-    public void setReadOnly() {
-        try {
-            lock.writeLock().lock();
-            this.readOnly = true;
-        } finally {
-            lock.writeLock().unlock();
-        }
-    }
-
     public TableIterator<K, V> getIterator() {
         try {
             lock.readLock().lock();
-            if (!readOnly) {
-                throw new RuntimeException("Attempting get an iterator for a writable MemTable.");
-            }
             return new TableIterator<K, V>() {
 
                 Iterator<K> iterator = elements.navigableKeySet().iterator();

@@ -44,14 +44,6 @@ class MemTableTest {
     }
 
     @Test
-    void testReadOnlyChecks() {
-        MemTable<LSMTestKey, LSMTestValue> memTable = new MemTable<>(1024, 200);
-        Assertions.assertThrows(RuntimeException.class, memTable::getIterator);
-        memTable.setReadOnly();
-        Assertions.assertThrows(RuntimeException.class, () -> memTable.add(new LSMTestKey(1), new LSMTestValue(128)));
-    }
-
-    @Test
     void testIterator() {
         MemTable<LSMTestKey, LSMTestValue> memTable = new MemTable<>(1024, 200);
         LSMTestValue[] values = new LSMTestValue[5];
@@ -59,7 +51,6 @@ class MemTableTest {
             values[i - 1] = new LSMTestValue(64);
             memTable.add(new LSMTestKey(i), values[i - 1]);
         }
-        memTable.setReadOnly();
 
         TableIterator<LSMTestKey, LSMTestValue> iterator = memTable.getIterator();
 

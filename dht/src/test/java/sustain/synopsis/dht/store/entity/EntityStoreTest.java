@@ -82,6 +82,7 @@ public class EntityStoreTest {
         // start a new session
         IngestionSession session = new IngestionSession("bob", System.currentTimeMillis(), 0);
         entityStore.startSession(session);
+        Mockito.verify(entityStoreJournalMock, Mockito.times(1)).startSession(session);
 
         Assertions.assertEquals(1, entityStore.activeSessions.size());
         Assertions.assertEquals(1, entityStore.activeMetadata.size());
@@ -97,6 +98,7 @@ public class EntityStoreTest {
         entityStore.store(session, key2, value2);
         // storing 2 strands should fill out the memTable
         Mockito.verify(diskManagerMock, Mockito.times(1)).allocate(Mockito.anyLong());
+        Mockito.verify(entityStoreJournalMock, Mockito.times(1)).addSerializedSSTable(Mockito.any(), Mockito.any());
         Assertions.assertEquals(0, entityStore.queryiableMetadata.size());
         Metadata<StrandStorageKey> metadata = entityStore.activeMetadata.get(session).get(0);
         Assertions.assertEquals(key1, metadata.getMin());
@@ -104,10 +106,21 @@ public class EntityStoreTest {
         Assertions.assertEquals(entityStore.getSSTableOutputPath(key1, key2, storageDir.getAbsolutePath(), 0),
                 metadata.getPath());
 
+        // add more data
         StrandStorageKey key3 = new StrandStorageKey(1391216400200L, 1391216400300L);
         StrandStorageValue value3 = new StrandStorageValue(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,
                 2.0));
         entityStore.store(session, key3, value3);
+
+        // end session
+        entityStore.endSession(session);
+        // at this point, there should be two calls to the disk_manager#allcate method
+        Mockito.verify(diskManagerMock, Mockito.times(2)).allocate(Mockito.anyLong());
+        Mockito.verify(entityStoreJournalMock, Mockito.times(2)).addSerializedSSTable(Mockito.any(), Mockito.any());
+        Mockito.verify(entityStoreJournalMock, Mockito.times(1)).endSession(session);
+        Assertions.assertEquals(2, entityStore.queryiableMetadata.size());
+        Assertions.assertEquals(0, entityStore.activeMetadata.size());
+        Assertions.assertEquals(0, entityStore.activeSessions.size());
     }
 
 }

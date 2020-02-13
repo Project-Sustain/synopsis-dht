@@ -29,10 +29,10 @@ public class EntityStore {
     /**
      * There can be multiple active ingestion sessions at a given time for a single entity.
      */
-    private Map<IngestionSession, MemTable<StrandStorageKey, StrandStorageValue>> activeSessions;
-    private Map<IngestionSession, List<Metadata<StrandStorageKey>>> activeMetadata;
+    Map<IngestionSession, MemTable<StrandStorageKey, StrandStorageValue>> activeSessions;
+    Map<IngestionSession, List<Metadata<StrandStorageKey>>> activeMetadata;
     private DiskManager diskManager;
-    private AtomicInteger sequenceId;
+    AtomicInteger sequenceId;
     // todo: these should be read from the config
     private BlockCompressor compressor;
     private ChecksumGenerator checksumGenerator;
@@ -41,17 +41,21 @@ public class EntityStore {
     /**
      * Queryiable metadata is accessed by both the reader threads and the writer threads
      */
-    private List<Metadata<StrandStorageKey>> queryiableMetadata;
+    List<Metadata<StrandStorageKey>> queryiableMetadata;
     private ReentrantReadWriteLock lock;
 
     public EntityStore(String entityId, String metadataDir, long memTableSize, long blockSize) {
+        this(entityId, new EntityStoreJournal(entityId, metadataDir), memTableSize, blockSize);
+    }
+
+    public EntityStore(String entityId, EntityStoreJournal entityStoreJournal, long memTableSize, long blockSize) {
         this.entityId = entityId;
         this.blockSize = blockSize;
         this.activeSessions = new HashMap<>();
         this.activeMetadata = new HashMap<>();
         this.compressor = new LZ4BlockCompressor();
         this.memTableSize = memTableSize;
-        this.entityStoreJournal = new EntityStoreJournal(entityId, metadataDir);
+        this.entityStoreJournal = entityStoreJournal;
         this.queryiableMetadata = new ArrayList<>();
         this.sequenceId = new AtomicInteger(-1);
         this.lock = new ReentrantReadWriteLock();
@@ -121,8 +125,9 @@ public class EntityStore {
         metadata.setSessionId(session.getSessionId());
         metadata.setUser(session.getIngestionUser());
         metadata.setSessionStartTS(session.getSessionStartTS());
-        entityStoreJournal.addSerializedSSTable(session, metadata);
+        // we need to store the memTable session before writing to the commit log
         toSSTable(session, diskManager, metadata);
+        entityStoreJournal.addSerializedSSTable(session, metadata);
         activeMetadata.get(session).add(metadata);
         memTable.clear();
     }
@@ -136,6 +141,7 @@ public class EntityStore {
             purgeMemTable(session, memTable);
         }
         entityStoreJournal.endSession(session);
+        // there can be multiple concurrent reader threads accessing the queryiable data
         try {
             lock.writeLock().lock();
             queryiableMetadata.addAll(activeMetadata.get(session));
@@ -149,10 +155,9 @@ public class EntityStore {
     // we inject a disk manager instance for unit testing purposes
     public void toSSTable(IngestionSession session, DiskManager diskManager, Metadata<StrandStorageKey> metadata) throws StorageException, IOException {
         MemTable<StrandStorageKey, StrandStorageValue> memTable = activeSessions.get(session);
-        memTable.setReadOnly();
-        // we throw the exception for the time being - verify once the upper layer is implemented
+        //memTable.setReadOnly();
         String dir = diskManager.allocate(memTable.getEstimatedSize());
-        String storagePath = getSSTableOutputPath(memTable.getFirstKey(), memTable.getLastKey(), dir);
+        String storagePath = getSSTableOutputPath(memTable.getFirstKey(), memTable.getLastKey(), dir, sequenceId.get());
         try (FileOutputStream fos = new FileOutputStream(storagePath); DataOutputStream dos =
                 new DataOutputStream(fos)) {
             SSTableWriter<StrandStorageKey, StrandStorageValue> ssTableWriter = new SSTableWriter<>(blockSize,
@@ -161,15 +166,15 @@ public class EntityStore {
             dos.flush();
             fos.flush();
             metadata.setPath(storagePath);
+            entityStoreJournal.incrementSequenceId(sequenceId.incrementAndGet());
         } catch (IOException e) {
             logger.error("Error converting memTable to SSTable.", e);
             throw new StorageException("Error converting memTable to SSTable.", e);
         }
     }
 
-    public String getSSTableOutputPath(StrandStorageKey firstKey, StrandStorageKey lastKey, String path) throws IOException, StorageException {
-        entityStoreJournal.incrementSequenceId(sequenceId.incrementAndGet());
-        return path + File.separator + entityId + "_" + firstKey + "_" + lastKey + "_" + sequenceId + ".sd";
+    public String getSSTableOutputPath(StrandStorageKey firstKey, StrandStorageKey lastKey, String path, int seqId) throws IOException, StorageException {
+        return path + File.separator + entityId + "_" + firstKey + "_" + lastKey + "_" + seqId + ".sd";
     }
 
     public String getJournalFilePath() {

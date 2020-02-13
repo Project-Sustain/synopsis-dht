@@ -62,6 +62,10 @@ class BlockProcessingTest {
         metadata.addBlockIndex(new LSMTestKey(5), 50);
         metadata.addBlockIndex(new LSMTestKey(8), 80);
         metadata.setPath("/test/path");
+        metadata.setUser("bob");
+        metadata.setSessionId(123);
+        metadata.setSessionStartTS(1234L);
+        metadata.setSessionComplete(true);
 
         Random random = new Random(123);
         byte[] checksum1 = new byte[10];

@@ -6,6 +6,8 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import sustain.synopsis.dht.Context;
+import sustain.synopsis.dht.NodeConfiguration;
 import sustain.synopsis.dht.journal.Logger;
 import sustain.synopsis.dht.store.DiskManager;
 import sustain.synopsis.dht.store.SessionValidator;
@@ -13,7 +15,10 @@ import sustain.synopsis.dht.store.StorageException;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Properties;
 
 import static sustain.synopsis.dht.store.StrandStorageKeyValueTest.createStrand;
 
@@ -94,5 +99,44 @@ public class NodeStoreTest {
 
         // test end_session
         nodeStore.endSession("dataset_2",  "bob", 1000L, 123456L);
+    }
+
+    @Test
+    void testRestart() throws StorageException, IOException {
+        MockitoAnnotations.initMocks(this);
+        Mockito.when(sessionValidatorMock.validate("bob", "dataset_1", 1000L)).thenReturn(true);
+        Mockito.when(sessionValidatorMock.validate("bob", "dataset_2", 1000L)).thenReturn(true);
+        Mockito.when(diskManagerMock.allocate(Mockito.anyLong())).thenReturn(storageDir.getAbsolutePath());
+        NodeConfiguration nodeConfiguration = new NodeConfiguration();
+        nodeConfiguration.setMetadataStoreDir(metadataStoreDir.getAbsolutePath());
+        nodeConfiguration.setMemTableSize(1024);
+        nodeConfiguration.setBlockSize(256);
+        nodeConfiguration.setRootJournalLoc(metadataStoreDir.getAbsolutePath());
+        Map<String, Long> storageDirs = new HashMap<>();
+        storageDirs.put(storageDir.getAbsolutePath(), 10240L);
+        nodeConfiguration.setStorageDirs(storageDirs);
+        nodeConfiguration.setStorageAllocationPolicy("round-robin");
+        Context.getInstance().initialize(new Properties(), nodeConfiguration);
+
+        NodeStore nodeStore = new NodeStore();
+        nodeStore.init();
+        nodeStore.store("bob", "dataset_1", "entity_1", 1000L, 123456L, createStrand("9xj", 1391216400000L,
+                1391216400100L, 1.0, 2.0));
+        nodeStore.store("bob", "dataset_1", "entity_2", 1000L, 123456L, createStrand("9xj", 1391216400100L,
+                1391216400200L, 1.0, 2.0));
+        nodeStore.store("bob", "dataset_2", "entity_2", 1000L, 123456L, createStrand("9xj", 1391216400100L,
+                1391216400200L, 1.0, 2.0));
+        nodeStore.endSession("dataset_1", "bob", 1000L, 123456L);
+
+
+        // simulate a restarted node store by starting a NodeStore by pointing to the same commit log
+        NodeStore nodeStoreRestarted = new NodeStore();
+        nodeStoreRestarted.init();
+        Assertions.assertEquals(2, nodeStoreRestarted.entityStoreMap.size());
+        Assertions.assertEquals(2, nodeStoreRestarted.entityStoreMap.get("dataset_1").size());
+        Assertions.assertTrue(nodeStoreRestarted.entityStoreMap.get("dataset_1").containsKey("entity_1"));
+        Assertions.assertTrue(nodeStoreRestarted.entityStoreMap.get("dataset_1").containsKey("entity_2"));
+        Assertions.assertEquals(1, nodeStoreRestarted.entityStoreMap.get("dataset_2").size());
+        Assertions.assertTrue(nodeStoreRestarted.entityStoreMap.get("dataset_2").containsKey("entity_2"));
     }
 }

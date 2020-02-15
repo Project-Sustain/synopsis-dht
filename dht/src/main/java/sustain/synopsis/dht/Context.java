@@ -34,6 +34,12 @@ public class Context {
         nodeConfig = NodeConfiguration.fromYamlFile(nodeConfigPath);
     }
 
+    // used mainly for unit testing by injecting a custom nodeConfiguration
+    public void initialize(Properties properties, NodeConfiguration nodeConfiguration){
+        initialize(properties);
+        this.nodeConfig = nodeConfiguration;
+    }
+
     private String localize(String propertyName) {
         if (propertyName.contains(ServerConstants.REPLACEABLE_STRINGS.HOSTNAME)) {
             return propertyName.replace(ServerConstants.REPLACEABLE_STRINGS.HOSTNAME, Util.getHostname());

@@ -2,7 +2,6 @@ package sustain.synopsis.dht.store.node;
 
 import sustain.synopsis.common.Strand;
 import sustain.synopsis.dht.Context;
-import sustain.synopsis.dht.NodeConfiguration;
 import sustain.synopsis.dht.Util;
 import sustain.synopsis.dht.journal.Logger;
 import sustain.synopsis.dht.store.*;
@@ -10,10 +9,7 @@ import sustain.synopsis.dht.store.entity.EntityStore;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -27,26 +23,39 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * for a given entity store. The node initialization is handled by the main thread during the startup of the node.
  */
 public class NodeStore {
+    // package level access to support unit testing
+    Map<String, Map<String, EntityStore>> entityStoreMap = new ConcurrentHashMap<>();
+    Set<Long> validatedSessionIds = Collections.synchronizedSet(new HashSet<>());
+
     private org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(NodeStore.class);
     private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-    private Map<String, Map<String, EntityStore>> entityStoreMap = new ConcurrentHashMap<>();
-    private Set<Long> validatedSessionIds = Collections.synchronizedSet(new HashSet<>());
     private SessionValidator sessionValidator;
     private AtomicBoolean initialized;
     private Logger rootLogger;
     private int memTableSize;
     private int blockSize;
     private String metadataStoreDir;
+    private DiskManager diskManager;
 
-    public NodeStore() {
-        this.sessionValidator = new SessionValidator();
-        NodeConfiguration nodeConfiguration = Context.getInstance().getNodeConfig();
-        String rootJournalLoc = nodeConfiguration.getRootJournalLoc();
-        this.memTableSize = nodeConfiguration.getMemTableSize();
-        this.blockSize = nodeConfiguration.getBlockSize();
-        this.rootLogger = new Logger(getRootJournalFileName(rootJournalLoc));
-        this.metadataStoreDir = nodeConfiguration.getMetadataStoreDir();
+
+    public NodeStore() throws StorageException {
+        this(new SessionValidator(),
+                new Logger(getRootJournalFileName(Context.getInstance().getNodeConfig().getRootJournalLoc())),
+                Context.getInstance().getNodeConfig().getMemTableSize(),
+                Context.getInstance().getNodeConfig().getBlockSize(),
+                Context.getInstance().getNodeConfig().getMetadataStoreDir(), DiskManager.getInstance());
+    }
+
+    // constructor used for writing unit tests with mocks
+    public NodeStore(SessionValidator validator, Logger logger, int memTableSize, int blockSize,
+                     String metadataStoreDir, DiskManager diskManager) {
+        this.sessionValidator = validator;
+        this.memTableSize = memTableSize;
+        this.blockSize = blockSize;
+        this.rootLogger = logger;
+        this.metadataStoreDir = metadataStoreDir;
         this.initialized = new AtomicBoolean(false);
+        this.diskManager = diskManager;
     }
 
     /**
@@ -63,7 +72,9 @@ public class NodeStore {
         logger.info("Starting node store initialization.");
         long nodeInitStartTS = System.currentTimeMillis();
         // initialize all entity stores
-        for (byte[] serialized : rootLogger) {
+        Iterator<byte[]> iterator = rootLogger.iterator();
+        while (iterator.hasNext()) {
+            byte[] serialized = iterator.next();
             if (serialized == null) {
                 continue;
             }
@@ -71,7 +82,7 @@ public class NodeStore {
                 CreateEntityStoreActivity createEntityStore = new CreateEntityStoreActivity();
                 createEntityStore.deserialize(serialized);
                 EntityStore entityStore = new EntityStore(createEntityStore.getEntityId(),
-                        createEntityStore.getEntityJournalLogLocation(), memTableSize, blockSize);
+                        createEntityStore.getEntityJournalLogLocation(), memTableSize, blockSize, diskManager);
                 if (logger.isDebugEnabled()) {
                     logger.debug("Initializing entity store: " + createEntityStore.getEntityId());
                 }
@@ -142,7 +153,7 @@ public class NodeStore {
                 // we need to check again if a previous invocation using a different thread have successfully
                 // initialized the entity store
                 if (!entityStoreMap.get(datasetId).containsKey(entityId)) {
-                    entityStore = new EntityStore(entityId, metadataStoreDir, memTableSize, blockSize);
+                    entityStore = new EntityStore(entityId, metadataStoreDir, memTableSize, blockSize, diskManager);
                     entityStore.init();
                     // If a new entity store is created, journal its metadata location
                     CreateEntityStoreActivity createEntityStoreActivity = new CreateEntityStoreActivity(datasetId,
@@ -175,9 +186,11 @@ public class NodeStore {
      * Terminating a session makes the data ingested during that session available for the subsequent queries.
      *
      * @param datasetId Dataset Id
+     * @param user User Id
      * @param sessionId Session id
+     * @param sessionStartTS session start timestamp
      */
-    public void endSession(String datasetId, long sessionId) {
+    public void endSession(String datasetId, String user, long sessionId, long sessionStartTS) {
         // Acknowledge every entity store of the dataset
         // There may be sessions that did not receive any data for this session - this case is handled by the entity
         // store.
@@ -185,10 +198,9 @@ public class NodeStore {
             try {
                 // we use the IngestionSession constructor with the session id here. It is used only for
                 // looking up a session.
-                entityStore.endSession(new IngestionSession(sessionId));
+                entityStore.endSession(new IngestionSession(user, sessionId, sessionStartTS));
             } catch (StorageException | IOException e) {
-                logger.error("Error terminating session on the entity store. Dataset Id: " + datasetId +
-                        ", session " + "id:" + sessionId + ", entity id: " + entityId);
+                logger.error("Error terminating session on the entity store. Dataset Id: " + datasetId + ", session " + "id:" + sessionId + ", entity id: " + entityId);
             }
         });
         if (logger.isDebugEnabled()) {
@@ -197,7 +209,7 @@ public class NodeStore {
     }
 
 
-    String getRootJournalFileName(String rootJournalLoc) {
+    static String getRootJournalFileName(String rootJournalLoc) {
         return rootJournalLoc + File.separator + Util.getHostname() + "_root.slog";
     }
 }

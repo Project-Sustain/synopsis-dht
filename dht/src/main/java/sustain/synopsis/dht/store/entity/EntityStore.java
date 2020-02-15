@@ -44,11 +44,13 @@ public class EntityStore {
     List<Metadata<StrandStorageKey>> queryiableMetadata;
     private ReentrantReadWriteLock lock;
 
-    public EntityStore(String entityId, String metadataDir, long memTableSize, long blockSize) {
-        this(entityId, new EntityStoreJournal(entityId, metadataDir), memTableSize, blockSize);
+    public EntityStore(String entityId, String metadataDir, long memTableSize, long blockSize, DiskManager diskManager) {
+        this(entityId, new EntityStoreJournal(entityId, metadataDir), memTableSize, blockSize, diskManager);
     }
 
-    public EntityStore(String entityId, EntityStoreJournal entityStoreJournal, long memTableSize, long blockSize) {
+    // used for unit testing by injecting entity store journal
+    public EntityStore(String entityId, EntityStoreJournal entityStoreJournal, long memTableSize, long blockSize,
+                       DiskManager diskManager) {
         this.entityId = entityId;
         this.blockSize = blockSize;
         this.activeSessions = new HashMap<>();
@@ -59,17 +61,13 @@ public class EntityStore {
         this.queryiableMetadata = new ArrayList<>();
         this.sequenceId = new AtomicInteger(-1);
         this.lock = new ReentrantReadWriteLock();
-    }
-
-    public boolean init() throws StorageException {
-        return init(this.diskManager);
+        this.diskManager = diskManager;
     }
 
     // used for unit testing by injecting the disk manager
-    public boolean init(DiskManager diskManager) throws StorageException {
+    public boolean init() throws StorageException {
         try {
             this.checksumGenerator = new ChecksumGenerator();
-            this.diskManager = diskManager;
             boolean success = this.entityStoreJournal.init();
             if (!success) {
                 return false;

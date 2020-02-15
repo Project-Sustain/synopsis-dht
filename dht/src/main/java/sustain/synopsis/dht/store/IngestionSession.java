@@ -21,10 +21,6 @@ public class IngestionSession implements Comparable<IngestionSession> {
         this.serializedSSTables = new ArrayList<>();
     }
 
-    public IngestionSession(long sessionStartTS) {
-        this.sessionStartTS = sessionStartTS;
-    }
-
     public void setComplete() {
         this.complete = true;
     }

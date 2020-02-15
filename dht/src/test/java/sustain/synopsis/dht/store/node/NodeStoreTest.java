@@ -9,6 +9,7 @@ import sustain.synopsis.dht.Context;
 import sustain.synopsis.dht.NodeConfiguration;
 import sustain.synopsis.dht.journal.Logger;
 import sustain.synopsis.dht.store.DiskManager;
+import sustain.synopsis.dht.store.IngestionSession;
 import sustain.synopsis.dht.store.SessionValidator;
 import sustain.synopsis.dht.store.StorageException;
 
@@ -19,8 +20,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static sustain.synopsis.dht.store.StrandStorageKeyValueTest.createStrand;
 
 public class NodeStoreTest {
@@ -139,5 +139,15 @@ public class NodeStoreTest {
         assertTrue(nodeStoreRestarted.entityStoreMap.get("dataset_1").containsKey("entity_2"));
         assertEquals(1, nodeStoreRestarted.entityStoreMap.get("dataset_2").size());
         assertTrue(nodeStoreRestarted.entityStoreMap.get("dataset_2").containsKey("entity_2"));
+    }
+
+    @Test
+    void testIngestionSession(){
+        IngestionSession session1 = new IngestionSession("bob", 1234L, 1000L);
+        IngestionSession session2 = new IngestionSession("bob", 12344L, 1000L);
+        IngestionSession session3 = new IngestionSession("bob", 1234L, 1001L);
+
+        assertEquals(session1, session2); // same session id
+        assertNotEquals(session1, session3); // different session ids
     }
 }

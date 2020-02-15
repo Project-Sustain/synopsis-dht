@@ -1,32 +1,16 @@
 package sustain.synopsis.dht.store;
 
-import sustain.synopsis.storage.lsmtree.Metadata;
-
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 public class IngestionSession implements Comparable<IngestionSession> {
     private String ingestionUser;
     private long sessionStartTS;
     private long sessionId;
-    private boolean complete;
-    private List<Metadata<StrandStorageKey>> serializedSSTables;
 
     public IngestionSession(String ingestionUser, long sessionStartTS, long sessionId) {
         this.ingestionUser = ingestionUser;
         this.sessionStartTS = sessionStartTS;
         this.sessionId = sessionId;
-        this.complete = false;
-        this.serializedSSTables = new ArrayList<>();
-    }
-
-    public void setComplete() {
-        this.complete = true;
-    }
-
-    public void addSerializedSSTable(Metadata<StrandStorageKey> metadata) {
-        this.serializedSSTables.add(metadata);
     }
 
     @Override
@@ -57,13 +41,5 @@ public class IngestionSession implements Comparable<IngestionSession> {
 
     public long getSessionId() {
         return sessionId;
-    }
-
-    public boolean isComplete() {
-        return complete;
-    }
-
-    public List<Metadata<StrandStorageKey>> getSerializedSSTables() {
-        return serializedSSTables;
     }
 }

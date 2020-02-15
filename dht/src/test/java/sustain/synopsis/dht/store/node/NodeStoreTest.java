@@ -1,6 +1,5 @@
 package sustain.synopsis.dht.store.node;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
@@ -20,6 +19,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static sustain.synopsis.dht.store.StrandStorageKeyValueTest.createStrand;
 
 public class NodeStoreTest {
@@ -59,14 +60,14 @@ public class NodeStoreTest {
         NodeStore nodeStore = new NodeStore(sessionValidatorMock, loggerMock, 1024, 200,
                 metadataStoreDir.getAbsolutePath(), diskManagerMock);
         nodeStore.init();
-        Assertions.assertTrue(nodeStore.entityStoreMap.isEmpty());
-        Assertions.assertTrue(nodeStore.validatedSessionIds.isEmpty());
+        assertTrue(nodeStore.entityStoreMap.isEmpty());
+        assertTrue(nodeStore.validatedSessionIds.isEmpty());
         nodeStore.store("bob", "dataset_1", "entity_1", 1000L, 123456L, createStrand("9xj", 1391216400000L,
                 1391216400100L, 1.0, 2.0));
-        Assertions.assertEquals(1, nodeStore.entityStoreMap.size());
-        Assertions.assertTrue(nodeStore.entityStoreMap.containsKey("dataset_1"));
-        Assertions.assertTrue(nodeStore.entityStoreMap.get("dataset_1").containsKey("entity_1"));
-        Assertions.assertTrue(nodeStore.validatedSessionIds.contains(1000L));
+        assertEquals(1, nodeStore.entityStoreMap.size());
+        assertTrue(nodeStore.entityStoreMap.containsKey("dataset_1"));
+        assertTrue(nodeStore.entityStoreMap.get("dataset_1").containsKey("entity_1"));
+        assertTrue(nodeStore.validatedSessionIds.contains(1000L));
 
         String entityCommitLogPath = metadataStoreDir.getAbsolutePath() + File.separator + "entity_1_metadata.slog";
         Mockito.verify(sessionValidatorMock, Mockito.times(1)).validate("bob", "dataset_1", 1000L);
@@ -76,26 +77,26 @@ public class NodeStoreTest {
         // to the entity store
         // log appenders are initialized
         File entityCommitLog = new File(entityCommitLogPath);
-        Assertions.assertTrue(entityCommitLog.exists());
+        assertTrue(entityCommitLog.exists());
 
         // add more data for the same entity store
         nodeStore.store("bob", "dataset_1", "entity_1", 1000L, 123456L, createStrand("9xj", 1391216400100L,
                 1391216400200L, 1.0, 2.0));
-        Assertions.assertEquals(1, nodeStore.entityStoreMap.size());
-        Assertions.assertEquals(1, nodeStore.entityStoreMap.get("dataset_1").size());
+        assertEquals(1, nodeStore.entityStoreMap.size());
+        assertEquals(1, nodeStore.entityStoreMap.get("dataset_1").size());
 
         // add data to a different entity store
         nodeStore.store("bob", "dataset_1", "entity_2", 1000L, 123456L, createStrand("9xj", 1391216400100L,
                 1391216400200L, 1.0, 2.0));
-        Assertions.assertEquals(1, nodeStore.entityStoreMap.size());
-        Assertions.assertEquals(2, nodeStore.entityStoreMap.get("dataset_1").size());
-        Assertions.assertTrue(nodeStore.entityStoreMap.get("dataset_1").containsKey("entity_2"));
+        assertEquals(1, nodeStore.entityStoreMap.size());
+        assertEquals(2, nodeStore.entityStoreMap.get("dataset_1").size());
+        assertTrue(nodeStore.entityStoreMap.get("dataset_1").containsKey("entity_2"));
 
         // add data to a different dataset
         nodeStore.store("bob", "dataset_2", "entity_2", 1000L, 123456L, createStrand("9xj", 1391216400100L,
                 1391216400200L, 1.0, 2.0));
-        Assertions.assertEquals(2, nodeStore.entityStoreMap.size());
-        Assertions.assertTrue(nodeStore.entityStoreMap.containsKey("dataset_2"));
+        assertEquals(2, nodeStore.entityStoreMap.size());
+        assertTrue(nodeStore.entityStoreMap.containsKey("dataset_2"));
 
         // test end_session
         nodeStore.endSession("dataset_2",  "bob", 1000L, 123456L);
@@ -132,11 +133,11 @@ public class NodeStoreTest {
         // simulate a restarted node store by starting a NodeStore by pointing to the same commit log
         NodeStore nodeStoreRestarted = new NodeStore();
         nodeStoreRestarted.init();
-        Assertions.assertEquals(2, nodeStoreRestarted.entityStoreMap.size());
-        Assertions.assertEquals(2, nodeStoreRestarted.entityStoreMap.get("dataset_1").size());
-        Assertions.assertTrue(nodeStoreRestarted.entityStoreMap.get("dataset_1").containsKey("entity_1"));
-        Assertions.assertTrue(nodeStoreRestarted.entityStoreMap.get("dataset_1").containsKey("entity_2"));
-        Assertions.assertEquals(1, nodeStoreRestarted.entityStoreMap.get("dataset_2").size());
-        Assertions.assertTrue(nodeStoreRestarted.entityStoreMap.get("dataset_2").containsKey("entity_2"));
+        assertEquals(2, nodeStoreRestarted.entityStoreMap.size());
+        assertEquals(2, nodeStoreRestarted.entityStoreMap.get("dataset_1").size());
+        assertTrue(nodeStoreRestarted.entityStoreMap.get("dataset_1").containsKey("entity_1"));
+        assertTrue(nodeStoreRestarted.entityStoreMap.get("dataset_1").containsKey("entity_2"));
+        assertEquals(1, nodeStoreRestarted.entityStoreMap.get("dataset_2").size());
+        assertTrue(nodeStoreRestarted.entityStoreMap.get("dataset_2").containsKey("entity_2"));
     }
 }

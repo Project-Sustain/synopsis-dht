@@ -1,6 +1,5 @@
 package sustain.synopsis.dht.store.entity;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
@@ -13,6 +12,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static sustain.synopsis.dht.store.StrandStorageKeyValueTest.createStrand;
 
 public class EntityStoreTest {
@@ -38,7 +39,7 @@ public class EntityStoreTest {
         String expected =
                 storageDir.getAbsolutePath() + File.separator + "9xj_" + key1.toString() + "_" + key2.toString() +
                         "_0.sd";
-        Assertions.assertEquals(expected, returned);
+        assertEquals(expected, returned);
     }
 
     @Test
@@ -62,10 +63,10 @@ public class EntityStoreTest {
 
         File serializedSSTable =
                 new File(storageDir.getAbsolutePath() + File.separator + "9xj" + "_" + key1.toString() + "_" + key2.toString() + "_0.sd");
-        Assertions.assertTrue(serializedSSTable.exists());
-        Assertions.assertTrue(serializedSSTable.isFile());
-        Assertions.assertTrue(serializedSSTable.length() > 0);
-        Assertions.assertEquals(serializedSSTable.getAbsolutePath(), metadata.getPath());
+        assertTrue(serializedSSTable.exists());
+        assertTrue(serializedSSTable.isFile());
+        assertTrue(serializedSSTable.length() > 0);
+        assertEquals(serializedSSTable.getAbsolutePath(), metadata.getPath());
     }
 
     @Test
@@ -84,8 +85,8 @@ public class EntityStoreTest {
         entityStore.startSession(session);
         Mockito.verify(entityStoreJournalMock, Mockito.times(1)).startSession(session);
 
-        Assertions.assertEquals(1, entityStore.activeSessions.size());
-        Assertions.assertEquals(1, entityStore.activeMetadata.size());
+        assertEquals(1, entityStore.activeSessions.size());
+        assertEquals(1, entityStore.activeMetadata.size());
 
         // size of key and value used here - 187 bytes
         StrandStorageKey key1 = new StrandStorageKey(1391216400000L, 1391216400100L);
@@ -99,11 +100,11 @@ public class EntityStoreTest {
         // storing 2 strands should fill out the memTable
         Mockito.verify(diskManagerMock, Mockito.times(1)).allocate(Mockito.anyLong());
         Mockito.verify(entityStoreJournalMock, Mockito.times(1)).addSerializedSSTable(Mockito.any(), Mockito.any());
-        Assertions.assertEquals(0, entityStore.queryiableMetadata.size());
+        assertEquals(0, entityStore.queryiableMetadata.size());
         Metadata<StrandStorageKey> metadata = entityStore.activeMetadata.get(session).get(0);
-        Assertions.assertEquals(key1, metadata.getMin());
-        Assertions.assertEquals(key2, metadata.getMax());
-        Assertions.assertEquals(entityStore.getSSTableOutputPath(key1, key2, storageDir.getAbsolutePath(), 0),
+        assertEquals(key1, metadata.getMin());
+        assertEquals(key2, metadata.getMax());
+        assertEquals(entityStore.getSSTableOutputPath(key1, key2, storageDir.getAbsolutePath(), 0),
                 metadata.getPath());
 
         // add more data
@@ -118,9 +119,9 @@ public class EntityStoreTest {
         Mockito.verify(diskManagerMock, Mockito.times(2)).allocate(Mockito.anyLong());
         Mockito.verify(entityStoreJournalMock, Mockito.times(2)).addSerializedSSTable(Mockito.any(), Mockito.any());
         Mockito.verify(entityStoreJournalMock, Mockito.times(1)).endSession(session);
-        Assertions.assertEquals(2, entityStore.queryiableMetadata.size());
-        Assertions.assertEquals(0, entityStore.activeMetadata.size());
-        Assertions.assertEquals(0, entityStore.activeSessions.size());
+        assertEquals(2, entityStore.queryiableMetadata.size());
+        assertEquals(0, entityStore.activeMetadata.size());
+        assertEquals(0, entityStore.activeSessions.size());
     }
 
     @Test
@@ -150,8 +151,8 @@ public class EntityStoreTest {
         EntityStore restartedEntityStore = new EntityStore("noaa:9xj", metadataDir.getAbsolutePath(), 200, 50, diskManagerMock);
         restartedEntityStore.init();
         // there were two SSTables written before. So the sequence ID should start from 2.
-        Assertions.assertEquals(2, restartedEntityStore.sequenceId.get());
-        Assertions.assertEquals(2, restartedEntityStore.queryiableMetadata.size());
+        assertEquals(2, restartedEntityStore.sequenceId.get());
+        assertEquals(2, restartedEntityStore.queryiableMetadata.size());
 
         // write some more data
         session = new IngestionSession("bob", System.currentTimeMillis(), 1);
@@ -164,11 +165,11 @@ public class EntityStoreTest {
                 2.0));
         restartedEntityStore.store(session, key5, value5); // this should fill up the memTable
 
-        Assertions.assertEquals(3, restartedEntityStore.sequenceId.get());
-        Assertions.assertEquals(2, restartedEntityStore.queryiableMetadata.size());
-        Assertions.assertEquals(1, restartedEntityStore.activeSessions.size());
-        Assertions.assertEquals(1, restartedEntityStore.activeMetadata.size());
+        assertEquals(3, restartedEntityStore.sequenceId.get());
+        assertEquals(2, restartedEntityStore.queryiableMetadata.size());
+        assertEquals(1, restartedEntityStore.activeSessions.size());
+        assertEquals(1, restartedEntityStore.activeMetadata.size());
         restartedEntityStore.endSession(session);
-        Assertions.assertEquals(3, restartedEntityStore.queryiableMetadata.size());
+        assertEquals(3, restartedEntityStore.queryiableMetadata.size());
     }
 }

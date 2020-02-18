@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sustain.synopsis.dht.store.services";
+
+service IngestionService {
+    rpc Ingest (IngestionRequest) returns (IngestionResponse) {
+    }
+}
+
+message IngestionRequest {
+    int64 sessionId = 1;
+    string dataSetId = 2;
+    string entityId = 3;
+    int64 fromTS = 4;
+    int64 toTS = 5;
+    bytes strand = 6;
+}
+
+message IngestionResponse {
+    int64 sessionId = 1;
+    bool status = 2;
+    string primary = 3;
+}

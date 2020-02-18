@@ -1,8 +1,14 @@
-apply plugin: 'idea'
+plugins {
+    id 'idea'
+    id 'java'
+    id 'jacoco'
+    id 'com.google.protobuf' version '0.8.8' apply false
+}
 
 subprojects {
     apply plugin: 'java'
     apply plugin: 'jacoco'
+
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
 
@@ -10,24 +16,27 @@ subprojects {
 
     repositories {
         mavenCentral()
-        maven{
+        maven {
             url 'https://yahoo.bintray.com/maven'
         }
-        maven{
+        maven {
             url 'https://github.com/Project-Sustain/synopsis-sketch/raw/mvn-repository'
         }
-        maven{
+        maven {
             url 'https://repo1.maven.org/maven2'
         }
+        maven { // proto-buff plugin
+            url "https://maven-central.storage-download.googleapis.com/repos/central/data/"
+        }
         dependencies {
-            compile 'log4j:log4j:1.2.17'
-            compile 'org.yaml:snakeyaml:1.25'
-            compile 'commons-io:commons-io:2.6'
+            implementation 'log4j:log4j:1.2.17'
+            implementation 'org.yaml:snakeyaml:1.25'
+            implementation 'commons-io:commons-io:2.6'
+
             testCompile 'org.mockito:mockito-core:2.+'
-            testImplementation  'org.junit.jupiter:junit-jupiter:5.5.2'
+            testImplementation 'org.junit.jupiter:junit-jupiter:5.5.2'
         }
     }
-
 
     test {
         useJUnitPlatform()

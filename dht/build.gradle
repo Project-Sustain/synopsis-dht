@@ -1,8 +1,40 @@
+apply plugin: 'com.google.protobuf'
+
+def grpcVersion = '1.26.0'
+def protobufVersion = '3.11.0'
+def protocVersion = protobufVersion
+
 dependencies {
-    compile 'io.netty:netty-all:4.0.25.Final'
-    compile 'org.apache.zookeeper:zookeeper:3.4.5'
-    compile project(':common')
-    compile project(':storage')
+    implementation "io.grpc:grpc-protobuf:${grpcVersion}"
+    implementation "io.grpc:grpc-stub:${grpcVersion}"
+    compileOnly "javax.annotation:javax.annotation-api:1.2"
+
+    implementation 'io.netty:netty-all:4.0.25.Final'
+    implementation 'org.apache.zookeeper:zookeeper:3.4.5'
+    implementation project(':common')
+    implementation project(':storage')
     runtime 'io.netty:netty-all:4.0.25.Final'
     runtime 'org.apache.zookeeper:zookeeper:3.4.5'
+
+    runtimeOnly "io.grpc:grpc-netty-shaded:${grpcVersion}"
+    testImplementation "io.grpc:grpc-testing:${grpcVersion}"
+}
+
+protobuf {
+    protoc { artifact = "com.google.protobuf:protoc:${protocVersion}" }
+    plugins {
+        grpc { artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}" }
+    }
+    generateProtoTasks {
+        all()*.plugins { grpc {} }
+    }
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs 'build/generated/source/proto/main/grpc'
+            srcDirs 'build/generated/source/proto/main/java'
+        }
+    }
 }

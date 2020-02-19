@@ -4,8 +4,7 @@ option java_multiple_files = true;
 option java_package = "sustain.synopsis.dht.store.services";
 
 service IngestionService {
-    rpc Ingest (IngestionRequest) returns (IngestionResponse) {
-    }
+    rpc Ingest (IngestionRequest) returns (IngestionResponse);
 }
 
 message IngestionRequest {

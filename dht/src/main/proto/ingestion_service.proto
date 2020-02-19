@@ -10,7 +10,7 @@ service IngestionService {
 
 message IngestionRequest {
     int64 sessionId = 1;
-    string dataSetId = 2;
+    string datasetId = 2;
     string entityId = 3;
     int64 fromTS = 4;
     int64 toTS = 5;

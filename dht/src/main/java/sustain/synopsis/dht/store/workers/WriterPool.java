@@ -16,7 +16,7 @@ public class WriterPool {
         this.parallelism = parallelism;
         this.executors = new ExecutorService[parallelism];
         // initialize each executor.
-        for(int i = 0; i < parallelism; i++){
+        for (int i = 0; i < parallelism; i++) {
             int threadId = i;
             executors[i] = Executors.newFixedThreadPool(1, new ThreadFactory() {
                 @Override
@@ -27,7 +27,7 @@ public class WriterPool {
         }
     }
 
-    public ExecutorService getExecutor(WriteTask task){
-        return executors[task.getIdentifier() % parallelism];
+    public ExecutorService getExecutor(int hash) {
+        return executors[hash % parallelism];
     }
 }

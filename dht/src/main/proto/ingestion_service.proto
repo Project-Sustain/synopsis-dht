@@ -4,13 +4,12 @@ option java_multiple_files = true;
 option java_package = "sustain.synopsis.dht.store.services";
 
 service IngestionService {
-    rpc Ingest (IngestionRequest) returns (IngestionResponse) {
-    }
+    rpc Ingest (IngestionRequest) returns (IngestionResponse);
 }
 
 message IngestionRequest {
     int64 sessionId = 1;
-    string dataSetId = 2;
+    string datasetId = 2;
     string entityId = 3;
     int64 fromTS = 4;
     int64 toTS = 5;

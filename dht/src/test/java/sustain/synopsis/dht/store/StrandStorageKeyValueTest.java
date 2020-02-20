@@ -6,6 +6,7 @@ import sustain.synopsis.common.Strand;
 import sustain.synopsis.sketch.dataset.feature.Feature;
 import sustain.synopsis.sketch.graph.DataContainer;
 import sustain.synopsis.sketch.graph.Path;
+import sustain.synopsis.sketch.serialization.SerializationOutputStream;
 import sustain.synopsis.sketch.stat.RunningStatisticsND;
 
 import java.io.*;
@@ -56,11 +57,11 @@ public class StrandStorageKeyValueTest {
     }
 
     @Test
-    void testStrandStorageValueMerge(){
+    void testStrandStorageValueMerge() throws IOException {
         Strand strand1 = createStrand("9xa", from, to, 1.0, 2.0, 3.0);
         Strand strand2 = createStrand("9xa", from, to, 1.0, 2.0, 3.0);
-        StrandStorageValue value1 = new StrandStorageValue(strand1);
-        StrandStorageValue value2 = new StrandStorageValue(strand2);
+        StrandStorageValue value1 = new StrandStorageValue(serializeStrand(strand1));
+        StrandStorageValue value2 = new StrandStorageValue(serializeStrand(strand2));
         value1.merge(value2);
         strand1.merge(strand2);
         Assertions.assertEquals(value1.getStrand(), strand1);
@@ -69,9 +70,9 @@ public class StrandStorageKeyValueTest {
     @Test
     void testStrandSerialization() throws IOException {
         Strand strand = createStrand("9xa", from, to, 1.0, 2.0, 3.0);
-        StrandStorageValue val = new StrandStorageValue(strand);
+        StrandStorageValue val = new StrandStorageValue(serializeStrand(strand));
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        DataOutputStream dos= new DataOutputStream(baos);
+        DataOutputStream dos = new DataOutputStream(baos);
         byte[] serializedData;
         try {
             val.serialize(dos);
@@ -85,7 +86,7 @@ public class StrandStorageKeyValueTest {
         ByteArrayInputStream bais = new ByteArrayInputStream(serializedData);
         DataInputStream dis = new DataInputStream(bais);
         StrandStorageValue deserialized = new StrandStorageValue();
-        try{
+        try {
             deserialized.deserialize(dis);
             Assertions.assertEquals(val.getStrand(), deserialized.getStrand());
         } finally {
@@ -95,7 +96,7 @@ public class StrandStorageKeyValueTest {
     }
 
     @Test
-    void testStrandStorageKeyToString(){
+    void testStrandStorageKeyToString() {
         StrandStorageKey key = new StrandStorageKey(from, to);
         Assertions.assertEquals(from + "_" + to, key.toString());
     }
@@ -109,5 +110,15 @@ public class StrandStorageKeyValueTest {
         DataContainer container = new DataContainer(runningStats);
         path.get(path.size() - 1).setData(container);
         return new Strand(geohash, ts, to, path);
+    }
+
+    public static byte[] serializeStrand(Strand strand) throws IOException {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream(); SerializationOutputStream sos =
+                new SerializationOutputStream(baos)) {
+            strand.serialize(sos);
+            sos.flush();
+            baos.flush();
+            return baos.toByteArray();
+        }
     }
 }

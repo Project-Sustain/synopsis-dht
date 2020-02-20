@@ -1,6 +1,5 @@
 package sustain.synopsis.dht.store.node;
 
-import sustain.synopsis.common.Strand;
 import sustain.synopsis.dht.Context;
 import sustain.synopsis.dht.Util;
 import sustain.synopsis.dht.journal.Logger;
@@ -9,7 +8,8 @@ import sustain.synopsis.dht.store.entity.EntityStore;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -25,8 +25,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class NodeStore {
     // package level access to support unit testing
     Map<String, Map<String, EntityStore>> entityStoreMap = new ConcurrentHashMap<>();
-    Set<Long> validatedSessionIds = Collections.synchronizedSet(new HashSet<>());
-
+    Map<Long, SessionValidator.SessionValidationResponse> validatedSessions = new ConcurrentHashMap<>();
     private org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(NodeStore.class);
     private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     private SessionValidator sessionValidator;
@@ -105,6 +104,28 @@ public class NodeStore {
         logger.info("Completed node store initialization. Elapsed time (s): " + (nodeInitEndTS - nodeInitStartTS) / 1000.0);
     }
 
+    public void store(String datasetId, String entityId, long sessionId, StrandStorageKey storageKey,
+                      StrandStorageValue storageValue) throws IOException,
+            StorageException {
+        // check if the session is new. If it's a new session validate.
+        // It's not necessary to record this in the commit log. A session can revalidated and cached in case
+        // of node failure/restart.
+        // It is possible that there will be multiple concurrent request to validate the same session in this code
+        // which is acceptable and will not affect the accuracy of the program.
+        SessionValidator.SessionValidationResponse response;
+        if (!validatedSessions.containsKey(sessionId)) {
+            response = sessionValidator.validate(datasetId, sessionId);
+            if (!response.valid) {
+                logger.error("Session validation failed. Aborting ingestion operation. User id: " + response.userId + ", " + "data set id: " + datasetId + ", session id: " + sessionId);
+                return;
+            }
+            validatedSessions.put(sessionId, response);
+        } else {
+            response = validatedSessions.get(sessionId);
+        }
+        store(response.userId, datasetId, entityId, sessionId, response.sessionStartTS, storageKey, storageValue);
+    }
+
     /**
      * Store an individual strand in the corresponding entity store
      *
@@ -113,27 +134,14 @@ public class NodeStore {
      * @param entityId          Entity identifier (spatial scope)
      * @param sessionId         Current session id
      * @param sessionCreationTs Session creation timestamp returned by the metadata server
-     * @param strand            Strand object for storage
+     * @param storageKey        Strand storage key
+     * @param storageValue      Strand storage value
      * @throws StorageException Error when storing strands on disk
      * @throws IOException      Error during serialization
      */
-    public void store(String userId, String datasetId, String entityId, long sessionId, long sessionCreationTs,
-                      Strand strand) throws StorageException, IOException {
-        // check if the session is new. If it's a new session validate.
-        // It's not necessary to record this in the commit log. A session can revalidated and cached in case
-        // of node failure/restart.
-        // It is possible that there will be multiple concurrent request to validate the same session in this code
-        // which is acceptable and will not affect the accuracy of the program.
-        if (!validatedSessionIds.contains(sessionId)) {
-            boolean validSession = sessionValidator.validate(userId, datasetId, sessionId);
-            if (!validSession) {
-                logger.error("Session validation failed. Aborting ingestion operation. User id: " + userId + ", " +
-                        "data set id: " + datasetId + ", session id: " + sessionId);
-                return;
-            }
-            validatedSessionIds.add(sessionId);
-        }
-
+    void store(String userId, String datasetId, String entityId, long sessionId, long sessionCreationTs,
+                      StrandStorageKey storageKey, StrandStorageValue storageValue) throws StorageException,
+            IOException {
         // retrieve entity store
         if (!entityStoreMap.containsKey(datasetId)) {
             try {
@@ -176,18 +184,16 @@ public class NodeStore {
         // Store the strand - check the status of the storage
         // we create a new instance of IngestionSession because each entity store uses separate IngestionSession
         // objects. Two IngestionSession objects are considered the same if they have the same session id.
-        entityStore.store(new IngestionSession(userId, sessionCreationTs, sessionId),
-                new StrandStorageKey(strand.getFromTimeStamp(), strand.getToTimestamp()),
-                new StrandStorageValue(strand));
+        entityStore.store(new IngestionSession(userId, sessionCreationTs, sessionId), storageKey, storageValue);
     }
 
     /**
      * Terminate session. Informs all entity stores of the corresponding dataset to terminate their sessions.
      * Terminating a session makes the data ingested during that session available for the subsequent queries.
      *
-     * @param datasetId Dataset Id
-     * @param user User Id
-     * @param sessionId Session id
+     * @param datasetId      Dataset Id
+     * @param user           User Id
+     * @param sessionId      Session id
      * @param sessionStartTS session start timestamp
      */
     public void endSession(String datasetId, String user, long sessionId, long sessionStartTS) {

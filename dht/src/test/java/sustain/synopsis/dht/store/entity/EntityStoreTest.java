@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static sustain.synopsis.dht.store.StrandStorageKeyValueTest.createStrand;
+import static sustain.synopsis.dht.store.StrandStorageKeyValueTest.serializeStrand;
 
 public class EntityStoreTest {
     @TempDir
@@ -49,11 +50,14 @@ public class EntityStoreTest {
         EntityStore entityStore = new EntityStore("9xj", metadataDir.getAbsolutePath(), 1024, 50, diskManagerMock);
         entityStore.init();
         StrandStorageKey key1 = new StrandStorageKey(1391216400000L, 1391216400100L);
-        StrandStorageValue value1 = new StrandStorageValue(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,
-                2.0));
+        StrandStorageValue value1 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L,
+                1391216400100L,
+                1.0,
+                2.0)));
         StrandStorageKey key2 = new StrandStorageKey(1391216400100L, 1391216400200L);
-        StrandStorageValue value2 = new StrandStorageValue(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,
-                2.0));
+        StrandStorageValue value2 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L, 1391216400100L,
+                1.0,
+                2.0)));
         IngestionSession session = new IngestionSession("bob", System.currentTimeMillis(), 0);
         entityStore.startSession(session);
         entityStore.store(session, key1, value1);
@@ -90,12 +94,13 @@ public class EntityStoreTest {
 
         // size of key and value used here - 187 bytes
         StrandStorageKey key1 = new StrandStorageKey(1391216400000L, 1391216400100L);
-        StrandStorageValue value1 = new StrandStorageValue(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,
-                2.0));
+        StrandStorageValue value1 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L, 1391216400100L,
+                1.0,
+                2.0)));
         entityStore.store(session, key1, value1); // this should fill up the memTable
         StrandStorageKey key2 = new StrandStorageKey(1391216400100L, 1391216400200L);
-        StrandStorageValue value2 = new StrandStorageValue(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,
-                2.0));
+        StrandStorageValue value2 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,
+                2.0)));
         entityStore.store(session, key2, value2);
         // storing 2 strands should fill out the memTable
         Mockito.verify(diskManagerMock, Mockito.times(1)).allocate(Mockito.anyLong());
@@ -109,8 +114,8 @@ public class EntityStoreTest {
 
         // add more data
         StrandStorageKey key3 = new StrandStorageKey(1391216400200L, 1391216400300L);
-        StrandStorageValue value3 = new StrandStorageValue(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,
-                2.0));
+        StrandStorageValue value3 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,
+                2.0)));
         entityStore.store(session, key3, value3);
 
         // end session
@@ -133,16 +138,16 @@ public class EntityStoreTest {
         IngestionSession session = new IngestionSession("bob", System.currentTimeMillis(), 0);
         entityStore.startSession(session);
         StrandStorageKey key1 = new StrandStorageKey(1391216400000L, 1391216400100L);
-        StrandStorageValue value1 = new StrandStorageValue(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,
-                2.0));
+        StrandStorageValue value1 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,
+                2.0)));
         entityStore.store(session, key1, value1); // this should fill up the memTable
         StrandStorageKey key2 = new StrandStorageKey(1391216400100L, 1391216400200L);
-        StrandStorageValue value2 = new StrandStorageValue(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,
-                2.0));
+        StrandStorageValue value2 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,
+                2.0)));
         entityStore.store(session, key2, value2);
         StrandStorageKey key3 = new StrandStorageKey(1391216400200L, 1391216400300L);
-        StrandStorageValue value3 = new StrandStorageValue(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,
-                2.0));
+        StrandStorageValue value3 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0,
+                2.0)));
         entityStore.store(session, key3, value3);
         // end session
         entityStore.endSession(session);
@@ -157,12 +162,12 @@ public class EntityStoreTest {
         // write some more data
         session = new IngestionSession("bob", System.currentTimeMillis(), 1);
         StrandStorageKey key4 = new StrandStorageKey(1391216400300L, 1391216400400L);
-        StrandStorageValue value4 = new StrandStorageValue(createStrand("9xj", 1391216400300L, 1391216400400L, 1.0,
-                2.0));
+        StrandStorageValue value4 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400300L, 1391216400400L, 1.0,
+                2.0)));
         restartedEntityStore.store(session, key4, value4); // this should fill up the memTable
         StrandStorageKey key5 = new StrandStorageKey(1391216400400L, 1391216400500L);
-        StrandStorageValue value5 = new StrandStorageValue(createStrand("9xj", 1391216400400L, 1391216400500L, 1.0,
-                2.0));
+        StrandStorageValue value5 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400400L, 1391216400500L, 1.0,
+                2.0)));
         restartedEntityStore.store(session, key5, value5); // this should fill up the memTable
 
         assertEquals(3, restartedEntityStore.sequenceId.get());

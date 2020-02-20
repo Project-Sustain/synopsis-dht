@@ -7,19 +7,21 @@ import sustain.synopsis.sketch.serialization.SerializationOutputStream;
 import sustain.synopsis.storage.lsmtree.Mergeable;
 import sustain.synopsis.storage.lsmtree.Serializable;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 
 /**
  * Wrapper for Strands before storing them in the LSMTree
+ * This implementation uses a lazy deserialization to reduce the serialization overhead.
+ * If the Strand object is requested through the #getMethod(), deserialization is performed.
+ * This implementation is not thread safe.
  */
 public class StrandStorageValue implements Mergeable<StrandStorageValue>, Serializable {
 
     private Strand strand;
+    private byte[] serializedStrand;
 
-    public StrandStorageValue(Strand strand) {
-        this.strand = strand;
+    public StrandStorageValue(byte[] serializedStrand) {
+        this.serializedStrand = serializedStrand;
     }
 
     public StrandStorageValue() {
@@ -28,30 +30,42 @@ public class StrandStorageValue implements Mergeable<StrandStorageValue>, Serial
 
     @Override
     public void merge(StrandStorageValue strandStorageValue) {
-        this.strand.merge(strandStorageValue.strand);
+        this.getStrand().merge(strandStorageValue.getStrand());
     }
 
     @Override
     public void serialize(DataOutputStream dataOutputStream) throws IOException {
-        SerializationOutputStream sos = new SerializationOutputStream(dataOutputStream);
-        strand.serialize(sos);
-        sos.flush();
-        sos.close();
+        byte[] serialized;
+        if (strand == null) { // strand is not deserialized yet. Use the serialized data
+            serialized = this.serializedStrand;
+        } else { // strand may have got merged with another strand - therefore serialize the object
+            try (ByteArrayOutputStream baos = new ByteArrayOutputStream(); SerializationOutputStream sos =
+                    new SerializationOutputStream(baos);) {
+                strand.serialize(sos);
+                sos.flush();
+                baos.flush();
+                serialized = baos.toByteArray();
+            }
+        }
+        dataOutputStream.writeInt(serialized.length);
+        dataOutputStream.write(serialized);
     }
 
     @Override
     public void deserialize(DataInputStream dataInputStream) throws IOException {
-        SerializationInputStream sis = new SerializationInputStream(dataInputStream);
-        try {
-            this.strand = new Strand(sis);
-        } catch (SerializationException e) {
-            throw new IOException(e);
-        } finally {
-            sis.close();
-        }
+        this.serializedStrand = new byte[dataInputStream.readInt()];
+        dataInputStream.readFully(this.serializedStrand);
     }
 
     public Strand getStrand() {
+        if (strand == null) {   // lazy deserialization
+            try (ByteArrayInputStream bais = new ByteArrayInputStream(serializedStrand); SerializationInputStream sis = new SerializationInputStream(bais)) {
+                Strand strand = new Strand(sis);
+                this.strand = strand;
+            } catch (IOException | SerializationException e) {
+                e.printStackTrace();
+            }
+        }
         return strand;
     }
 }

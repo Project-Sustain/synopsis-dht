@@ -50,7 +50,7 @@ public class StrandRegistry {
         }
         // publish all completed strands - it is possible for the incomplete strands to get published at this stage.
         // but as long as they are sharing the same ingestion session id, they will get merged.
-        publishStrandsWithPrefix(strand.getGeohash(), strand.getFromTimeStamp());
+//        publishStrandsWithPrefix(strand.getGeohash(), strand.getFromTimeStamp());
         return registry.size();
     }
 

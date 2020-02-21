@@ -7,5 +7,6 @@ dependencies {
     compile 'org.apache.kafka:kafka-clients:2.1.0'
     runtime 'org.apache.zookeeper:zookeeper:3.4.5'
     runtime 'com.oath.halodb:halodb:0.4.6'
+    compile group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: '3.8.0'
 }
 

@@ -1,8 +1,8 @@
 package synopsis2.client;
 
 import com.datastax.driver.core.BatchStatement;
-import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Statement;
+import com.datastax.driver.mapping.Mapper;
 import sustain.synopsis.common.Strand;
 import sustain.synopsis.ingestion.client.core.StrandPublisher;
 
@@ -20,20 +20,11 @@ public class CassandraStrandPublisher implements StrandPublisher {
 
     @Override
     public void publish(Set<Strand> strands) {
-        BatchStatement bs = new BatchStatement();
+        Mapper<CassandraStrand> mapper = this.connection.getManager().mapper(CassandraStrand.class);
         for (Strand s : strands) {
             CassandraStrand cs = CassandraStrand.fromStrandWithConfig(s, config);
-            bs.add(getInsertStatement(cs));
+            mapper.save(cs);
         }
-
-    }
-
-    private Statement getInsertStatement(CassandraStrand cs) {
-//        PreparedStatement preparedStatement = PreparedSt
-//        Statement stmt
-//
-
-        return null;
     }
 
     // strandKey

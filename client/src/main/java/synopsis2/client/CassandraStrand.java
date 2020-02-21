@@ -1,21 +1,38 @@
 package synopsis2.client;
 
+import com.datastax.driver.mapping.annotations.*;
 import sustain.synopsis.common.Strand;
 import sustain.synopsis.sketch.dataset.feature.Feature;
-import sustain.synopsis.sketch.stat.RunningStatisticsND;
-
 import java.math.BigInteger;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.List;
 
+
+@Table(keyspace = "synopsis_cassandra", name="strand",
+        // https://docs.datastax.com/en/archived/cassandra/3.0/cassandra/dml/dmlConfigConsistency.html
+        readConsistency = "QUORUM",
+        writeConsistency = "QUORUM")
 public class CassandraStrand {
+
+    @PartitionKey(0)
     String geohash;
+
+    @PartitionKey(1)
     Long sessionId;
+
+    @ClusteringColumn(0)
     Long fromTs;
+
+    @ClusteringColumn(1)
     byte[] featuresKey;
+
+    @ClusteringColumn(2)
     byte[] binsKey;
-    RunningStatisticsND statistics;
+
+    @Column(name="statistics")
+    @FrozenValue
+    CassandraStatistics statistics;
 
     public static CassandraStrand fromStrandWithConfig(Strand s, CassandraIngestionConfig config) {
         CassandraStrand cs = new CassandraStrand();
@@ -24,7 +41,8 @@ public class CassandraStrand {
         cs.fromTs = s.getFromTimeStamp();
         cs.setFeaturesKey(s.getPath().getLabels(), config);
         cs.setBinsKey(s.getPath().getLabels(), config);
-        cs.statistics = s.getPath().getTail().getData().statistics;
+        cs.statistics = CassandraStatistics.fromRunningStatisticsND(
+                s.getPath().getTail().getData().statistics);
         return cs;
     }
 

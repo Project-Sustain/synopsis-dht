@@ -8,5 +8,6 @@ dependencies {
     runtime 'org.apache.zookeeper:zookeeper:3.4.5'
     runtime 'com.oath.halodb:halodb:0.4.6'
     compile group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: '3.8.0'
+    compile group: 'com.datastax.cassandra', name: 'cassandra-driver-mapping', version: '3.8.0'
 }
 

@@ -4,35 +4,37 @@ import com.datastax.driver.mapping.annotations.*;
 import sustain.synopsis.common.Strand;
 import sustain.synopsis.sketch.dataset.feature.Feature;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.List;
 
-
-@Table(keyspace = "synopsis_cassandra", name="strand",
-        // https://docs.datastax.com/en/archived/cassandra/3.0/cassandra/dml/dmlConfigConsistency.html
-        readConsistency = "QUORUM",
-        writeConsistency = "QUORUM")
+@Table(keyspace = "synopsis_cassandra", name="strand")
 public class CassandraStrand {
 
     @PartitionKey(0)
+    @Column(name="geohash")
     String geohash;
 
     @PartitionKey(1)
+    @Column(name="session_id")
     Long sessionId;
 
     @ClusteringColumn(0)
+    @Column(name="from_ts")
     Long fromTs;
 
     @ClusteringColumn(1)
-    byte[] featuresKey;
+    @Column(name="features_key")
+    ByteBuffer featuresKey;
 
     @ClusteringColumn(2)
-    byte[] binsKey;
+    @Column(name="bins_key")
+    ByteBuffer binsKey;
 
-    @Column(name="statistics")
     @FrozenValue
-    CassandraStatistics statistics;
+    @Column(name="summary")
+    CassandraSummary summary;
 
     public static CassandraStrand fromStrandWithConfig(Strand s, CassandraIngestionConfig config) {
         CassandraStrand cs = new CassandraStrand();
@@ -41,8 +43,9 @@ public class CassandraStrand {
         cs.fromTs = s.getFromTimeStamp();
         cs.setFeaturesKey(s.getPath().getLabels(), config);
         cs.setBinsKey(s.getPath().getLabels(), config);
-        cs.statistics = CassandraStatistics.fromRunningStatisticsND(
+        cs.summary = CassandraSummary.fromRunningStatisticsND(
                 s.getPath().getTail().getData().statistics);
+//        cs.summary = null;
         return cs;
     }
 
@@ -52,7 +55,7 @@ public class CassandraStrand {
             int featureIdx = config.getFeatureIdx(f.getName());
             featureBitSet.set(featureIdx);
         }
-        featuresKey = featureBitSet.toByteArray();
+        featuresKey = ByteBuffer.wrap(featureBitSet.toByteArray());
     }
 
     private void setBinsKey(List<Feature> featureList, CassandraIngestionConfig config) {
@@ -67,9 +70,9 @@ public class CassandraStrand {
                     .add(BigInteger.valueOf(value));
         }
 
-        binsKey = cur.toByteArray();
+        binsKey = ByteBuffer.wrap(cur.toByteArray());
     }
-
+//
 //        private static String getPathKey(Path p) {
 //            StringBuilder sb = new StringBuilder();
 //            for (Feature f : p.getLabels()) {

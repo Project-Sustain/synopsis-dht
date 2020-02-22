@@ -22,6 +22,10 @@ public class CassandraConnection {
         cluster.close();
     }
 
+    public Cluster getCluster() {
+        return cluster;
+    }
+
     public Session getSession() {
         return session;
     }
@@ -29,5 +33,4 @@ public class CassandraConnection {
     public MappingManager getManager() {
         return manager;
     }
-
 }

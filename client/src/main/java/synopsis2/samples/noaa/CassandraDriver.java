@@ -38,17 +38,28 @@ public class CassandraDriver {
             CassandraIngestionConfig config = CassandraIngestionConfig.fromIngestConfigWithSessionId(ingestionConfig, 1);
 
             StrandRegistry registry = new StrandRegistry(new CassandraStrandPublisher(connection,config));
+
+            long startTime = System.currentTimeMillis();
             while (ingester.hasNext()) {
                 Strand strand = ingester.next();
                 if (strand != null) {
                     int recordCount = registry.add(strand);
                     if(recordCount % 100 == 0){
-                        System.out.println("Records processed: " + recordCount);
+//                        System.out.println("Records processed: " + recordCount);
                     }
                 }
             }
+
             int totalStrandsPublished = registry.terminateSession();
+
+            long endTime = System.currentTimeMillis();
+            double timeSecs = (endTime-startTime) / 1000.0d;
+
             System.out.println("Total Strands Published: " + totalStrandsPublished);
+            System.out.println("time : "+timeSecs);
+
+            connection.close();
+
         } catch (IOException e) {
             e.printStackTrace();
         }

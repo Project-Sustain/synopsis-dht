@@ -1,7 +1,5 @@
 package synopsis2.client;
 
-import com.datastax.driver.core.BatchStatement;
-import com.datastax.driver.core.Statement;
 import com.datastax.driver.mapping.Mapper;
 import sustain.synopsis.common.Strand;
 import sustain.synopsis.ingestion.client.core.StrandPublisher;
@@ -21,15 +19,12 @@ public class CassandraStrandPublisher implements StrandPublisher {
     @Override
     public void publish(Set<Strand> strands) {
         Mapper<CassandraStrand> mapper = this.connection.getManager().mapper(CassandraStrand.class);
+
         for (Strand s : strands) {
             CassandraStrand cs = CassandraStrand.fromStrandWithConfig(s, config);
             mapper.save(cs);
         }
     }
-
-    // strandKey
-
-
 
 }
 

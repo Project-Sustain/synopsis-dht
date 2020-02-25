@@ -5,15 +5,12 @@ def protobufVersion = '3.11.0'
 def protocVersion = protobufVersion
 
 dependencies {
+    compileOnly "javax.annotation:javax.annotation-api:1.2"
     implementation "io.grpc:grpc-protobuf:${grpcVersion}"
     implementation "io.grpc:grpc-stub:${grpcVersion}"
-    compileOnly "javax.annotation:javax.annotation-api:1.2"
-
-    implementation 'io.netty:netty-all:4.0.25.Final'
     implementation 'org.apache.zookeeper:zookeeper:3.4.5'
     implementation project(':common')
     implementation project(':storage')
-    runtime 'io.netty:netty-all:4.0.25.Final'
     runtime 'org.apache.zookeeper:zookeeper:3.4.5'
 
     runtimeOnly "io.grpc:grpc-netty-shaded:${grpcVersion}"

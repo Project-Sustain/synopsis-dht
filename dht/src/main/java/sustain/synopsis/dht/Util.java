@@ -7,11 +7,8 @@ import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 
 import java.lang.management.ManagementFactory;
-import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 /**
  * @author Thilina Buddhika
@@ -19,9 +16,6 @@ import java.security.NoSuchAlgorithmException;
 public class Util {
 
     private static Logger logger = Logger.getLogger(Util.class);
-
-    // we assume 128-bit identifier.
-    public static final BigInteger BASE = BigInteger.valueOf(2).pow(128);
 
     public static String getHostname() {
         InetAddress inetAddr;
@@ -38,25 +32,6 @@ public class Util {
         // we use ingestion service port to construct the node address - a unique port is needed
         // if there are multiple server processes running on the same machine
         return ctx.getProperty(ServerConstants.Configuration.HOSTNAME) + ":" + ctx.getNodeConfig().getIngestionServicePort();
-    }
-
-    /**
-     * Method that converts a given key to an identifier of the range 0 - 2^128
-     *
-     * @param key String key
-     * @return Identifier between 0 - 2^128
-     */
-    public static BigInteger getIdentifier(String key) {
-        // hash the passed in key. Use it as an 2's complement of a number to construct
-        // a positive BigInteger object.
-        BigInteger identifier = null;
-        try {
-            identifier = new BigInteger(1, MessageDigest.getInstance("SHA-1").digest(key.getBytes()));
-            identifier = identifier.mod(BASE);
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }
-        return identifier;
     }
 
     static String createZKDirectory(ZooKeeper zk, String path, CreateMode createMode) throws KeeperException, InterruptedException {

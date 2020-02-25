@@ -68,8 +68,9 @@ public class ContextTest {
     void testRingAccess(){
         Context ctx = Context.getInstance();
         Assertions.assertNull(ctx.getRing());
-        Ring ring = new Ring();
+        Ring ring = new Ring(null, null);
         ctx.setRing(ring);
+        // use object id comparison to check for the same object
         Assertions.assertEquals(ring, ctx.getRing());
     }
 }

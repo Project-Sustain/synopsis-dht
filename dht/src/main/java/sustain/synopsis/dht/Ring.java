@@ -1,7 +1,7 @@
 package sustain.synopsis.dht;
 
 import org.apache.log4j.Logger;
-import sustain.synopsis.dht.dispersion.DataDispersionScheme;
+import sustain.synopsis.dht.dispersion.RingIdMapper;
 import sustain.synopsis.dht.dispersion.DataDispersionSchemeFactory;
 import sustain.synopsis.dht.zk.MembershipListener;
 import sustain.synopsis.dht.zk.MembershipTracker;
@@ -12,6 +12,7 @@ import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 
 /**
  * Consistent Hashing implementation is inspired by http://www.tom-e-white.com/2007/11/consistent-hashing.html
@@ -29,14 +30,6 @@ public class Ring implements Runnable, MembershipListener {
             this.id = id;
             this.addr = addr;
             this.virtualId = virtualId;
-        }
-
-        public String getAddr() {
-            return addr;
-        }
-
-        public BigInteger getId() {
-            return id;
         }
 
         @Override
@@ -61,41 +54,55 @@ public class Ring implements Runnable, MembershipListener {
         public String toString() {
             return "Entity{" + "id=" + id + ", addr='" + addr + '\'' + ", virtualId=" + virtualId + '}';
         }
+
+        BigInteger getId() {
+            return id;
+        }
+
+        String getAddr() {
+            return addr;
+        }
+
+        int getVirtualId() {
+            return virtualId;
+        }
     }
 
-    private BlockingQueue<List<String>> updates = new LinkedBlockingDeque<>();
+    private final BlockingQueue<List<String>> updates = new LinkedBlockingDeque<>();
     private final SortedMap<BigInteger, Entity> ring = new TreeMap<>();
-    private final Map<String, BigInteger> dataAddressToIdMapping = new HashMap<>();
-    private final DataDispersionScheme dataDispersionScheme =
-            DataDispersionSchemeFactory.getInstance().getDataDispersionScheme(ServerConstants.DATA_DISPERSION_SCHEME.CONSISTENT_HASHING);
+    private final RingIdMapper ringIdMapper;
+    private final MembershipTracker membershipTracker;
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
-    public Ring() {
+    // used for unit testing
+    public Ring(RingIdMapper dispersionScheme, MembershipTracker membershipTracker) {
+        this.ringIdMapper = dispersionScheme;
+        this.membershipTracker = membershipTracker;
+    }
 
+    public Ring() throws ZKError {
+        ringIdMapper =
+                DataDispersionSchemeFactory.getInstance().getDataDispersionScheme(ServerConstants.DATA_DISPERSION_SCHEME.CONSISTENT_HASHING);
+        membershipTracker = MembershipTracker.getInstance();
     }
 
     @Override
     public void run() {
-        // subscribe for membership changes.
-        try {
-            MembershipTracker membershipTracker = MembershipTracker.getInstance();
-            membershipTracker.subscribe(this);
-            membershipTracker.getAvailableWorkers();
-        } catch (ZKError zkError) {
-            logger.error("Error subscribing to membership changes. Terminating the ring updater thread.", zkError);
-            return;
-        }
-
+        membershipTracker.subscribe(this);
+        membershipTracker.getAvailableWorkers();
         // listen for membership changes and update the ring data structure
         logger.debug("Ring Updater Thread started.");
         while (!Thread.interrupted()) {
             try {
                 List<String> newNodes = updates.take();
-                if (!updates.isEmpty()) {
-                    updateRing(newNodes, dataDispersionScheme, ring, dataAddressToIdMapping); // todo: remove
-                    // indirection
+                if (!newNodes.isEmpty()) {
+                    List<Entity> entities = newNodes.stream().map(this::convertToEntity).collect(Collectors.toList());
+                    updateRing(entities);
                 }
+            } catch (InterruptedException e) {
+                return;
             } catch (Throwable e) {
+                e.printStackTrace();
                 logger.error("Error in ring updater thread.", e);
             }
         }
@@ -106,56 +113,48 @@ public class Ring implements Runnable, MembershipListener {
         updates.add(update);
     }
 
-    private void updateRing(List<String> nodes, DataDispersionScheme dispersionScheme,
-                            SortedMap<BigInteger, Entity> circle, Map<String, BigInteger> addressMapping) {
+    void updateRing(List<Entity> entities) {
         try {
             lock.writeLock().lock();
-            List<Entity> entities = dispersionScheme.processNewMembers(nodes);
-            if (!dispersionScheme.incrementalUpdatesToMembers()) {
-                circle.clear();
-                addressMapping.clear();
-            }
             for (Entity entity : entities) {
-                circle.put(entity.id, entity);
-                addressMapping.put(entity.addr + ":" + entity.virtualId, entity.id);
+                ring.put(entity.id, entity);
             }
-            logger.info("Updated data ring structure for new nodes. New node count: " + nodes.size());
+            logger.info("Updated data ring structure for new nodes. Total node count: " + ring.size());
         } finally {
             lock.writeLock().unlock();
         }
     }
 
-    public String lookup(String entityId) {
-        return search(dataDispersionScheme.getIdentifier(entityId), ring);
+    public String lookup(String key) {
+        return lookup(ringIdMapper.getIdentifier(key));
     }
 
-    public BigInteger getIdentifier(String key) {
-        return dataDispersionScheme.getIdentifier(key);
-    }
-
-    private String search(BigInteger identifier, SortedMap<BigInteger, Entity> circle) {
+    private String lookup(BigInteger identifier) {
         try {
             lock.readLock().lock();
-            if (!circle.containsKey(identifier)) {
-                SortedMap<BigInteger, Entity> tailMap = circle.tailMap(identifier);
-                identifier = tailMap.isEmpty() ? circle.firstKey() : tailMap.firstKey();
+            if (!ring.containsKey(identifier)) {
+                SortedMap<BigInteger, Entity> tailMap = ring.tailMap(identifier);
+                identifier = tailMap.isEmpty() ? ring.firstKey() : tailMap.firstKey();
             }
-            return circle.get(identifier).addr;
+            return ring.get(identifier).addr;
         } finally {
             lock.readLock().unlock();
         }
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Ring)) return false;
-        Ring ring1 = (Ring) o;
-        return updates.equals(ring1.updates) && ring.equals(ring1.ring) && dataAddressToIdMapping.equals(ring1.dataAddressToIdMapping) && dataDispersionScheme.equals(ring1.dataDispersionScheme);
+    Entity convertToEntity(String newNodeStr) {
+        // each string is of the form address:port:v_node_id
+        BigInteger identifier = ringIdMapper.getIdentifier(newNodeStr);
+        String[] segments = newNodeStr.split(":");
+        return new Entity(identifier, segments[0] + ":" + segments[1], Integer.parseInt(segments[2]));
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(updates, ring, dataAddressToIdMapping, dataDispersionScheme);
+    public long getSize() {
+        try {
+            lock.readLock().lock();
+            return ring.size();
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 }

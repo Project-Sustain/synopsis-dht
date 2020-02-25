@@ -53,6 +53,8 @@ public class Node {
             logger.error("Error starting the NodeStore.", e);
         } catch (IOException e) {
            logger.error("Error starting the gRPC services.", e);
+        } catch (ZKError zkError) {
+            logger.error("Error initializing the ring with zk client.", zkError);
         }
     }
 

@@ -1,4 +1,7 @@
 ---
+# ingestion service port
+ingestionServicePort: 9091
+
 # storage directories and the upper limits on the usage used for storing data (in GB)
 storageDirs:
   /sustain/data/a : 10
@@ -18,3 +21,6 @@ blockSize: 10
 
 # metadata storage directory - used for storing metadata of entity stores (e.g.: commit logs)
 metadataStoreDir: '/tmp/'
+
+# writer pool size
+writerPoolSize: 10

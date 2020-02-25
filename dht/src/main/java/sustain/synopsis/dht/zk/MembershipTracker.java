@@ -1,9 +1,5 @@
 package sustain.synopsis.dht.zk;
 
-/**
- * @author Thilina Buddhika
- */
-
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.KeeperException;

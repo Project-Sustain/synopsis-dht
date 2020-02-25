@@ -18,7 +18,7 @@ public class DataDispersionSchemeFactory {
         return instance;
     }
 
-    public DataDispersionScheme getDataDispersionScheme(String dataDispersionScheme) {
+    public RingIdMapper getDataDispersionScheme(String dataDispersionScheme) {
         switch (dataDispersionScheme) {
             case ServerConstants.DATA_DISPERSION_SCHEME.CONSISTENT_HASHING:
                 return new ConsistentHashingDDS();

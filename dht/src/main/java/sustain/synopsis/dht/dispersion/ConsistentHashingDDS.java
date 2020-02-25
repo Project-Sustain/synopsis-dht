@@ -1,35 +1,28 @@
 package sustain.synopsis.dht.dispersion;
 
-import sustain.synopsis.dht.Ring;
-import sustain.synopsis.dht.Util;
-
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.List;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 /**
- * @author Thilina Buddhika
+ * Id mapping scheme that converts a given key to an identifier of the range 0 - 2^128
  */
-public class ConsistentHashingDDS implements DataDispersionScheme {
-    @Override
-    public List<Ring.Entity> processNewMembers(List<String> newNodes) {
-        List<Ring.Entity> entities = new ArrayList<>();
-        for (String newNode : newNodes) {
-            String[] segments = newNode.split(":");
-            BigInteger identifier = Util.getIdentifier(segments[0] + ":" + segments[1] + ":" + segments[2]);
-            entities.add(new Ring.Entity(identifier, segments[0] + ":" + segments[1],
-                    Integer.parseInt(segments[2])));
-        }
-        return entities;
-    }
+public class ConsistentHashingDDS implements RingIdMapper {
+
+    // we assume 128-bit identifier.
+    public final BigInteger BASE = BigInteger.valueOf(2).pow(128);
 
     @Override
     public BigInteger getIdentifier(String key) {
-        return Util.getIdentifier(key);
-    }
-
-    @Override
-    public boolean incrementalUpdatesToMembers() {
-        return true;
+        // hash the passed in key. Use it as an 2's complement of a number to construct
+        // a positive BigInteger object.
+        BigInteger identifier = null;
+        try {
+            identifier = new BigInteger(1, MessageDigest.getInstance("SHA-1").digest(key.getBytes()));
+            identifier = identifier.mod(BASE);
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        return identifier;
     }
 }

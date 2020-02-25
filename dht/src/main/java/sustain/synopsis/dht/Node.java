@@ -63,7 +63,7 @@ public class Node {
         try {
             try {
                 if (zk.exists(ServerConstants.ZK_NODES_ROOT, false) == null) {
-                    String groupDir = Util.createZKDirectory(zk, ServerConstants.ZK_NODES_ROOT, null,
+                    String groupDir = Util.createZKDirectory(zk, ServerConstants.ZK_NODES_ROOT,
                             CreateMode.PERSISTENT);
                     if (logger.isDebugEnabled()) {
                         logger.debug("Created Root ZNode: " + groupDir);
@@ -76,7 +76,7 @@ public class Node {
             for (int i = 0; i < virtualNodeCount; i++) {
                 String individualDir = ServerConstants.ZK_NODES_ROOT + "/" + nodeAddress + ":" + i;
                 try {
-                    Util.createZKDirectory(zk, individualDir, null, CreateMode.EPHEMERAL);
+                    Util.createZKDirectory(zk, individualDir, CreateMode.EPHEMERAL);
                 } catch (KeeperException e) {
                     logger.error(e.getMessage(), e);
                     throw new ZKError(e.getMessage(), e);

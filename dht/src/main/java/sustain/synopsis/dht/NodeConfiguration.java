@@ -4,9 +4,10 @@ import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -19,11 +20,13 @@ public class NodeConfiguration {
 
     public static final String HOSTNAME_PLACEHOLDER = "$HOSTNAME";
 
-    static NodeConfiguration fromYamlFile(String filePath) throws FileNotFoundException {
-        FileInputStream fis;
-        fis = new FileInputStream(filePath);
-        Yaml yaml = new Yaml(new Constructor(NodeConfiguration.class));
-        return yaml.load(fis);
+    static NodeConfiguration fromYamlFile(String filePath) throws IOException {
+        try (FileInputStream fis = new FileInputStream(filePath)) {
+            Yaml yaml = new Yaml(new Constructor(NodeConfiguration.class));
+            return yaml.load(fis);
+        } catch (IOException e) {
+            throw e;
+        }
     }
 
 
@@ -46,7 +49,7 @@ public class NodeConfiguration {
     }
 
     public Map<String, Long> getStorageDirs() {
-        if(this.storageDirs != null) {
+        if (this.storageDirs != null) {
             return this.storageDirs;
         } else {
             return null;
@@ -55,8 +58,9 @@ public class NodeConfiguration {
 
     public void setStorageDirs(Map<String, Long> storageDirs) {
         if (this.storageDirs == null) {
-            this.storageDirs = Collections.unmodifiableMap(storageDirs).entrySet().stream().collect(
-                    Collectors.toMap(x -> x.getKey().replace(HOSTNAME_PLACEHOLDER, hostname), Map.Entry::getValue));;
+            this.storageDirs =
+                    Collections.unmodifiableMap(storageDirs).entrySet().stream().collect(Collectors.toMap(x -> x.getKey().replace(HOSTNAME_PLACEHOLDER, hostname), Map.Entry::getValue));
+            ;
         }
     }
 
@@ -108,5 +112,19 @@ public class NodeConfiguration {
 
     public void setWriterPoolSize(int writerPoolSize) {
         this.writerPoolSize = writerPoolSize;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof NodeConfiguration)) return false;
+        NodeConfiguration that = (NodeConfiguration) o;
+        return getIngestionServicePort() == that.getIngestionServicePort() && getMemTableSize() == that.getMemTableSize() && getBlockSize() == that.getBlockSize() && getWriterPoolSize() == that.getWriterPoolSize() && hostname.equals(that.hostname) && getStorageDirs().equals(that.getStorageDirs()) && getStorageAllocationPolicy().equals(that.getStorageAllocationPolicy()) && getRootJournalLoc().equals(that.getRootJournalLoc()) && getMetadataStoreDir().equals(that.getMetadataStoreDir());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(hostname, getIngestionServicePort(), getStorageDirs(), getStorageAllocationPolicy(),
+                getRootJournalLoc(), getMemTableSize(), getBlockSize(), getMetadataStoreDir(), getWriterPoolSize());
     }
 }

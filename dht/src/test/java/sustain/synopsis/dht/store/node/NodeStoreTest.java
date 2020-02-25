@@ -16,7 +16,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static sustain.synopsis.dht.store.StrandStorageKeyValueTest.createStrand;
@@ -122,7 +121,7 @@ public class NodeStoreTest {
         storageDirs.put(storageDir.getAbsolutePath(), 10240L);
         nodeConfiguration.setStorageDirs(storageDirs);
         nodeConfiguration.setStorageAllocationPolicy("round-robin");
-        Context.getInstance().initialize(new Properties(), nodeConfiguration);
+        Context.getInstance().initialize(nodeConfiguration);
 
         NodeStore nodeStore = new NodeStore();
         nodeStore.init();

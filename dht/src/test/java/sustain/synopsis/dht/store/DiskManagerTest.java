@@ -16,7 +16,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
 
 public class DiskManagerTest {
 
@@ -43,7 +42,7 @@ public class DiskManagerTest {
         fw.append("storageAllocationPolicy: 'round-robin'\n");
         fw.flush();
         fw.close();
-        Context.getInstance().initialize(new Properties(), nodeConfigFilePath.toAbsolutePath().toString());
+        Context.getInstance().initialize(nodeConfigFilePath.toAbsolutePath().toString());
     }
 
     @Test
@@ -97,7 +96,7 @@ public class DiskManagerTest {
 
     @Test
     void testSingletonInstanceWithFailedInit() {
-        Context.getInstance().initialize(new Properties());
+        Context.getInstance().initialize(new NodeConfiguration());
         Assertions.assertThrows(StorageException.class, DiskManager::getInstance);
     }
 

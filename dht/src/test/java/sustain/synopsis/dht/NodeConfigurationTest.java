@@ -19,6 +19,7 @@ public class NodeConfigurationTest {
         Path nodeConfigFilePath = tempDir.resolve("test.yaml");
         FileWriter fw = new FileWriter(nodeConfigFilePath.toFile());
         fw.append("---\n");
+        fw.append("ingestionServicePort: 9091\n");
         fw.append("storageDirs:\n");
         fw.append("  /tmp/ : 1024\n");
         fw.append("storageAllocationPolicy: 'round-robin'\n");
@@ -26,10 +27,12 @@ public class NodeConfigurationTest {
         fw.append("memTableSize: 50\n");
         fw.append("blockSize: 10\n");
         fw.append("metadataStoreDir: '/tmp'\n");
+        fw.append("writerPoolSize: 5\n");
         fw.flush();
         fw.close();
         NodeConfiguration configuration = NodeConfiguration.fromYamlFile(nodeConfigFilePath.toAbsolutePath().toString());
 
+        Assertions.assertEquals(9091, configuration.getIngestionServicePort());
         Map<String, Long> storageDirs = configuration.getStorageDirs();
         Assertions.assertEquals(1, storageDirs.size());
         Assertions.assertEquals(1024L, storageDirs.get("/tmp/"));
@@ -37,6 +40,7 @@ public class NodeConfigurationTest {
         Assertions.assertEquals("/tmp/root-journal.slog", configuration.getRootJournalLoc());
         Assertions.assertEquals(50, configuration.getMemTableSize());
         Assertions.assertEquals(10, configuration.getBlockSize());
+        Assertions.assertEquals(5, configuration.getWriterPoolSize());
     }
 
     @Test

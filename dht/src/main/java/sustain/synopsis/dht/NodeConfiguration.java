@@ -28,12 +28,22 @@ public class NodeConfiguration {
 
 
     private String hostname = Util.getHostname();
+    private int ingestionServicePort;
     private Map<String, Long> storageDirs;
     private String storageAllocationPolicy;
     private String rootJournalLoc;
     private int memTableSize;
     private int blockSize;
     private String metadataStoreDir;
+    private int writerPoolSize;
+
+    public int getIngestionServicePort() {
+        return ingestionServicePort;
+    }
+
+    public void setIngestionServicePort(int ingestionServicePort) {
+        this.ingestionServicePort = ingestionServicePort;
+    }
 
     public Map<String, Long> getStorageDirs() {
         if(this.storageDirs != null) {
@@ -90,5 +100,13 @@ public class NodeConfiguration {
 
     public void setMetadataStoreDir(String metadataStoreDir) {
         this.metadataStoreDir = metadataStoreDir;
+    }
+
+    public int getWriterPoolSize() {
+        return writerPoolSize;
+    }
+
+    public void setWriterPoolSize(int writerPoolSize) {
+        this.writerPoolSize = writerPoolSize;
     }
 }

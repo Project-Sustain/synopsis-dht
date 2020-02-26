@@ -110,7 +110,11 @@ public class NOAAIngester implements Ingester {
     private File[] getInputFilesInDir(String dataDirPath) {
         File dataDir = new File(dataDirPath);
         if (dataDir.exists()) {
-            inputFiles = dataDir.listFiles((dir, name) -> name.endsWith(".mblob"));
+            if (dataDir.isDirectory()) {
+                inputFiles = dataDir.listFiles((dir, name) -> name.endsWith(".mblob"));
+            } else {
+                inputFiles = new File[]{dataDir};
+            }
         } else {
             inputFiles = new File[0];
         }

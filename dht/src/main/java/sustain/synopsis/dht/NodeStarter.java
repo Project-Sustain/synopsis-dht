@@ -27,10 +27,10 @@ public class NodeStarter {
             return;
         }
         // set the hostname
-        ctx.setProperty(ServerConstants.Configuration.HOSTNAME, Util.getHostname());
+        ctx.setProperty(ServerConstants.HOSTNAME, Util.getHostname());
         logger.info("Successfully initialized node context.");
 
-        int port = Integer.parseInt(ctx.getProperty(ServerConstants.Configuration.PORT));
+        int port = ctx.getNodeConfig().getIngestionServicePort();
         Node node = new Node(port);
         // this is a blocking call
         node.start();

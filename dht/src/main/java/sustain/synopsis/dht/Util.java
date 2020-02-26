@@ -31,7 +31,7 @@ public class Util {
         Context ctx = Context.getInstance();
         // we use ingestion service port to construct the node address - a unique port is needed
         // if there are multiple server processes running on the same machine
-        return ctx.getProperty(ServerConstants.Configuration.HOSTNAME) + ":" + ctx.getNodeConfig().getIngestionServicePort();
+        return ctx.getProperty(ServerConstants.HOSTNAME) + ":" + ctx.getNodeConfig().getIngestionServicePort();
     }
 
     static String createZKDirectory(ZooKeeper zk, String path, CreateMode createMode) throws KeeperException, InterruptedException {

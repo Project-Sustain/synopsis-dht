@@ -43,14 +43,14 @@ public class CassandraDriver {
             while (ingester.hasNext()) {
                 Strand strand = ingester.next();
                 if (strand != null) {
-                    int recordCount = registry.add(strand);
+                    long recordCount = registry.add(strand);
                     if(recordCount % 100 == 0){
 //                        System.out.println("Records processed: " + recordCount);
                     }
                 }
             }
 
-            int totalStrandsPublished = registry.terminateSession();
+            long totalStrandsPublished = registry.terminateSession();
 
             long endTime = System.currentTimeMillis();
             double timeSecs = (endTime-startTime) / 1000.0d;

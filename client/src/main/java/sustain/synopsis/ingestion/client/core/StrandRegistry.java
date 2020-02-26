@@ -27,10 +27,10 @@ public class StrandRegistry {
     private final Map<String, Strand> registry = new HashMap<>();
     private final LRUCache<Strand> lruCache = new LRUCache<>();
 
-    private final int publishAtCacheSize = 2500;
-    private final int numToPublish = 50;
+    private final int publishAtCacheSize = 100000;
+    private final int numToPublish = 100;
 
-    private int totalPublishedStrandCount = 0;
+    private long totalPublishedStrandCount = 0;
 
 
     public StrandRegistry(StrandPublisher publisher) {
@@ -42,12 +42,16 @@ public class StrandRegistry {
      * @param strand New strand to be added
      * @return Current number of strands in the registry
      */
-    public int add(Strand strand) {
-        Strand existing = registry.putIfAbsent(strand.getKey(), strand);
+    public long add(Strand strand) {
+
+        Strand existing = registry.get(strand.getKey());
         if (existing != null) {
             existing.merge(strand);
+            lruCache.use(existing);
+        } else {
+            registry.put(strand.getKey(), strand);
+            lruCache.use(strand);
         }
-        lruCache.use(existing);
 
         if (logger.isTraceEnabled()) {
             logger.trace("[" + Thread.currentThread().getName() + "] Strand is added. Key: " + strand.getKey() +
@@ -63,6 +67,10 @@ public class StrandRegistry {
         return registry.size();
     }
 
+    public long getTotalPublishedStrandCount() {
+        return totalPublishedStrandCount;
+    }
+
     private void publish (Collection<Strand> strands) {
         publisher.publish(strands);
         totalPublishedStrandCount += strands.size();
@@ -72,7 +80,7 @@ public class StrandRegistry {
      * Terminate the current ingestion session. Send all the remaining strands in the registry to the cloud.
      * @return Total number of strands ingested during the session.
      */
-    public int terminateSession() {
+    public long terminateSession() {
         publish(lruCache.evictAll());
         logger.info("[" + Thread.currentThread().getName() + "] Publishing all strands. Published strand count: " +
                 registry.size());

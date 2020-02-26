@@ -16,14 +16,20 @@ public class LRUCache<E> {
     }
 
     public void use(E elem) {
-        Node node = map.get(elem);
-        if (node == null) {
-            Node newNode = new Node(null,listHead,elem);
-            listHead = newNode;
-            map.put(elem, newNode);
+        Node existing = map.get(elem);
+        if (existing != null) {
+            moveToHead(existing);
 
         } else {
-            moveToHead(node);
+            Node newNode = new Node(null,listHead,elem);
+            map.put(elem, newNode);
+
+            if (listHead == null) {
+                listTail = newNode;
+            } else {
+                listHead.prev = newNode;
+            }
+            listHead = newNode;
         }
     }
 
@@ -46,6 +52,7 @@ public class LRUCache<E> {
         Node cur = listHead;
         listHead = null;
         listTail = null;
+        map.clear();
 
         Collection<E> ret = new ArrayList<>(size());
         while (cur != null) {
@@ -85,11 +92,10 @@ public class LRUCache<E> {
             n.prev.next = n.next;
             n.next.prev = n.prev;
         }
-        n.prev = null;
 
-        if (listHead != null) {
-            listHead.prev = n;
-        }
+        n.prev = null;
+        n.next = listHead;
+        listHead.prev = n;
         listHead = n;
     }
 

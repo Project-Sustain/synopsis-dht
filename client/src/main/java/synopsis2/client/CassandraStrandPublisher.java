@@ -17,7 +17,7 @@ public class CassandraStrandPublisher implements StrandPublisher {
     }
 
     @Override
-    public void publish(Set<Strand> strands) {
+    public void publish(Collection<Strand> strands) {
         Mapper<CassandraStrand> mapper = this.connection.getManager().mapper(CassandraStrand.class);
 
         for (Strand s : strands) {

@@ -7,7 +7,7 @@ import sustain.synopsis.sketch.serialization.SerializationOutputStream;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.Set;
+import java.util.Collection;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class PayloadSizeCalculator implements StrandPublisher {
@@ -16,7 +16,7 @@ public class PayloadSizeCalculator implements StrandPublisher {
     private final Logger logger = Logger.getLogger(PayloadSizeCalculator.class);
 
     @Override
-    public void publish(Set<Strand> strands) {
+    public void publish(Collection<Strand> strands) {
         for(Strand s: strands){
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             SerializationOutputStream sos = new SerializationOutputStream(baos);

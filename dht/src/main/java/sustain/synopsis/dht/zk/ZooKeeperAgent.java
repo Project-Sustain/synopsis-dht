@@ -5,9 +5,9 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 import sustain.synopsis.dht.Context;
-import sustain.synopsis.dht.ServerConstants;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 public class ZooKeeperAgent implements Watcher {
@@ -19,8 +19,8 @@ public class ZooKeeperAgent implements Watcher {
 
     private ZooKeeperAgent() throws ZKError {
         try {
-            String zkHosts = Context.getInstance().getProperty(ServerConstants.Configuration.ZK_SERVERS);
-            this.zk = new ZooKeeper(zkHosts, 30000, this);
+            List<String> zkEnsemble = Context.getInstance().getNodeConfig().getZkEnsemble();
+            this.zk = new ZooKeeper(String.join(",", zkEnsemble), 30000, this);
             logger.info("Waiting for ZooKeeper connection.");
             this.connectionWatcher.await();
             logger.info("Successfully connected with Zookeeper cluster.");

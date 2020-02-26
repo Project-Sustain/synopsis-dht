@@ -8,6 +8,8 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 public class NodeConfigurationTest {
@@ -22,6 +24,8 @@ public class NodeConfigurationTest {
         NodeConfiguration configuration = NodeConfiguration.fromYamlFile(nodeConfigFilePath.toAbsolutePath().toString());
 
         Assertions.assertEquals(9091, configuration.getIngestionServicePort());
+        List<String> zkEnsemble = Arrays.asList("localhost:2181", "localhost:2182");
+        Assertions.assertEquals(zkEnsemble, configuration.getZkEnsemble());
         Map<String, Long> storageDirs = configuration.getStorageDirs();
         Assertions.assertEquals(1, storageDirs.size());
         Assertions.assertEquals(1024L, storageDirs.get("/tmp/"));
@@ -55,6 +59,9 @@ public class NodeConfigurationTest {
         FileWriter fw = new FileWriter(output);
         fw.append("---\n");
         fw.append("ingestionServicePort: 9091\n");
+        fw.append("zkEnsemble:\n");
+        fw.append("  - 'localhost:2181'\n");
+        fw.append("  - 'localhost:2182'\n");
         fw.append("storageDirs:\n");
         fw.append("  /tmp/ : 1024\n");
         fw.append("storageAllocationPolicy: 'round-robin'\n");
@@ -63,6 +70,7 @@ public class NodeConfigurationTest {
         fw.append("blockSize: 10\n");
         fw.append("metadataStoreDir: '/tmp'\n");
         fw.append("writerPoolSize: 5\n");
+        fw.append("...\n");
         fw.flush();
         fw.close();
     }

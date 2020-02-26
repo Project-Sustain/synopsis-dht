@@ -2,6 +2,11 @@
 # ingestion service port
 ingestionServicePort: 9091
 
+# ZK ensemble - the list of zk Servers
+zkEnsemble:
+  - 'localhost:2181'
+  - 'localhost:2182'
+
 # storage directories and the upper limits on the usage used for storing data (in GB)
 storageDirs:
   /sustain/data/a : 10
@@ -24,3 +29,4 @@ metadataStoreDir: '/tmp/'
 
 # writer pool size
 writerPoolSize: 10
+...

@@ -6,6 +6,7 @@ import org.yaml.snakeyaml.constructor.Constructor;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -32,6 +33,7 @@ public class NodeConfiguration {
 
     private String hostname = Util.getHostname();
     private int ingestionServicePort;
+    private List<String> zkEnsemble;
     private Map<String, Long> storageDirs;
     private String storageAllocationPolicy;
     private String rootJournalLoc;
@@ -49,19 +51,12 @@ public class NodeConfiguration {
     }
 
     public Map<String, Long> getStorageDirs() {
-        if (this.storageDirs != null) {
-            return this.storageDirs;
-        } else {
-            return null;
-        }
+        return this.storageDirs;
     }
 
     public void setStorageDirs(Map<String, Long> storageDirs) {
-        if (this.storageDirs == null) {
-            this.storageDirs =
-                    Collections.unmodifiableMap(storageDirs).entrySet().stream().collect(Collectors.toMap(x -> x.getKey().replace(HOSTNAME_PLACEHOLDER, hostname), Map.Entry::getValue));
-            ;
-        }
+        this.storageDirs =
+                Collections.unmodifiableMap(storageDirs).entrySet().stream().collect(Collectors.toMap(x -> x.getKey().replace(HOSTNAME_PLACEHOLDER, hostname), Map.Entry::getValue));
     }
 
     public String getStorageAllocationPolicy() {
@@ -69,9 +64,7 @@ public class NodeConfiguration {
     }
 
     public void setStorageAllocationPolicy(String storageAllocationPolicy) {
-        if (this.storageAllocationPolicy == null) {
-            this.storageAllocationPolicy = storageAllocationPolicy;
-        }
+        this.storageAllocationPolicy = storageAllocationPolicy;
     }
 
     public String getRootJournalLoc() {
@@ -112,6 +105,14 @@ public class NodeConfiguration {
 
     public void setWriterPoolSize(int writerPoolSize) {
         this.writerPoolSize = writerPoolSize;
+    }
+
+    public List<String> getZkEnsemble() {
+        return zkEnsemble;
+    }
+
+    public void setZkEnsemble(List<String> zkEnsemble) {
+        this.zkEnsemble = zkEnsemble;
     }
 
     @Override

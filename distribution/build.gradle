@@ -1,13 +1,42 @@
-apply plugin: 'java-library-distribution'
+plugins {
+    id 'distribution'
+}
+
+configurations {
+    sustainDht
+    sustainIngestionClient
+}
 
 dependencies {
-    compile project(':dht')
-    compile project(':client')
-    compile project(':samples')
+    sustainDht project(':dht')
+    sustainIngestionClient project(':client')
 }
 
 distributions {
     main {
-        baseName = 'synopsis2'
+        distributionBaseName = 'synopsis-dht'
+        contents {
+            into('lib') {
+                from(project.configurations.sustainDht)
+            }
+            into('bin') {
+                from('../bin/')
+            }
+            into('conf') {
+                from('../conf/')
+            }
+            into('lib') {
+                from('../log4j.properties')
+            }
+        }
+    }
+
+    ingestionClient {
+        distributionBaseName = 'synopsis-ingestion-client'
+        contents {
+            into('lib') {
+                from(project.configurations.sustainIngestionClient)
+            }
+        }
     }
 }

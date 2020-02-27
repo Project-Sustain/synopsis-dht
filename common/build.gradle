@@ -1,6 +1,5 @@
-dependencies {
-    compile 'sustain.synopsis:sketch:1.0'
-    compile 'org.apache.kafka:kafka-clients:2.1.0'
-    compile 'org.apache.zookeeper:zookeeper:3.4.5'
-}
+apply plugin: 'java-library'
 
+dependencies {
+    api 'sustain.synopsis:sketch:1.0'
+}

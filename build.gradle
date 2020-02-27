@@ -33,7 +33,7 @@ subprojects {
             implementation 'org.yaml:snakeyaml:1.25'
             implementation 'commons-io:commons-io:2.6'
 
-            testCompile 'org.mockito:mockito-core:2.+'
+            testImplementation 'org.mockito:mockito-core:2.+'
             testImplementation 'org.junit.jupiter:junit-jupiter:5.5.2'
         }
     }

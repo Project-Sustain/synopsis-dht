@@ -60,17 +60,14 @@ public class Driver {
             IngestionConfig ingestionConfig = new IngestionConfig(Arrays.asList(FEATURE_NAMES), quantizerMap, 3,
                     Duration.ofHours(6));
             NOAAIngester ingester = new NOAAIngester(inputDir, ingestionConfig);
-            StrandRegistry registry = new StrandRegistry(strands -> strands.forEach(System.out::println));
+            StrandRegistry registry = new StrandRegistry(s -> {});
             while (ingester.hasNext()) {
                 Strand strand = ingester.next();
                 if (strand != null) {
-                    int recordCount = registry.add(strand);
-                    if(recordCount % 100 == 0){
-                        System.out.println("Records processed: " + recordCount);
-                    }
+                    registry.add(strand);
                 }
             }
-            int totalStrandsPublished = registry.terminateSession();
+            long totalStrandsPublished = registry.terminateSession();
             System.out.println("Total Strands Published: " + totalStrandsPublished);
         } catch (IOException e) {
             e.printStackTrace();

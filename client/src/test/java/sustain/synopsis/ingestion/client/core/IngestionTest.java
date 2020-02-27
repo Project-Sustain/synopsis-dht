@@ -131,38 +131,6 @@ class IngestionTest {
         assertEquals(2, registry.add(similarStrand));
     }
 
-    @Test
-    void testStrandRegistryPrefixFiltering(){
-        LocalDateTime from = LocalDateTime.of(2019, 2, 12, 1, 0, 0);
-        LocalDateTime to = LocalDateTime.of(2019, 2, 12, 1, 1, 0);
-        Strand strand1 = createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
-                TemporalQuantizer.localDateTimeToEpoch(to), 1.0, 2.0);
-        Strand strand2 = createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
-                TemporalQuantizer.localDateTimeToEpoch(to), 1.1, 2.0);
-        // different geohash
-        Strand strand3 = createStrand(new Path(), "9xi", TemporalQuantizer.localDateTimeToEpoch(from),
-                TemporalQuantizer.localDateTimeToEpoch(to), 1.0, 2.0);
-
-        // increments the timestamp for the prefix 9xj. Should publish strand 1 and strand 2
-        Strand strand4 = createStrand(new Path(), "9xj",
-                TemporalQuantizer.localDateTimeToEpoch(from.plusMinutes(1)),
-                TemporalQuantizer.localDateTimeToEpoch(to.plusMinutes(1)), 1.0, 2.0);
-        Map<String, Strand> strandMap  = new HashMap<>();
-        strandMap.put(strand1.getKey(), strand1);
-        strandMap.put(strand2.getKey(), strand2);
-        strandMap.put(strand3.getKey(), strand3);
-        strandMap.put(strand4.getKey(), strand4);
-
-        StrandRegistry registry = new StrandRegistry(strands -> {
-            // intentionally do nothing
-        });
-        Map<String, Strand> filteredSet = registry.filterStrandsWithPrefix(strandMap, "9xj",
-                TemporalQuantizer.localDateTimeToEpoch(to));
-        Map<String, Strand> expected = new HashMap<>();
-        expected.put(strand1.getKey(), strand1);
-        expected.put(strand2.getKey(), strand2);
-        assertEquals(expected, filteredSet);
-    }
 
     @Test
     void testStrandPublishing() {
@@ -194,7 +162,7 @@ class IngestionTest {
         Mockito.verify(publisherMock, Mockito.times(1)).publish(expectedOutput);
 
         // check the session termination
-        int total = registry.terminateSession();
+        long total = registry.terminateSession();
         assertEquals(4, total);
 
         expectedOutput.clear();

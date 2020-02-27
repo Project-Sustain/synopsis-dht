@@ -1,6 +1,6 @@
 package sustain.synopsis.ingestion.client.core;
 
-import junit.framework.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class LRUCacheTest {
@@ -13,13 +13,13 @@ public class LRUCacheTest {
     @Test
     public void testSimple() {
         LRUCache<String> lruCache = new LRUCache<>();
-        Assert.assertEquals(0,lruCache.size());
+        Assertions.assertEquals(0,lruCache.size());
 
         lruCache.use(s1);
-        Assert.assertEquals(1,lruCache.size());
+        Assertions.assertEquals(1,lruCache.size());
 
-        Assert.assertEquals(s1, lruCache.evictLRU());
-        Assert.assertEquals(0, lruCache.size());
+        Assertions.assertEquals(s1, lruCache.evictLRU());
+        Assertions.assertEquals(0, lruCache.size());
     }
 
     @Test
@@ -29,7 +29,7 @@ public class LRUCacheTest {
         lruCache.use(s1);
         lruCache.use(s2);
 
-        Assert.assertEquals(s1, lruCache.evictLRU());
+        Assertions.assertEquals(s1, lruCache.evictLRU());
     }
 
     @Test
@@ -40,7 +40,7 @@ public class LRUCacheTest {
         lruCache.use(s2);
         lruCache.use(s1);
 
-        Assert.assertEquals(s2, lruCache.evictLRU());
+        Assertions.assertEquals(s2, lruCache.evictLRU());
     }
 
     @Test
@@ -53,7 +53,7 @@ public class LRUCacheTest {
         lruCache.use(s4);
         lruCache.use(s1);
 
-        Assert.assertEquals(s2, lruCache.evictLRU());
+        Assertions.assertEquals(s2, lruCache.evictLRU());
     }
 
 

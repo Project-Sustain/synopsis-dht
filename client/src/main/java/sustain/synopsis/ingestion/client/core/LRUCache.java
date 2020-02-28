@@ -49,7 +49,7 @@ public class LRUCache<E> {
     }
 
     public Collection<E> evictAll() {
-        Node cur = listHead;
+        Node cur = listTail;
         listHead = null;
         listTail = null;
         map.clear();
@@ -58,7 +58,7 @@ public class LRUCache<E> {
         while (cur != null) {
             ret.add(cur.elem);
 
-            Node temp = cur.next;
+            Node temp = cur.prev;
             cur.prev = null;
             cur.next = null;
             cur = temp;

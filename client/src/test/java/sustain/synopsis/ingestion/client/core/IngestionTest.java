@@ -14,10 +14,7 @@ import sustain.synopsis.sketch.stat.RunningStatisticsND;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
 
@@ -136,16 +133,16 @@ class IngestionTest {
     void testStrandPublishing() {
         LocalDateTime from = LocalDateTime.of(2019, 2, 12, 1, 0, 0);
         LocalDateTime to = LocalDateTime.of(2019, 2, 12, 1, 1, 0);
-        Strand strand1 = createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
+        Strand strand1 = createStrand(new Path(), "9xk", TemporalQuantizer.localDateTimeToEpoch(from),
                 TemporalQuantizer.localDateTimeToEpoch(to), 1.0, 2.0);
         // same geohash and temporal bounds, different feature values.
-        Strand strand2 = createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
+        Strand strand2 = createStrand(new Path(), "9xi", TemporalQuantizer.localDateTimeToEpoch(from),
                 TemporalQuantizer.localDateTimeToEpoch(to), 1.1, 2.0);
         // different geohash
-        Strand strand3 = createStrand(new Path(), "9xi", TemporalQuantizer.localDateTimeToEpoch(from),
+        Strand strand3 = createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
                 TemporalQuantizer.localDateTimeToEpoch(to), 1.0, 2.0);
         // increments the timestamp for the prefix 9xj. Should trigger publishing strand 1 and strand 2
-        Strand strand4 = createStrand(new Path(), "9xj",
+        Strand strand4 = createStrand(new Path(), "9xh",
                 TemporalQuantizer.localDateTimeToEpoch(from.plusMinutes(1)),
                 TemporalQuantizer.localDateTimeToEpoch(to.plusMinutes(1)), 1.0, 2.0);
 
@@ -155,17 +152,16 @@ class IngestionTest {
         registry.add(strand3);
         registry.add(strand4);
 
-        // strands1 and strands2 should get published - strand4 increments the timestamp
-        Set<Strand> expectedOutput = new HashSet<>();
-        expectedOutput.add(strand1);
-        expectedOutput.add(strand2);
-        Mockito.verify(publisherMock, Mockito.times(1)).publish(expectedOutput);
 
         // check the session termination
         long total = registry.terminateSession();
         assertEquals(4, total);
 
-        expectedOutput.clear();
+        // strands1 and strands2 should get published
+        // - strand4 increments the timestamp
+        List<Strand> expectedOutput = new ArrayList<>();
+        expectedOutput.add(strand1);
+        expectedOutput.add(strand2);
         expectedOutput.add(strand3);
         expectedOutput.add(strand4);
         Mockito.verify(publisherMock, Mockito.timeout(1)).publish(expectedOutput);

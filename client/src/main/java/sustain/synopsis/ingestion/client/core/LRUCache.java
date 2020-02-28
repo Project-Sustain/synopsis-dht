@@ -1,8 +1,8 @@
 package sustain.synopsis.ingestion.client.core;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 
 public class LRUCache<E> {
 
@@ -40,21 +40,22 @@ public class LRUCache<E> {
         return ret;
     }
 
-    public Collection<E> evictLRU(int num) {
-        Collection<E> ret = new ArrayList<>();
-        while (map.size() > 0) {
+    public List<E> evictLRU(int num) {
+        List<E> ret = new ArrayList<>();
+        while (num > 0 && map.size() > 0) {
             ret.add(evictLRU());
+            num--;
         }
         return ret;
     }
 
-    public Collection<E> evictAll() {
+    public List<E> evictAll() {
         Node cur = listTail;
         listHead = null;
         listTail = null;
         map.clear();
 
-        Collection<E> ret = new ArrayList<>(size());
+        List<E> ret = new ArrayList<>(size());
         while (cur != null) {
             ret.add(cur.elem);
 

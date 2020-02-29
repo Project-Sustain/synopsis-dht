@@ -1,0 +1,5 @@
+apply plugin: 'java-library'
+
+dependencies {
+    api 'sustain.synopsis:sketch:1.0.1'
+}

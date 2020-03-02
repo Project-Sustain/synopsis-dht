@@ -103,7 +103,7 @@ public class LoggerTest {
         Logger log = new Logger(root.getAbsolutePath() + File.separator + "non_existing_file_log");
         Iterator<byte[]> iterator = log.iterator();
         Assertions.assertNotNull(iterator);
-        Assert.assertFalse(iterator.hasNext());
+        Assertions.assertFalse(iterator.hasNext());
     }
 
     @Test

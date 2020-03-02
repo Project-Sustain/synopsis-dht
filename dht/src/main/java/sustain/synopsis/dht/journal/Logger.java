@@ -126,7 +126,10 @@ public class Logger implements Iterable<byte[]> {
     @Override
     public Iterator<byte[]> iterator() {
         JournalLogIterator iterator = new JournalLogIterator();
-        iterator.init();
+        File file = new File(filePath);
+        if (file.exists()) {
+            iterator.init();
+        }
         return iterator;
     }
 

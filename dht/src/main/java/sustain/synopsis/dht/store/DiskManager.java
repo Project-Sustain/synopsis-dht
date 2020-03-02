@@ -108,7 +108,7 @@ public class DiskManager {
     }
 
     StorageDirectory processPath(File f, long allocatedSpace) {
-        System.out.println("processing path " + f.getAbsolutePath());
+        logger.info("processing path " + f.getAbsolutePath());
         long occupiedSpace = 0;
         if (!f.exists()) { // path does not exist. Attempt top create the path
             boolean status = f.mkdirs();

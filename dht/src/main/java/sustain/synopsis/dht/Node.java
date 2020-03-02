@@ -12,6 +12,7 @@ import sustain.synopsis.dht.zk.ZKError;
 import sustain.synopsis.dht.zk.ZooKeeperAgent;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Thilina Buddhika
@@ -46,13 +47,25 @@ public class Node {
             new Thread(ring).start();
             Context ctx = Context.getInstance();
             ctx.setRing(ring);
-            logger.info("Shutting down the node.");
+            Runtime.getRuntime().addShutdownHook(new Thread() {
+                @Override
+                public void run() {
+                    logger.info("Shutting down the node.");
+                    try {
+                        Node.this.stop();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace(System.err);
+                    }
+                    logger.info("Shutdown complete!");
+                }
+            });
+            server.awaitTermination();
         } catch (InterruptedException e) {
             logger.error("Error starting the node. ", e);
         } catch (StorageException e) {
             logger.error("Error starting the NodeStore.", e);
         } catch (IOException e) {
-           logger.error("Error starting the gRPC services.", e);
+            logger.error("Error starting the gRPC services.", e);
         } catch (ZKError zkError) {
             logger.error("Error initializing the ring with zk client.", zkError);
         }
@@ -65,8 +78,7 @@ public class Node {
         try {
             try {
                 if (zk.exists(ServerConstants.ZK_NODES_ROOT, false) == null) {
-                    String groupDir = Util.createZKDirectory(zk, ServerConstants.ZK_NODES_ROOT,
-                            CreateMode.PERSISTENT);
+                    String groupDir = Util.createZKDirectory(zk, ServerConstants.ZK_NODES_ROOT, CreateMode.PERSISTENT);
                     if (logger.isDebugEnabled()) {
                         logger.debug("Created Root ZNode: " + groupDir);
                     }
@@ -88,6 +100,12 @@ public class Node {
         } catch (InterruptedException e) {
             logger.error(e.getMessage(), e);
             throw new ZKError(e.getMessage(), e);
+        }
+    }
+
+    private void stop() throws InterruptedException {
+        if (server != null) {
+            server.shutdown().awaitTermination(30, TimeUnit.SECONDS);
         }
     }
 }

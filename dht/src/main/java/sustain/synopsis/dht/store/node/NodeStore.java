@@ -8,7 +8,6 @@ import sustain.synopsis.dht.store.entity.EntityStore;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -40,8 +39,8 @@ public class NodeStore {
     public NodeStore() throws StorageException {
         this(new SessionValidator(),
                 new Logger(getRootJournalFileName(Context.getInstance().getNodeConfig().getRootJournalLoc())),
-                Context.getInstance().getNodeConfig().getMemTableSize(),
-                Context.getInstance().getNodeConfig().getBlockSize(),
+                Context.getInstance().getNodeConfig().getMemTableSize() * 1024 * 1024, // MB -> Bytes
+                Context.getInstance().getNodeConfig().getBlockSize() * 1024 * 1024, // MB -> Bytes
                 Context.getInstance().getNodeConfig().getMetadataStoreDir(), DiskManager.getInstance());
     }
 
@@ -71,17 +70,15 @@ public class NodeStore {
         logger.info("Starting node store initialization.");
         long nodeInitStartTS = System.currentTimeMillis();
         // initialize all entity stores
-        Iterator<byte[]> iterator = rootLogger.iterator();
-        while (iterator.hasNext()) {
-            byte[] serialized = iterator.next();
+        for (byte[] serialized : rootLogger) {
             if (serialized == null) {
                 continue;
             }
             try {
                 CreateEntityStoreActivity createEntityStore = new CreateEntityStoreActivity();
                 createEntityStore.deserialize(serialized);
-                EntityStore entityStore = new EntityStore(createEntityStore.getEntityId(),
-                        createEntityStore.getEntityJournalLogLocation(), memTableSize, blockSize, diskManager);
+                EntityStore entityStore = new EntityStore(createEntityStore.getEntityId(), metadataStoreDir,
+                        memTableSize, blockSize, diskManager);
                 if (logger.isDebugEnabled()) {
                     logger.debug("Initializing entity store: " + createEntityStore.getEntityId());
                 }
@@ -165,7 +162,7 @@ public class NodeStore {
                     entityStore.init();
                     // If a new entity store is created, journal its metadata location
                     CreateEntityStoreActivity createEntityStoreActivity = new CreateEntityStoreActivity(datasetId,
-                            entityId, entityStore.getJournalFilePath());
+                            entityId);
                     rootLogger.append(createEntityStoreActivity.serialize());
                     entityStoreMap.get(datasetId).put(entityId, entityStore);
                     if (logger.isDebugEnabled()) {

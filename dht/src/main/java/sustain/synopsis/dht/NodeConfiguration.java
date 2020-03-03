@@ -120,7 +120,11 @@ public class NodeConfiguration {
         if (this == o) return true;
         if (!(o instanceof NodeConfiguration)) return false;
         NodeConfiguration that = (NodeConfiguration) o;
-        return getIngestionServicePort() == that.getIngestionServicePort() && getMemTableSize() == that.getMemTableSize() && getBlockSize() == that.getBlockSize() && getWriterPoolSize() == that.getWriterPoolSize() && hostname.equals(that.hostname) && getStorageDirs().equals(that.getStorageDirs()) && getStorageAllocationPolicy().equals(that.getStorageAllocationPolicy()) && getRootJournalLoc().equals(that.getRootJournalLoc()) && getMetadataStoreDir().equals(that.getMetadataStoreDir());
+        return getIngestionServicePort() == that.getIngestionServicePort() && getMemTableSize() == that.getMemTableSize()
+                && getBlockSize() == that.getBlockSize() && getWriterPoolSize() == that.getWriterPoolSize() &&
+                hostname.equals(that.hostname) && getStorageDirs().equals(that.getStorageDirs()) &&
+                getStorageAllocationPolicy().equals(that.getStorageAllocationPolicy()) &&
+                getRootJournalLoc().equals(that.getRootJournalLoc()) && getMetadataStoreDir().equals(that.getMetadataStoreDir());
     }
 
     @Override

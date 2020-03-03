@@ -69,8 +69,7 @@ public class NodeStoreTest {
 
         String entityCommitLogPath = metadataStoreDir.getAbsolutePath() + File.separator + "entity_1_metadata.slog";
         Mockito.verify(sessionValidatorMock, Mockito.times(1)).validate("dataset_1", 1000L);
-        Mockito.verify(loggerMock, Mockito.times(1)).append(new CreateEntityStoreActivity("dataset_1", "entity_1",
-                entityCommitLogPath).serialize());
+        Mockito.verify(loggerMock, Mockito.times(1)).append(new CreateEntityStoreActivity("dataset_1", "entity_1").serialize());
         // we can verify if there is a log written into the entity store log to make sure the store request is made to
         // to the entity store
         // log appenders are initialized

@@ -89,7 +89,7 @@ public class DiskManager {
         long totalAvailableSpace = 0;
         for (String path : paths) {
             StorageDirectory storageDirectory = processPath(new File(path),
-                    nodeConfiguration.getStorageDirs().get(path));
+                    nodeConfiguration.getStorageDirs().get(path) * 1024 * 1024 * 1024);
             if (storageDirectory == null) {
                 continue;
             }

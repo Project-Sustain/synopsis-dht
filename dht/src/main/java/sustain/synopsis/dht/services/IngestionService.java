@@ -18,6 +18,11 @@ public class IngestionService extends IngestionServiceGrpc.IngestionServiceImplB
         this.dispatcher = new IngestionRequestDispatcher();
     }
 
+    // used for unit testing and benchmarking
+    public IngestionService(IngestionRequestDispatcher dispatcher) {
+        this.dispatcher = dispatcher;
+    }
+
     @Override
     public void ingest(IngestionRequest request, StreamObserver<IngestionResponse> responseObserver) {
         CompletableFuture<IngestionResponse> future = dispatcher.dispatch(request);

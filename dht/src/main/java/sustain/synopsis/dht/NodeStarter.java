@@ -1,8 +1,12 @@
 package sustain.synopsis.dht;
 
+import io.grpc.BindableService;
 import org.apache.log4j.Logger;
+import sustain.synopsis.dht.services.IngestionService;
+import sustain.synopsis.dht.store.StorageException;
 
 import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * @author Thilina Buddhika
@@ -31,9 +35,18 @@ public class NodeStarter {
         logger.info("Successfully initialized node context.");
 
         int port = ctx.getNodeConfig().getIngestionServicePort();
-        Node node = new Node(port);
-        // this is a blocking call
-        node.start();
-        Runtime.getRuntime().exit(-1);
+        try {
+            BindableService[] services = new BindableService[]{new IngestionService()};
+            Node node = new Node(port, services);
+            // this is a blocking call
+            CountDownLatch latch = new CountDownLatch(1);
+            node.start(latch);
+            latch.await();
+            logger.info("Server start up is complete!");
+        } catch (StorageException e) {
+            logger.error("Error initiating the ingestion service.", e);
+        } catch (InterruptedException e) {
+            logger.error("Interrupted while waiting for the server to start.", e);
+        }
     }
 }

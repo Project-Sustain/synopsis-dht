@@ -1,17 +1,18 @@
 package sustain.synopsis.dht;
 
+import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
-import sustain.synopsis.dht.services.IngestionService;
-import sustain.synopsis.dht.store.StorageException;
 import sustain.synopsis.dht.zk.ZKError;
 import sustain.synopsis.dht.zk.ZooKeeperAgent;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -22,16 +23,20 @@ public class Node {
     private final Logger logger = Logger.getLogger(Node.class);
     private final int port;
     private Server server;
+    private final BindableService[] services;
 
-    public Node(int port) {
+    public Node(int port, BindableService[] services) {
         this.port = port;
+        this.services = services;
     }
 
-    public void start() {
+    public void start(CountDownLatch latch) {
         try {
             logger.info("Trying to bind to port: " + this.port);
             // start gRPC services
-            this.server = ServerBuilder.forPort(port).addService(new IngestionService()).build().start();
+            ServerBuilder<?> builder = ServerBuilder.forPort(port);
+            Arrays.stream(services).forEach(builder::addService);
+            this.server = builder.build().start();
             logger.info("Node is running on " + this.port);
             // register in ZK
             try {
@@ -59,11 +64,10 @@ public class Node {
                     logger.info("Shutdown complete!");
                 }
             });
+            latch.countDown();
             server.awaitTermination();
         } catch (InterruptedException e) {
             logger.error("Error starting the node. ", e);
-        } catch (StorageException e) {
-            logger.error("Error starting the NodeStore.", e);
         } catch (IOException e) {
             logger.error("Error starting the gRPC services.", e);
         } catch (ZKError zkError) {

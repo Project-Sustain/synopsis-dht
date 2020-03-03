@@ -3,37 +3,35 @@
 java_opts="-Xmx4096m"
 
 if [[ ! -d "../lib/" ]]; then
-  echo "Could not locate Gossamer jars. Exiting!"
+  echo "Could not locate Sustain jars. Exiting!"
   exit 1
 fi
 
 PRG="$0"
 PRGDIR=`dirname "$PRG"`
-SYN_HOME=`cd "$PRGDIR/.." ; pwd`
+SST_HOME=`cd "$PRGDIR/.." ; pwd`
 
-echo 'Synopsis2 Home: '${SYN_HOME}
+echo 'Sustain Home: '${SST_HOME}
 
 # initialize the classpath
-SYN_CLASSPATH=""
+SST_CLASSPATH=""
 for f in ../lib/*
 do
-  if [ "$SYN_CLASSPATH" == "" ]
+  if [ "$SST_CLASSPATH" == "" ]
     then
-    SYN_CLASSPATH=$f
+    SST_CLASSPATH=$f
   else
-    SYN_CLASSPATH="$SYN_CLASSPATH":$f
+    SST_CLASSPATH="$SST_CLASSPATH":$f
   fi
 done
 
 #echo ${GOSSAMER_CLASSPATH}
 # location of the log4j properties file
-log4j_conf_file='file:'${SYN_HOME}'/lib/log4j.properties'
+log4j_conf_file='file:'${SST_HOME}'/lib/log4j.properties'
 # append it to java opts
 java_opts=${java_opts}' -Dlog4j.configuration='${log4j_conf_file}
 
-#echo $java_opts
-
 java \
     ${java_opts} \
-    -cp ${SYN_CLASSPATH} \
-    NodeStarter ${SYN_HOME}/conf/synopsis2.properties
+    -cp ${SST_CLASSPATH} \
+    sustain.synopsis.dht.NodeStarter ${SST_HOME}/conf/dht-node-config.yaml

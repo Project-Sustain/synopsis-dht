@@ -1,6 +1,5 @@
 package sustain.synopsis.dht.store.journal;
 
-import junit.framework.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -40,9 +39,9 @@ public class LoggerTest {
         Logger deserializedLog = new Logger(f.getAbsolutePath());
         Assertions.assertTrue(f.length() > 0);
         Iterator<byte[]> iter = deserializedLog.iterator();
-        for (int i = 0; i < payloads.size(); i++) {
+        for (byte[] payload : payloads) {
             Assertions.assertTrue(iter.hasNext());
-            Assertions.assertArrayEquals(payloads.get(i), iter.next());
+            Assertions.assertArrayEquals(payload, iter.next());
         }
         Assertions.assertFalse(iter.hasNext());
     }
@@ -67,7 +66,7 @@ public class LoggerTest {
     }
 
     @Test
-    void testChecksumValidation() throws IOException, StorageException, ChecksumGenerator.ChecksumError {
+    void testChecksumValidation() throws IOException, StorageException {
         File f = new File(root.getAbsolutePath() + File.separator + "journal_log");
         Logger log = new Logger(f.getAbsolutePath());
         List<byte[]> payloads = new ArrayList<>();
@@ -133,6 +132,6 @@ public class LoggerTest {
         TestActivity deserialized = new TestActivity();
         deserialized.deserialize(serialized);
         Assertions.assertEquals(testActivity.getType(), deserialized.getType());
-        Assert.assertEquals(testActivity.member, deserialized.member);
+        Assertions.assertEquals(testActivity.member, deserialized.member);
     }
 }

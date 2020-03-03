@@ -1,4 +1,5 @@
 apply plugin: 'com.google.protobuf'
+apply plugin: 'java-library'
 
 def grpcVersion = '1.26.0'
 def protobufVersion = '3.11.0'
@@ -6,8 +7,8 @@ def protocVersion = protobufVersion
 
 dependencies {
     compileOnly "javax.annotation:javax.annotation-api:1.2"
-    implementation "io.grpc:grpc-protobuf:${grpcVersion}"
-    implementation "io.grpc:grpc-stub:${grpcVersion}"
+    api "io.grpc:grpc-protobuf:${grpcVersion}"
+    api "io.grpc:grpc-stub:${grpcVersion}"
     implementation 'org.apache.zookeeper:zookeeper:3.4.5'
     implementation project(':common')
     implementation project(':storage')

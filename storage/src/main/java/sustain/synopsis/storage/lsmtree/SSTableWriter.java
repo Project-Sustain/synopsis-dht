@@ -22,19 +22,22 @@ public class SSTableWriter<K extends Comparable<K> & Serializable, V extends Ser
     public void serialize(DataOutputStream blockOutputStream, Metadata<K> metadata, BlockCompressor compressor,
                           ChecksumGenerator checksumGenerator) throws IOException {
         SortedMergeIterator<K, V> mergeIterator = new SortedMergeIterator<>(iterators);
-        ByteArrayOutputStream baos = new ByteArrayOutputStream((int)blockSize);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream((int) blockSize);
         DataOutputStream dos = new DataOutputStream(baos);
         K minKey = null;
         K maxKey = null;
         int blockCount = 0;
         K firstKey = null; // first key of the current block
 
+        long uncompressedDataSize = 0;
+        long compressedDataSize = 0;
+
         while (mergeIterator.hasNext()) {
             TableIterator.TableEntry<K, V> entry = mergeIterator.next();
             // update the block index
             if (dos.size() == 0) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Updated block index. LZ4BlockCompressor Id: " + blockCount + ", Offset: " + blockOutputStream.size());
+                    logger.debug("Updated block index. Block Id: " + blockCount + ", Offset: " + blockOutputStream.size());
                 }
                 metadata.addBlockIndex(entry.getKey(), blockOutputStream.size());
                 firstKey = entry.getKey();
@@ -56,27 +59,35 @@ public class SSTableWriter<K extends Comparable<K> & Serializable, V extends Ser
                 blockOutputStream.writeBoolean(mergeIterator.hasNext()); // there is a block after the current block
 
                 // compress and calculate checksum
-                byte[] compressed = compress(blockOutputStream, compressor, currentBlock);
+                byte[] compressed = compressAndSerialize(blockOutputStream, compressor, currentBlock);
                 calculateChecksum(firstKey, compressed, metadata, checksumGenerator);
+                uncompressedDataSize += currentBlock.length;
+                compressedDataSize += compressed.length;
 
                 baos.reset();
                 dos.close();
                 dos = new DataOutputStream(baos);
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Stored block " + blockCount + " on disk. LZ4BlockCompressor Size: " + currentBlock.length);
+                    logger.debug("Stored block " + blockCount + " on disk. Block size: " + currentBlock.length);
                 }
                 blockCount++;
             }
         }
+        // last block
         if (dos.size() > 0) {
-            // last block
+            dos.flush();
+            baos.flush();
             byte[] lastBlock = baos.toByteArray();
             blockOutputStream.writeBoolean(false);
-            byte[] compressed = compress(blockOutputStream, compressor, lastBlock);
+            byte[] compressed = compressAndSerialize(blockOutputStream, compressor, lastBlock);
             calculateChecksum(firstKey, compressed, metadata, checksumGenerator);
+            uncompressedDataSize += lastBlock.length;
+            compressedDataSize += compressed.length;
 
+            dos.close();
+            baos.close();
             if (logger.isDebugEnabled()) {
-                logger.debug("Stored the final block of the SSTable on disk. LZ4BlockCompressor Id: " + blockCount + ", block " +
+                logger.debug("Stored the final block of the SSTable on disk. Block Id: " + blockCount + ", block " +
                         "size: " + lastBlock.length);
             }
         } else if (blockCount == 0) { // empty SSTable
@@ -91,9 +102,14 @@ public class SSTableWriter<K extends Comparable<K> & Serializable, V extends Ser
         // set the metadata
         metadata.setMin(minKey);
         metadata.setMax(maxKey);
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("Completed moving a MemTable to SSTable on disk. Uncompressed size: " + uncompressedDataSize + ", compressed size: " + compressedDataSize);
+        }
     }
 
-    private byte[] compress(DataOutputStream blockOutputStream, BlockCompressor compressor, byte[] currentBlock) throws IOException {
+    private byte[] compressAndSerialize(DataOutputStream blockOutputStream, BlockCompressor compressor,
+                                        byte[] currentBlock) throws IOException {
         if (compressor != null) {
             byte[] compressed = compressor.compress(currentBlock);
             blockOutputStream.writeBoolean(true);

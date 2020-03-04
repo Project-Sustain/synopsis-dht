@@ -25,8 +25,6 @@ public class NodeConfiguration {
         try (FileInputStream fis = new FileInputStream(filePath)) {
             Yaml yaml = new Yaml(new Constructor(NodeConfiguration.class));
             return yaml.load(fis);
-        } catch (IOException e) {
-            throw e;
         }
     }
 

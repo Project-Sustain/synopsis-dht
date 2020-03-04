@@ -51,7 +51,12 @@ public class MemTable<K extends Comparable<K> & Serializable, V extends Serializ
                     logger.error("Error estimating the entry size.", e);
                 }
             }
-            return isMemTableFull();
+            boolean isMemTableFull = isMemTableFull();
+            if (isMemTableFull && logger.isTraceEnabled()) {
+                logger.trace("Estimated entry size: " + estimatedEntrySize + ", Element Count: " + elements.size() +
+                        ", " + "Threshold: " + maxSizeInBytes);
+            }
+            return isMemTableFull;
         } finally {
             lock.writeLock().unlock();
         }
@@ -114,7 +119,7 @@ public class MemTable<K extends Comparable<K> & Serializable, V extends Serializ
     }
 
     public K getLastKey() {
-        if(elements.size() > 0) {
+        if (elements.size() > 0) {
             return elements.lastKey();
         }
         return null;

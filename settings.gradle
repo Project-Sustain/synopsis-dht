@@ -1,1 +1,3 @@
 include 'common', 'storage', 'dht', 'client', 'distribution', 'samples', 'tools'
+include 'benchmarks'
+

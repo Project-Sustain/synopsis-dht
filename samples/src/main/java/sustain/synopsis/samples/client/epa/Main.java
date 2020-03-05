@@ -1,9 +1,10 @@
 package sustain.synopsis.samples.client.epa;
 
+import sustain.synopsis.ingestion.client.connectors.DataConnector;
+import sustain.synopsis.ingestion.client.connectors.file.CsvRecordParser;
 import sustain.synopsis.ingestion.client.connectors.file.FileDataConnector;
-import sustain.synopsis.ingestion.client.connectors.file.FileParserHelper;
-import sustain.synopsis.ingestion.client.core.Driver;
-import sustain.synopsis.ingestion.client.core.Record;
+import sustain.synopsis.ingestion.client.connectors.file.LineByLineParser;
+import sustain.synopsis.ingestion.client.core.IngestionTaskManager;
 import sustain.synopsis.samples.client.PayloadSizeCalculator;
 import sustain.synopsis.sketch.dataset.Quantizer;
 import sustain.synopsis.sketch.dataset.feature.Feature;
@@ -42,36 +43,32 @@ public class Main {
             input = new File[]{file};
         }
 
-        FileParserHelper parserHelper = new FileParserHelper() {
-            @Override
-            public Record parse(String line) {
-                String[] splits = line.split(",");
-                String geohash = Geohash.encode(Float.parseFloat(splits[5]), Float.parseFloat(splits[6]), 3);
-                long ts =
-                        LocalDateTime.of(LocalDate.parse(splits[11].replace("\"","")),
-                                LocalTime.parse(splits[12].replace("\"",""))).atZone(ZoneId.of(
-                                "GMT")).toInstant().toEpochMilli();
-                Record record = new Record();
-                record.setTimestamp(ts);
-                record.setGeohash(geohash);
-                record.addFeatureValue(splits[8].replace("\"",""), Float.parseFloat(splits[13]));
-                return record;
-            }
-
-            @Override
-            public boolean skipHeader() {
-                return true;
-            }
-        };
 
         PayloadSizeCalculator payloadSizeCalculator = new PayloadSizeCalculator();
-        Driver driver = new Driver(5, payloadSizeCalculator, getQuantizerMap(), Duration.ofHours(24));
-        FileDataConnector fdConnector = new FileDataConnector(parserHelper, driver, input);
-        driver.start(); // blocking call to make sure all the ingestion workers are ready to accept data
-        fdConnector.init();
-        fdConnector.start(); // start the connector
-        driver.awaitCompletion(); // blocking call to keep the main thread alive
-        fdConnector.terminate(); // terminate the connector
+        IngestionTaskManager ingestionTaskManager = new IngestionTaskManager(5, payloadSizeCalculator, getQuantizerMap(), Duration.ofHours(24));
+
+        CsvRecordParser recordParser = CsvRecordParser.newBuilder()
+                .setSkipHeader(true)
+                .withFeatureParser((record, splits) -> {
+                    record.setTimestamp(LocalDateTime.of(LocalDate.parse(splits[11].replace("\"","")),
+                            LocalTime.parse(splits[12].replace("\"",""))).atZone(ZoneId.of(
+                            "GMT")).toInstant().toEpochMilli());
+                })
+                .withFeatureParser((record, splits) -> {
+                    record.setGeohash(Geohash.encode(Float.parseFloat(splits[5]), Float.parseFloat(splits[6]), 3));
+                })
+                .withFeatureParser(((record, splits) -> {
+                    record.addFeatureValue(splits[8].replace("\"",""), Float.parseFloat(splits[13]));
+                }))
+                .build();
+
+
+        DataConnector dataConnector = new FileDataConnector(new LineByLineParser(recordParser), ingestionTaskManager, input);
+        ingestionTaskManager.start(); // blocking call to make sure all the ingestion workers are ready to accept data
+        dataConnector.init();
+        dataConnector.start(); // start the connector
+        ingestionTaskManager.awaitCompletion(); // blocking call to keep the main thread alive
+        dataConnector.terminate(); // terminate the connector
         System.out.println("total data transferred (MB): " + payloadSizeCalculator.getCumulativePayloadSize()/(1024* 1024.0));
     }
 

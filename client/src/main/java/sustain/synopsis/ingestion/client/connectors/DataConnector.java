@@ -1,4 +1,4 @@
-package sustain.synopsis.ingestion.client.core;
+package sustain.synopsis.ingestion.client.connectors;
 
 public interface DataConnector {
     boolean init();

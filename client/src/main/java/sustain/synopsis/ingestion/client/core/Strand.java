@@ -1,4 +1,4 @@
-package synopsis2;
+package sustain.synopsis.ingestion.client.core;
 
 import sustain.synopsis.sketch.graph.Path;
 import sustain.synopsis.sketch.graph.Vertex;

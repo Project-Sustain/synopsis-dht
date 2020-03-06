@@ -8,5 +8,6 @@ import java.util.Collection;
 public class StrandPublisherImpl implements StrandPublisher {
     @Override
     public void publish(Collection<Strand> strands) {
+
     }
 }

@@ -3,7 +3,7 @@ package sustain.synopsis.ingestion.client.core;
 import io.grpc.Channel;
 import io.grpc.ManagedChannelBuilder;
 import sustain.synopsis.ingestion.client.connectors.DataConnector;
-import sustain.synopsis.ingestion.client.connectors.DataParser;
+import sustain.synopsis.ingestion.client.connectors.file.FileParser;
 import sustain.synopsis.ingestion.client.connectors.file.FileDataConnector;
 import sustain.synopsis.metadata.DatasetServiceGrpc;
 import sustain.synopsis.metadata.DatasetServiceGrpc.DatasetServiceBlockingStub;
@@ -11,8 +11,6 @@ import sustain.synopsis.metadata.DatasetServiceOuterClass.GetDatasetSessionReque
 import sustain.synopsis.metadata.DatasetServiceOuterClass.GetDatasetSessionResponse;
 import sustain.synopsis.metadata.DatasetServiceOuterClass.Session;
 import sustain.synopsis.sketch.dataset.Quantizer;
-import synopsis2.client.IngestionConfig;
-import synopsis2.client.Util;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,15 +21,8 @@ public class Client {
 
     public static String metadataServiceHost = "localhost";
     public static int metadataServicePort = 44097;
-    public static void ingest(DataConnector dc, IngestionTaskManager tm) {
-        tm.start();
-        dc.init();
-        dc.start();
-        tm.awaitCompletion();
-        dc.terminate();
-    }
 
-    public static IngestionConfig fetchIngestionConfig(String datasetId, long sessionId) throws IOException {
+    public static SessionSchema fetchSessionSchema(String datasetId, long sessionId) throws IOException {
         Channel channel = ManagedChannelBuilder.forAddress(metadataServiceHost,metadataServicePort)
                 .usePlaintext()
                 .build();
@@ -49,7 +40,7 @@ public class Client {
         int geohashLength = session.getGeohashLength();
         Duration temporalBracketLength = Duration.ofMillis(session.getTemporalBracketLength());
 
-        return new IngestionConfig(stringQuantizerMap, geohashLength, temporalBracketLength);
+        return new SessionSchema(stringQuantizerMap, geohashLength, temporalBracketLength);
     }
 
     public static File[] getFileListFromArgs(String[] args) {
@@ -62,29 +53,33 @@ public class Client {
 
     public static void main(String[] args) throws ClassNotFoundException, IOException, IllegalAccessException, InstantiationException {
         if (args.length < 4) {
-            System.out.println("usage: datasetId sessionId FileParserClassName files...");
+            System.out.println("usage: datasetId sessionId DataParserClassName files...");
             return;
         }
 
         String datasetId = args[0];
         long sessionId = Long.parseLong(args[1]);
-        IngestionConfig config = fetchIngestionConfig(datasetId, sessionId);
+        SessionSchema config = fetchSessionSchema(datasetId, sessionId);
 
         String fileParserClassName = args[2];
-        DataParser dataParser = (DataParser) Class.forName(fileParserClassName).newInstance();
+        FileParser fileParser = (FileParser) Class.forName(fileParserClassName).newInstance();
         File[] files = getFileListFromArgs(args);
 
         StrandPublisher strandPublisher = new StrandPublisherImpl();
 
-        IngestionTaskManager ingestionTaskManager = new IngestionTaskManager(
+        StrandConversionTaskManager strandConversionManager = new StrandConversionTaskManager(
                 4,
                 strandPublisher,
                 config.getQuantizers(),
                 config.getTemporalGranularity());
 
-        DataConnector dataConnector = new FileDataConnector(dataParser, ingestionTaskManager, files);
+        DataConnector dataConnector = new FileDataConnector(fileParser, files);
 
-        ingest(dataConnector, ingestionTaskManager);
+        strandConversionManager.start();
+        dataConnector.initWithIngestionConfigAndRecordCallBackHandler(config, strandConversionManager);
+        dataConnector.start();
+        strandConversionManager.awaitCompletion();
+        dataConnector.terminate();
     }
 
 }

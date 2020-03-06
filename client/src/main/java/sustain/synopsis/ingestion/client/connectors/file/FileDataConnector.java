@@ -2,7 +2,7 @@ package sustain.synopsis.ingestion.client.connectors.file;
 
 import org.apache.log4j.Logger;
 import sustain.synopsis.ingestion.client.connectors.DataConnector;
-import sustain.synopsis.ingestion.client.connectors.DataParser;
+import sustain.synopsis.ingestion.client.core.SessionSchema;
 import sustain.synopsis.ingestion.client.core.RecordCallbackHandler;
 
 import java.io.*;
@@ -12,27 +12,27 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * A data connector to read records from a list of files. '\n' character is used to separate the records.
- * Each line is converted to a record using the provided {@link RecordParser}.
+ * Each file is processed using the provided {@link FileParser}.
  * A single threaded executor is used to run the data connector.
  */
 public class FileDataConnector implements DataConnector, Runnable {
     private final Logger logger = Logger.getLogger(FileDataConnector.class);
-    private final DataParser fileParser;
-    private final RecordCallbackHandler recordCallbackHandler;
+    private final FileParser fileParser;
     private final File[] input;
     private final ExecutorService threadPool;
-    private int processedFileCount;
+    private RecordCallbackHandler handler;
 
-    public FileDataConnector(DataParser fileParser, RecordCallbackHandler recordCallbackHandler, File[] input) {
+    public FileDataConnector(FileParser fileParser, File[] input) {
         this.fileParser = fileParser;
-        this.recordCallbackHandler = recordCallbackHandler;
         this.input = input;
         this.threadPool = Executors.newFixedThreadPool(1);
     }
 
     @Override
-    public boolean init() {
-        return true; // nothing to initialize
+    public boolean initWithIngestionConfigAndRecordCallBackHandler(SessionSchema config, RecordCallbackHandler handler) {
+        this.fileParser.initWithSchemaAndHandler(config, handler);
+        this.handler = handler;
+        return true;
     }
 
     @Override
@@ -54,56 +54,18 @@ public class FileDataConnector implements DataConnector, Runnable {
         }
     }
 
-
-    private void readFile(File f) {
-        FileReader fileReader = null;
-        BufferedReader bufferedReader = null;
-        try {
-            fileReader = new FileReader(f);
-            bufferedReader = new BufferedReader(fileReader);
-
-            fileParser.parseFromReaderWithHandler(bufferedReader, recordCallbackHandler);
-
-            processedFileCount++;
-            logger.info("Completed processing " + f.getAbsolutePath() +
-                    ", Total files processed: " + processedFileCount);
-        } catch (FileNotFoundException e) {
-            logger.error("File not found. Path: " + f.getAbsolutePath(), e);
-        } catch (IOException e) {
-            logger.error("Error reading from file. Path: " + f.getAbsolutePath(), e);
-        } catch (Throwable e){
-            logger.error("Error during execution.", e);
-        }
-        finally {
-            if (fileReader != null) {
-                try {
-                    fileReader.close();
-                } catch (IOException ignore) {
-                    // ignore
-                }
-            }
-            if (bufferedReader != null) {
-                try {
-                    bufferedReader.close();
-                } catch (IOException ignore) {
-                    // ignore
-                }
-            }
-        }
-
-    }
-
     @Override
     public void run() {
-        processedFileCount = 0;
-        for (File f : input) {
-            if (!f.isFile()) {
-                logger.warn("Skipping " + f.getAbsolutePath() + ", not a file.");
+        int processedFileCount = 0;
+        for (File file : input) {
+            if (!file.isFile()) {
+                logger.warn("Skipping " + file.getAbsolutePath() + ", not a file.");
                 continue;
             }
-            readFile(f);
+            fileParser.parse(file);
+            processedFileCount++;
         }
         logger.info("Completed processing input. Processed file count: " + processedFileCount);
-        recordCallbackHandler.onTermination(); // acknowledge the end of the input
+        handler.onTermination(); // acknowledge the end of the input
     }
 }

@@ -1,11 +1,10 @@
-package synopsis2.client;
+package sustain.synopsis.ingestion.client.core;
 
 import org.apache.log4j.Logger;
 import sustain.synopsis.sketch.dataset.Quantizer;
 import sustain.synopsis.sketch.dataset.feature.Feature;
 
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Files;

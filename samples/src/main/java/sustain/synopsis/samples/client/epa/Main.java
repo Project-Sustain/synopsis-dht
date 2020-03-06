@@ -1,10 +1,10 @@
 package sustain.synopsis.samples.client.epa;
 
 import sustain.synopsis.ingestion.client.connectors.DataConnector;
-import sustain.synopsis.ingestion.client.connectors.file.CsvRecordParser;
+import sustain.synopsis.ingestion.client.connectors.file.CsvFileParser;
 import sustain.synopsis.ingestion.client.connectors.file.FileDataConnector;
-import sustain.synopsis.ingestion.client.connectors.file.LineByLineParser;
-import sustain.synopsis.ingestion.client.core.IngestionTaskManager;
+import sustain.synopsis.ingestion.client.connectors.file.LineDataParser;
+import sustain.synopsis.ingestion.client.core.StrandConversionTaskManager;
 import sustain.synopsis.samples.client.PayloadSizeCalculator;
 import sustain.synopsis.sketch.dataset.Quantizer;
 import sustain.synopsis.sketch.dataset.feature.Feature;
@@ -45,9 +45,9 @@ public class Main {
 
 
         PayloadSizeCalculator payloadSizeCalculator = new PayloadSizeCalculator();
-        IngestionTaskManager ingestionTaskManager = new IngestionTaskManager(5, payloadSizeCalculator, getQuantizerMap(), Duration.ofHours(24));
+        StrandConversionTaskManager ingestionTaskManager = new StrandConversionTaskManager(5, payloadSizeCalculator, getQuantizerMap(), Duration.ofHours(24));
 
-        CsvRecordParser recordParser = CsvRecordParser.newBuilder()
+        CsvFileParser recordParser = CsvFileParser.newBuilder()
                 .setSkipHeader(true)
                 .withFeatureParser((record, splits) -> {
                     record.setTimestamp(LocalDateTime.of(LocalDate.parse(splits[11].replace("\"","")),
@@ -63,7 +63,7 @@ public class Main {
                 .build();
 
 
-        DataConnector dataConnector = new FileDataConnector(new LineByLineParser(recordParser), ingestionTaskManager, input);
+        DataConnector dataConnector = new FileDataConnector(new LineDataParser(recordParser), ingestionTaskManager, input);
         ingestionTaskManager.start(); // blocking call to make sure all the ingestion workers are ready to accept data
         dataConnector.init();
         dataConnector.start(); // start the connector

@@ -15,7 +15,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class IngestionTask implements Runnable {
+public class StrandConversionTask implements Runnable {
 
     private final ArrayBlockingQueue<Record> input;
     private final StrandRegistry registry;
@@ -23,11 +23,11 @@ public class IngestionTask implements Runnable {
     private final Map<String, TemporalQuantizer> temporalQuantizerMap;
     private final Duration duration;
     private AtomicBoolean terminate = new AtomicBoolean(false);
-    private final Logger logger = Logger.getLogger(IngestionTask.class);
+    private final Logger logger = Logger.getLogger(StrandConversionTask.class);
     private final CountDownLatch startupLatch;
     private final CountDownLatch shutdownLatch;
 
-    IngestionTask( StrandRegistry registry, ArrayBlockingQueue<Record> input, Map<String, Quantizer> quantizers,
+    StrandConversionTask(StrandRegistry registry, ArrayBlockingQueue<Record> input, Map<String, Quantizer> quantizers,
                          Duration duration, CountDownLatch startupLatch, CountDownLatch shutdownLatch) {
         this.input = input;
         this.registry = registry;

@@ -13,20 +13,20 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class IngestionTaskManager implements RecordCallbackHandler {
+public class StrandConversionTaskManager implements RecordCallbackHandler {
 
-    private final Logger logger = Logger.getLogger(IngestionTaskManager.class);
+    private final Logger logger = Logger.getLogger(StrandConversionTaskManager.class);
     private final int parallelism;
     private final List<ArrayBlockingQueue<Record>> input;
     private final ExecutorService executorService;
     private final StrandPublisher strandPublisher;
     private final Map<String, Quantizer> quantizerMap;
     private final Duration temporalBracketSize;
-    private final List<IngestionTask> ingestionTasks;
+    private final List<StrandConversionTask> ingestionTasks;
     private final CountDownLatch shutdownLatch;
 
-    public IngestionTaskManager(int parallelism, StrandPublisher strandPublisher, Map<String, Quantizer> quantizerMap,
-                                Duration temporalBracketSize) {
+    public StrandConversionTaskManager(int parallelism, StrandPublisher strandPublisher, Map<String, Quantizer> quantizerMap,
+                                       Duration temporalBracketSize) {
         this.parallelism = parallelism;
         this.strandPublisher = strandPublisher;
         this.quantizerMap = quantizerMap;
@@ -64,7 +64,7 @@ public class IngestionTaskManager implements RecordCallbackHandler {
 
     @Override
     public void onTermination() {
-        for(IngestionTask ingestionTask : ingestionTasks){
+        for(StrandConversionTask ingestionTask : ingestionTasks){
             ingestionTask.terminate();
         }
     }
@@ -76,7 +76,7 @@ public class IngestionTaskManager implements RecordCallbackHandler {
     public void start() {
         CountDownLatch startLatch = new CountDownLatch(parallelism);
         for (int i = 0; i < parallelism; i++) {
-            IngestionTask ingestionTask = new IngestionTask(new StrandRegistry(strandPublisher), input.get(i), quantizerMap,
+            StrandConversionTask ingestionTask = new StrandConversionTask(new StrandRegistry(strandPublisher), input.get(i), quantizerMap,
                     this.temporalBracketSize, startLatch, shutdownLatch);
             ingestionTasks.add(ingestionTask);
             executorService.submit(ingestionTask);
@@ -89,7 +89,6 @@ public class IngestionTaskManager implements RecordCallbackHandler {
         logger.info("Number of ingestion tasks launched: " + parallelism);
     }
 
-
     public boolean awaitCompletion(){
         try {
             shutdownLatch.await();
@@ -99,4 +98,5 @@ public class IngestionTaskManager implements RecordCallbackHandler {
         }
         return true;
     }
+
 }

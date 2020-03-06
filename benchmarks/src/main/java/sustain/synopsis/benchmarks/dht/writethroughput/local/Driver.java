@@ -64,7 +64,7 @@ public class Driver {
     }
 
     private void runTestSuite() {
-        byte[] payload = new byte[100];
+        byte[] payload = new byte[2048];
         String[] entities = new String[]{"9x0", "9x1", "9x2", "9x3", "9x4", "9x5", "9x6", "9x7", "9x8", "9x9"};
         Random rnd = new Random(1);
         for (int i = 0; i < 200000000; i++) {

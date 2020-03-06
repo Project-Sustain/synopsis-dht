@@ -6,7 +6,6 @@ import sustain.synopsis.ingestion.client.core.SessionSchema;
 import sustain.synopsis.ingestion.client.core.RecordCallbackHandler;
 
 import java.io.File;
-import java.io.IOException;
 
 public class NoaaFileParser implements FileParser {
 

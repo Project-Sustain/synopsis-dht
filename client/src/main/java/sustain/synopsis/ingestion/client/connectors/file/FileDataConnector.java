@@ -2,6 +2,7 @@ package sustain.synopsis.ingestion.client.connectors.file;
 
 import org.apache.log4j.Logger;
 import sustain.synopsis.ingestion.client.connectors.DataConnector;
+import sustain.synopsis.ingestion.client.connectors.DataParser;
 import sustain.synopsis.ingestion.client.core.RecordCallbackHandler;
 
 import java.io.*;
@@ -16,13 +17,13 @@ import java.util.concurrent.TimeUnit;
  */
 public class FileDataConnector implements DataConnector, Runnable {
     private final Logger logger = Logger.getLogger(FileDataConnector.class);
-    private final FileParser fileParser;
+    private final DataParser fileParser;
     private final RecordCallbackHandler recordCallbackHandler;
     private final File[] input;
     private final ExecutorService threadPool;
     private int processedFileCount;
 
-    public FileDataConnector(FileParser fileParser, RecordCallbackHandler recordCallbackHandler, File[] input) {
+    public FileDataConnector(DataParser fileParser, RecordCallbackHandler recordCallbackHandler, File[] input) {
         this.fileParser = fileParser;
         this.recordCallbackHandler = recordCallbackHandler;
         this.input = input;

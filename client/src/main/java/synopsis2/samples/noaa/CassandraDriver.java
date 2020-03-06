@@ -30,7 +30,7 @@ public class CassandraDriver {
         try {
 
             Map<String, Quantizer> quantizerMap = Util.quantizerMapFromFile(binConfig);
-            IngestionConfig ingestionConfig = new IngestionConfig(Arrays.asList(FEATURE_NAMES), quantizerMap, 3,
+            IngestionConfig ingestionConfig = new IngestionConfig(quantizerMap, 3,
                     Duration.ofHours(6));
             NOAAIngester ingester = new NOAAIngester(inputDir, ingestionConfig);
 

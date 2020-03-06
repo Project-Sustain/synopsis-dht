@@ -20,6 +20,7 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 
 public class NOAAIngester implements Ingester {
@@ -75,7 +76,7 @@ public class NOAAIngester implements Ingester {
             float lon = inStream.readFloat();
             byte[] payload = inStream.readField();
             Metadata eventMetadata = Serializer.deserialize(sustain.synopsis.sketch.dataset.Metadata.class, payload);
-            String stringHash = GeoHash.encode(lat, lon, ingestionConfig.getPrecision());
+            String stringHash = GeoHash.encode(lat, lon, ingestionConfig.getTemporalBracketLength());
             long ts = eventMetadata.getTemporalProperties().getEnd();
             record = constructStrand(stringHash, ts, eventMetadata);
         } catch (IOException e) {
@@ -87,7 +88,7 @@ public class NOAAIngester implements Ingester {
     }
 
     private Strand constructStrand(String geohash, long ts, Metadata metadata) {
-        List<String> features = ingestionConfig.getFeatures();
+        Collection<String> features = ingestionConfig.getFeatures();
         Path path = new Path(features.size() + 2); // additional vertices for time and location
 
         // path: time -> feature 1 -> ..... -> feature n -> geohash (data container)

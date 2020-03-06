@@ -1,11 +1,13 @@
 package sustain.synopsis.ingestion.client.core;
 
+import sustain.synopsis.ingestion.client.connectors.DataConnector;
+
 import java.util.HashMap;
 import java.util.Map;
 
 /**
  * Represents a single spatio-temporal record that is being sketched.
- * {@link DataConnector}  generates records and passes to the {@link Driver}
+ * {@link DataConnector}  generates records and passes to the {@link IngestionTaskManager}
  */
 public class Record {
     private String geohash;

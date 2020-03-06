@@ -13,20 +13,20 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class Driver implements RecordCallbackHandler {
+public class IngestionTaskManager implements RecordCallbackHandler {
 
-    private final Logger logger = Logger.getLogger(Driver.class);
+    private final Logger logger = Logger.getLogger(IngestionTaskManager.class);
     private final int parallelism;
     private final List<ArrayBlockingQueue<Record>> input;
     private final ExecutorService executorService;
     private final StrandPublisher strandPublisher;
     private final Map<String, Quantizer> quantizerMap;
-    private final Duration duration;
-    private List<IngestionTask> ingestionTasks;
+    private final Duration temporalBracketSize;
+    private final List<IngestionTask> ingestionTasks;
     private final CountDownLatch shutdownLatch;
 
-    public Driver(int parallelism, StrandPublisher strandPublisher, Map<String, Quantizer> quantizerMap,
-                  Duration temporalBracketSize) {
+    public IngestionTaskManager(int parallelism, StrandPublisher strandPublisher, Map<String, Quantizer> quantizerMap,
+                                Duration temporalBracketSize) {
         this.parallelism = parallelism;
         this.strandPublisher = strandPublisher;
         this.quantizerMap = quantizerMap;
@@ -35,7 +35,7 @@ public class Driver implements RecordCallbackHandler {
             input.add(new ArrayBlockingQueue<>(5));
         }
         executorService = Executors.newFixedThreadPool(parallelism);
-        this.duration = temporalBracketSize;
+        this.temporalBracketSize = temporalBracketSize;
         this.ingestionTasks = new ArrayList<>();
         this.shutdownLatch = new CountDownLatch(parallelism);
     }
@@ -77,7 +77,7 @@ public class Driver implements RecordCallbackHandler {
         CountDownLatch startLatch = new CountDownLatch(parallelism);
         for (int i = 0; i < parallelism; i++) {
             IngestionTask ingestionTask = new IngestionTask(new StrandRegistry(strandPublisher), input.get(i), quantizerMap,
-                    this.duration, startLatch, shutdownLatch);
+                    this.temporalBracketSize, startLatch, shutdownLatch);
             ingestionTasks.add(ingestionTask);
             executorService.submit(ingestionTask);
         }

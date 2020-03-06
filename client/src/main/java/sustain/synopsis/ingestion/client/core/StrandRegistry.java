@@ -4,11 +4,10 @@ import org.apache.log4j.Logger;
 import sustain.synopsis.common.Strand;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Registry to keep track of strands at the client's end.
- * For each observation the {@link Driver} will generate a {@link Strand}, and pass it to the registry.
+ * For each observation the {@link IngestionTaskManager} will generate a {@link Strand}, and pass it to the registry.
  * Registry will look for a similar strand using the key of the strand - if there is a match, it will merge
  * the newly added strand with the existing strand in the registry. If not the new strand will be added to the
  * registry. For each newly added strand, the registry will check for completed strands by doing a prefix
@@ -16,7 +15,7 @@ import java.util.stream.Collectors;
  * For the prefix lookup, it will use the geohash of the newly added strand + its starting timestamp (which is the
  * ending timestamp of the completed strand).
  *
- * {@link Driver} will notify the registry at the end of an ingestion session. This is to make sure all strands
+ * {@link IngestionTaskManager} will notify the registry at the end of an ingestion session. This is to make sure all strands
  * that are not yet published should be published to the registry.
  * A single writer thread model is assumed to maintain the temporal ordering between strands. The temporal ordering
  * is important to detect (with high confidence) the temporal bound of a strand.
@@ -43,7 +42,6 @@ public class StrandRegistry {
      * @return Current number of strands in the registry
      */
     public long add(Strand strand) {
-
         Strand existing = registry.get(strand.getKey());
         if (existing != null) {
             existing.merge(strand);

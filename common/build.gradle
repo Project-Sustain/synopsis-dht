@@ -1,5 +1,31 @@
+apply plugin: 'com.google.protobuf'
 apply plugin: 'java-library'
+
+def grpcVersion = '1.26.0'
+def protobufVersion = '3.11.0'
+def protocVersion = protobufVersion
 
 dependencies {
     api 'sustain.synopsis:sketch:1.0.1'
+    api "io.grpc:grpc-protobuf:${grpcVersion}"
+    api "io.grpc:grpc-stub:${grpcVersion}"
+}
+
+protobuf {
+    protoc { artifact = "com.google.protobuf:protoc:${protocVersion}" }
+    plugins {
+        grpc { artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}" }
+    }
+    generateProtoTasks {
+        all()*.plugins { grpc {} }
+    }
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs 'build/generated/source/proto/main/grpc'
+            srcDirs 'build/generated/source/proto/main/java'
+        }
+    }
 }

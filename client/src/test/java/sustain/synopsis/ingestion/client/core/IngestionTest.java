@@ -128,7 +128,6 @@ class IngestionTest {
         assertEquals(2, registry.add(similarStrand));
     }
 
-
     @Test
     void testStrandPublishing() {
         LocalDateTime from = LocalDateTime.of(2019, 2, 12, 1, 0, 0);

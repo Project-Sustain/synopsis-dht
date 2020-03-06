@@ -7,7 +7,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import sustain.synopsis.ingestion.client.connectors.file.FileDataConnector;
-import sustain.synopsis.ingestion.client.connectors.file.FileParserHelper;
+import sustain.synopsis.ingestion.client.connectors.file.RecordParser;
 import sustain.synopsis.ingestion.client.core.Record;
 import sustain.synopsis.ingestion.client.core.RecordCallbackHandler;
 
@@ -23,7 +23,7 @@ class FileConnectorTest {
     private RecordCallbackHandler recordCallbackHandler;
 
     @Mock
-    private FileParserHelper fileParserHelper;
+    private RecordParser fileParserHelper;
 
     @TempDir
     Path tempDir;

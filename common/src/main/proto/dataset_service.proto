@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package sustain.synopsis.metadata;
+
+import "google/protobuf/timestamp.proto";
+
+service DatasetService {
+    rpc registerDataset (RegisterDatasetRequest) returns (RegisterDatasetResponse);
+    rpc createIngestSession (CreateIngestSessionRequest) returns (CreateIngestSessionResponse);
+    rpc getDatasetSession (GetDatasetSessionRequest) returns (GetDatasetSessionResponse);
+    rpc getDatasetSessions (GetDatasetSessionsRequest) returns (GetDatasetSessionsResponse);
+}
+
+message RegisterDatasetRequest {
+    string datasetId = 1;
+}
+
+message RegisterDatasetResponse {}
+
+message CreateIngestSessionRequest {
+    string dataset_id = 1;
+    int64 temporalBracketLength= 2;
+    int32 geohashLength= 3;
+    string binConfig = 4;
+}
+
+message CreateIngestSessionResponse {
+    int64 session_id = 1;
+    google.protobuf.Timestamp created_at = 2;
+}
+
+message Session {
+    int64 sessionId = 1;
+    int64 temporalBracketLength= 2;
+    int32 geohashLength= 3;
+    string binConfig = 4;
+}
+
+message GetDatasetSessionRequest {
+    string datasetId = 1;
+    int64 sessionId = 2;
+}
+
+message GetDatasetSessionResponse {
+    Session session = 1;
+}
+
+message GetDatasetSessionsRequest {
+    string datasetId = 1;
+}
+
+message GetDatasetSessionsResponse {
+    repeated Session session = 1;
+}

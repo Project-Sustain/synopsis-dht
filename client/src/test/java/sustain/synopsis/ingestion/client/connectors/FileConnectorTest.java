@@ -1,14 +1,10 @@
 package sustain.synopsis.ingestion.client.connectors;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import sustain.synopsis.ingestion.client.connectors.file.FileDataConnector;
-import sustain.synopsis.ingestion.client.connectors.file.RecordParser;
-import sustain.synopsis.ingestion.client.core.Record;
+import sustain.synopsis.ingestion.client.connectors.file.LineParser;
 import sustain.synopsis.ingestion.client.core.RecordCallbackHandler;
 
 import java.io.File;
@@ -23,7 +19,7 @@ class FileConnectorTest {
     private RecordCallbackHandler recordCallbackHandler;
 
     @Mock
-    private RecordParser fileParserHelper;
+    private LineParser fileParserHelper;
 
     @TempDir
     Path tempDir;

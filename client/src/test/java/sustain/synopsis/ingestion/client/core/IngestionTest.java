@@ -40,7 +40,7 @@ class IngestionTest {
         quantizers.put("feature_2", new Quantizer(new Feature(100.0f), new Feature(200.0f), new Feature(1000.0f)));
 
         TemporalQuantizer temporalQuantizer = new TemporalQuantizer(Duration.ofHours(1));
-        IngestionTask ingestionTask = new IngestionTask(null, null, quantizers, Duration.ofHours(1),
+        StrandConversionTask ingestionTask = new StrandConversionTask(null, null, quantizers, Duration.ofHours(1),
                 new CountDownLatch(1), new CountDownLatch(1));
         Record record = new Record();
         record.setGeohash("9xj");
@@ -79,7 +79,7 @@ class IngestionTest {
         quantizers.put("feature_2", new Quantizer(new Feature(100.0f), new Feature(200.0f), new Feature(1000.0f)));
 
         ArrayBlockingQueue<Record> input = new ArrayBlockingQueue<>(5);
-        IngestionTask ingestionTask = new IngestionTask(registryMock, input, quantizers, Duration.ofHours(1),
+        StrandConversionTask ingestionTask = new StrandConversionTask(registryMock, input, quantizers, Duration.ofHours(1),
                 new CountDownLatch(1), new CountDownLatch(1));
         Thread t = new Thread(ingestionTask);
         t.start();

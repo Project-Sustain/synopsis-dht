@@ -7,7 +7,7 @@ import java.util.*;
 
 /**
  * Registry to keep track of strands at the client's end.
- * For each observation the {@link IngestionTaskManager} will generate a {@link Strand}, and pass it to the registry.
+ * For each observation the {@link StrandConversionTaskManager} will generate a {@link Strand}, and pass it to the registry.
  * Registry will look for a similar strand using the key of the strand - if there is a match, it will merge
  * the newly added strand with the existing strand in the registry. If not the new strand will be added to the
  * registry. For each newly added strand, the registry will check for completed strands by doing a prefix
@@ -15,7 +15,7 @@ import java.util.*;
  * For the prefix lookup, it will use the geohash of the newly added strand + its starting timestamp (which is the
  * ending timestamp of the completed strand).
  *
- * {@link IngestionTaskManager} will notify the registry at the end of an ingestion session. This is to make sure all strands
+ * {@link StrandConversionTaskManager} will notify the registry at the end of an ingestion session. This is to make sure all strands
  * that are not yet published should be published to the registry.
  * A single writer thread model is assumed to maintain the temporal ordering between strands. The temporal ordering
  * is important to detect (with high confidence) the temporal bound of a strand.

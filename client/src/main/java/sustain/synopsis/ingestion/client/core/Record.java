@@ -7,7 +7,7 @@ import java.util.Map;
 
 /**
  * Represents a single spatio-temporal record that is being sketched.
- * {@link DataConnector}  generates records and passes to the {@link IngestionTaskManager}
+ * {@link DataConnector}  generates records and passes to the {@link StrandConversionTaskManager}
  */
 public class Record {
     private String geohash;

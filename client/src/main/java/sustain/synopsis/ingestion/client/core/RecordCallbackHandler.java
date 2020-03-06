@@ -3,7 +3,7 @@ package sustain.synopsis.ingestion.client.core;
 import sustain.synopsis.ingestion.client.connectors.DataConnector;
 
 /**
- * Used for asynchronous communication between a {@link DataConnector} and the {@link IngestionTaskManager}.
+ * Used for asynchronous communication between a {@link DataConnector} and the {@link StrandConversionTaskManager}.
  * Driver provides an implementation of {@link RecordCallbackHandler} when instantiating a data connector.
  * This allows decoupling between the execution of the data connectors and the driver, for e.g.: a data connector
  * may use multiple threads to fetch data whereas the driver is a single threaded implementation.
@@ -19,7 +19,7 @@ public interface RecordCallbackHandler {
     boolean onRecordAvailability(Record record);
 
     /**
-     * Notifies the end of the dataset. Used by the {@link IngestionTaskManager} to flush any unfinished strand and initiate the
+     * Notifies the end of the dataset. Used by the {@link StrandConversionTaskManager} to flush any unfinished strand and initiate the
      * cleanup process.
      */
     void onTermination();

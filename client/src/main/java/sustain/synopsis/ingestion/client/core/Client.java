@@ -53,7 +53,7 @@ public class Client {
 
     public static void main(String[] args) throws ClassNotFoundException, IOException, IllegalAccessException, InstantiationException {
         if (args.length < 4) {
-            System.out.println("usage: datasetId sessionId DataParserClassName files...");
+            System.out.println("usage: datasetId sessionId FileParserClassName files...");
             return;
         }
 

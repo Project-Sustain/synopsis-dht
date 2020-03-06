@@ -4,7 +4,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import sustain.synopsis.ingestion.client.connectors.file.LineParser;
 import sustain.synopsis.ingestion.client.core.RecordCallbackHandler;
 
 import java.io.File;
@@ -17,9 +16,6 @@ class FileConnectorTest {
 
     @Mock
     private RecordCallbackHandler recordCallbackHandler;
-
-    @Mock
-    private LineParser fileParserHelper;
 
     @TempDir
     Path tempDir;

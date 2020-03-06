@@ -41,4 +41,5 @@ public class PayloadSizeCalculator implements StrandPublisher {
     public long getCumulativePayloadSize(){
         return cumulativeDataTransferred.get();
     }
+
 }

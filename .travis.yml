@@ -7,4 +7,4 @@ os:
   - linux
 
 jdk:
-  - oraclejdk8
+  - oraclejdk9

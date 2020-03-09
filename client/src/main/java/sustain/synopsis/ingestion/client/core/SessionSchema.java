@@ -8,13 +8,13 @@ import java.util.Map;
 
 public class SessionSchema {
     private final Map<String, Quantizer> quantizers;
-    private final int temporalBracketLength;
-    private final Duration temporalGranularity;
+    private final int geohashLength;
+    private final Duration temporalBracketLength;
 
     public SessionSchema(Map<String, Quantizer> quantizers, int temporalBracketLength, Duration temporalGranularity) {
         this.quantizers = quantizers;
-        this.temporalBracketLength = temporalBracketLength;
-        this.temporalGranularity = temporalGranularity;
+        this.geohashLength = temporalBracketLength;
+        this.temporalBracketLength = temporalGranularity;
     }
 
     public Quantizer getQuantizer(String featureName) {
@@ -25,15 +25,15 @@ public class SessionSchema {
         return quantizers;
     }
 
-    public int getTemporalBracketLength() {
-        return temporalBracketLength;
+    public int getGeohashLength() {
+        return geohashLength;
     }
 
     public Collection<String> getFeatures() {
         return quantizers.keySet();
     }
 
-    public Duration getTemporalGranularity() {
-        return temporalGranularity;
+    public Duration getTemporalBracketLength() {
+        return temporalBracketLength;
     }
 }

@@ -14,10 +14,9 @@ import java.time.ZoneId;
 
 public class EpaFileParser implements FileParser {
 
-    CsvFileParser csvFileParser;
+    private CsvFileParser csvFileParser;
 
-    @Override
-    public void initWithSchemaAndHandler(SessionSchema schema, RecordCallbackHandler handler) {
+    public EpaFileParser() {
         csvFileParser = CsvFileParser.newBuilder()
                 .setSkipHeader(true)
                 .withFeatureParser((record, splits) -> {
@@ -32,7 +31,10 @@ public class EpaFileParser implements FileParser {
                     record.addFeatureValue(splits[8].replace("\"",""), Float.parseFloat(splits[13]));
                 }))
                 .build();
+    }
 
+    @Override
+    public void initWithSchemaAndHandler(SessionSchema schema, RecordCallbackHandler handler) {
         csvFileParser.initWithSchemaAndHandler(schema, handler);
     }
 
@@ -40,4 +42,5 @@ public class EpaFileParser implements FileParser {
     public void parse(File file) {
         csvFileParser.parse(file);
     }
+
 }

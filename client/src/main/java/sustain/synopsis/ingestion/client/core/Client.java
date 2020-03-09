@@ -10,6 +10,7 @@ import sustain.synopsis.metadata.DatasetServiceGrpc.DatasetServiceBlockingStub;
 import sustain.synopsis.metadata.DatasetServiceOuterClass.GetDatasetSessionRequest;
 import sustain.synopsis.metadata.DatasetServiceOuterClass.GetDatasetSessionResponse;
 import sustain.synopsis.metadata.DatasetServiceOuterClass.Session;
+import sustain.synopsis.samples.client.nwqmc.WaterTemperatureParser;
 import sustain.synopsis.sketch.dataset.Quantizer;
 
 import java.io.File;
@@ -33,7 +34,6 @@ public class Client {
                 .setSessionId(sessionId)
                 .build();
         GetDatasetSessionResponse datasetSession = stub.getDatasetSession(datasetSessionRequest);
-
         Session session = datasetSession.getSession();
 
         Map<String, Quantizer> stringQuantizerMap = Util.quantizerMapFromString(session.getBinConfig());
@@ -41,14 +41,6 @@ public class Client {
         Duration temporalBracketLength = Duration.ofMillis(session.getTemporalBracketLength());
 
         return new SessionSchema(stringQuantizerMap, geohashLength, temporalBracketLength);
-    }
-
-    public static File[] getFileListFromArgs(String[] args) {
-        File[] files = new File[args.length-3];
-        for (int i = 3; i < args.length; i++) {
-            files[i-3] = (new File(args[i]));
-        }
-        return files;
     }
 
     public static void main(String[] args) throws ClassNotFoundException, IOException, IllegalAccessException, InstantiationException {
@@ -59,27 +51,31 @@ public class Client {
 
         String datasetId = args[0];
         long sessionId = Long.parseLong(args[1]);
-        SessionSchema config = fetchSessionSchema(datasetId, sessionId);
+//        SessionSchema config = fetchSessionSchema(datasetId, sessionId);
+        SessionSchema schema = WaterTemperatureParser.getHardCodedSessionSchema();
+
 
         String fileParserClassName = args[2];
         FileParser fileParser = (FileParser) Class.forName(fileParserClassName).newInstance();
-        File[] files = getFileListFromArgs(args);
+        File[] files = Util.getFilesFromStrings(3, args);
 
-        StrandPublisher strandPublisher = new StrandPublisherImpl();
+        StrandPublisherImpl strandPublisher = new StrandPublisherImpl();
 
         StrandConversionTaskManager strandConversionManager = new StrandConversionTaskManager(
-                4,
+                1,
                 strandPublisher,
-                config.getQuantizers(),
-                config.getTemporalGranularity());
+                schema.getQuantizers(),
+                schema.getTemporalBracketLength());
 
         DataConnector dataConnector = new FileDataConnector(fileParser, files);
 
         strandConversionManager.start();
-        dataConnector.initWithIngestionConfigAndRecordCallBackHandler(config, strandConversionManager);
+        dataConnector.initWithSchemaAndHandler(schema, strandConversionManager);
         dataConnector.start();
         strandConversionManager.awaitCompletion();
         dataConnector.terminate();
+
+        System.out.println(strandPublisher.getCountAvg());
     }
 
 }

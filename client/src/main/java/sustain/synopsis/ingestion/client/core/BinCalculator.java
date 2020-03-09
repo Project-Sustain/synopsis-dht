@@ -1,4 +1,4 @@
-package sustain.synopsis.tools;
+package sustain.synopsis.ingestion.client.core;
 
 import sustain.synopsis.sketch.dataset.AutoQuantizer;
 import sustain.synopsis.sketch.dataset.Quantizer;
@@ -7,7 +7,9 @@ import sustain.synopsis.sketch.dataset.feature.FeatureType;
 import sustain.synopsis.sketch.stat.SquaredError;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Calculates the bin configuration for a given feature based on a sample.
@@ -87,6 +89,45 @@ public class BinCalculator {
      */
     public List<Feature> calculateBins(List<Feature> sample){
         return calculateBins(sample, 0.025, 5, 50);
+    }
+
+    public String getBinConfiguration(List<Record> records) {
+        Map<String, List<Feature>> featureListMap = getFeatureListMapFromRecordList(records);
+        Map<String, List<Feature>> binConfigurationMap = getBinConfigurationMapFromFeatureListMap(featureListMap);
+        String binConfiguration = getStringForBinConfigurationMap(binConfigurationMap);
+        return binConfiguration;
+    }
+
+    private String getStringForBinConfigurationMap(Map<String, List<Feature>> binConfigurationMap) {
+        StringBuilder sb = new StringBuilder();
+        for (String featureName : binConfigurationMap.keySet()) {
+            sb.append(featureName);
+            for (Feature f : binConfigurationMap.get(featureName)) {
+                sb.append(","+f.getDouble());
+            }
+            sb.append("\n");
+        }
+        return sb.toString();
+    }
+
+    private Map<String, List<Feature>> getBinConfigurationMapFromFeatureListMap(Map<String,List<Feature>> featureListMap) {
+        Map<String,List<Feature>> binConfigurationMap = new HashMap<>();
+        for (String featureName : featureListMap.keySet()) {
+            binConfigurationMap.put(featureName, calculateBins(featureListMap.get(featureName)));
+        }
+        return binConfigurationMap;
+    }
+
+    private Map<String, List<Feature>> getFeatureListMapFromRecordList(List<Record> recordList) {
+        Map<String,List<Feature>> featureListMap = new HashMap<>();
+        for (Record r : recordList) {
+            Map<String, Float> features = r.getFeatures();
+            for (String featureName : features.keySet()) {
+                featureListMap.putIfAbsent(featureName, new ArrayList<>());
+                featureListMap.get(featureName).add(new Feature(featureName, features.get(featureName)));
+            }
+        }
+        return featureListMap;
     }
 
     private double evaluate(List<Feature> sample, Quantizer q) {

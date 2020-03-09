@@ -1,0 +1,10 @@
+language: java
+
+install:
+  - ./gradlew build
+
+os:
+  - linux
+
+jdk:
+  - openjdk8

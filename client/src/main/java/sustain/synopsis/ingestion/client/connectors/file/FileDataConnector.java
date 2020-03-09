@@ -29,8 +29,8 @@ public class FileDataConnector implements DataConnector, Runnable {
     }
 
     @Override
-    public boolean initWithIngestionConfigAndRecordCallBackHandler(SessionSchema config, RecordCallbackHandler handler) {
-        this.fileParser.initWithSchemaAndHandler(config, handler);
+    public boolean initWithSchemaAndHandler(SessionSchema schema, RecordCallbackHandler handler) {
+        this.fileParser.initWithSchemaAndHandler(schema, handler);
         this.handler = handler;
         return true;
     }
@@ -54,18 +54,36 @@ public class FileDataConnector implements DataConnector, Runnable {
         }
     }
 
+    public void awaitCompletion() {
+        if (!threadPool.isTerminated()) {
+            try {
+                logger.info("Attempting to terminate the thread pool");
+                boolean terminated = threadPool.awaitTermination(5, TimeUnit.DAYS);
+                logger.info("Status of the thread pool termination " + (terminated ? "true" : "false"));
+            } catch (InterruptedException e) {
+                logger.error("Interrupted while waiting for thread pool to terminate.", e);
+            }
+        }
+    }
+
     @Override
     public void run() {
         int processedFileCount = 0;
-        for (File file : input) {
-            if (!file.isFile()) {
-                logger.warn("Skipping " + file.getAbsolutePath() + ", not a file.");
-                continue;
+        try {
+            for (File file : input) {
+                if (!file.isFile()) {
+                    logger.warn("Skipping " + file.getAbsolutePath() + ", not a file.");
+                    continue;
+                }
+                fileParser.parse(file);
+                processedFileCount++;
             }
-            fileParser.parse(file);
-            processedFileCount++;
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            logger.info("Completed processing input. Processed file count: " + processedFileCount);
+            handler.onTermination(); // acknowledge the end of the input
         }
-        logger.info("Completed processing input. Processed file count: " + processedFileCount);
-        handler.onTermination(); // acknowledge the end of the input
     }
+
 }

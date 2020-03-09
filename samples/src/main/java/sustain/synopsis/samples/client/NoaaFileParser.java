@@ -1,4 +1,4 @@
-package sustain.synopsis.ingestion.client.connectors.examples;
+package sustain.synopsis.samples.client;
 
 import sustain.synopsis.ingestion.client.connectors.file.CsvFileParser;
 import sustain.synopsis.ingestion.client.connectors.file.FileParser;
@@ -18,7 +18,6 @@ public class NoaaFileParser implements FileParser {
                 .setSkipHeader(true);
 
         for (String feature : schema.getFeatures()) {
-
         }
 
     }

@@ -5,8 +5,10 @@ import sustain.synopsis.sketch.dataset.Quantizer;
 import sustain.synopsis.sketch.dataset.feature.Feature;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -20,7 +22,7 @@ public class Util {
     public static Map<String, Quantizer> quantizerMapFromFile(String filePath) throws IOException {
         try {
             byte[] fileBytes = Files.readAllBytes(Paths.get(filePath));
-            return quantizerMapFromString(Arrays.toString(fileBytes));
+            return quantizerMapFromString(new String(fileBytes, StandardCharsets.UTF_8));
 
         } catch (IOException e) {
             LOGGER.error("Error parsing the bin configuration.", e);
@@ -44,6 +46,17 @@ public class Util {
             quantizers.put(fName, q);
         }
         return quantizers;
+    }
+
+    public static File[] getFilesFromStrings(int startIdx, String[] args) {
+        if (startIdx >= args.length) {
+            return new File[]{};
+        }
+        File[] files = new File[args.length-startIdx];
+        for (int i = startIdx; i < args.length; i++) {
+            files[i-startIdx] = (new File(args[i]));
+        }
+        return files;
     }
 
 

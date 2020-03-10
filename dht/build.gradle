@@ -1,15 +1,9 @@
 apply plugin: 'java-library'
 
 def grpcVersion = '1.26.0'
-def protobufVersion = '3.11.0'
-def protocVersion = protobufVersion
 
 dependencies {
-    compileOnly "javax.annotation:javax.annotation-api:1.2"
     implementation 'org.apache.zookeeper:zookeeper:3.4.5'
     implementation project(':common')
     implementation project(':storage')
-
-    runtimeOnly "io.grpc:grpc-netty-shaded:${grpcVersion}"
-    testImplementation "io.grpc:grpc-testing:${grpcVersion}"
 }

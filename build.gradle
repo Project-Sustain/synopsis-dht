@@ -49,6 +49,7 @@ subprojects {
     test {
         useJUnitPlatform()
         forkEvery = 1
+        maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
         testLogging {
             events "passed", "skipped", "failed"
         }

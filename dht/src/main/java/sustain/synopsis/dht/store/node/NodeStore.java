@@ -41,7 +41,7 @@ public class NodeStore {
                 new Logger(getRootJournalFileName(Context.getInstance().getNodeConfig().getRootJournalLoc())),
                 Context.getInstance().getNodeConfig().getMemTableSize() * 1024 * 1024, // MB -> Bytes
                 Context.getInstance().getNodeConfig().getBlockSize() * 1024 * 1024, // MB -> Bytes
-                Context.getInstance().getNodeConfig().getMetadataStoreDir(), DiskManager.getInstance());
+                Context.getInstance().getNodeConfig().getMetadataStoreDir(), new DiskManager());
     }
 
     // constructor used for writing unit tests with mocks
@@ -69,6 +69,13 @@ public class NodeStore {
         }
         logger.info("Starting node store initialization.");
         long nodeInitStartTS = System.currentTimeMillis();
+
+        // initialize the disk manager
+        boolean diskManagerReady = diskManager.init(Context.getInstance().getNodeConfig());
+        if (!diskManagerReady) {
+            throw new StorageException("Failed to initialize disk manager.");
+        }
+
         // initialize all entity stores
         for (byte[] serialized : rootLogger) {
             if (serialized == null) {
@@ -102,8 +109,7 @@ public class NodeStore {
     }
 
     public void store(String datasetId, String entityId, long sessionId, StrandStorageKey storageKey,
-                      StrandStorageValue storageValue) throws IOException,
-            StorageException {
+                      StrandStorageValue storageValue) throws IOException, StorageException {
         // check if the session is new. If it's a new session validate.
         // It's not necessary to record this in the commit log. A session can revalidated and cached in case
         // of node failure/restart.
@@ -137,8 +143,7 @@ public class NodeStore {
      * @throws IOException      Error during serialization
      */
     void store(String userId, String datasetId, String entityId, long sessionId, long sessionCreationTs,
-                      StrandStorageKey storageKey, StrandStorageValue storageValue) throws StorageException,
-            IOException {
+               StrandStorageKey storageKey, StrandStorageValue storageValue) throws StorageException, IOException {
         // retrieve entity store
         if (!entityStoreMap.containsKey(datasetId)) {
             try {

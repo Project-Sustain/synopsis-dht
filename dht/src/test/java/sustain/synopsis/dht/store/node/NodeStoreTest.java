@@ -1,5 +1,6 @@
 package sustain.synopsis.dht.store.node;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
@@ -40,6 +41,8 @@ public class NodeStoreTest {
 
     @Test
     void testFreshStart() throws StorageException, IOException {
+        NodeConfiguration nodeConfiguration = new NodeConfiguration();
+        Context.getInstance().initialize(nodeConfiguration);
         MockitoAnnotations.initMocks(this);
         Mockito.when(loggerMock.iterator()).thenReturn(new Iterator<byte[]>() {
             @Override
@@ -53,6 +56,7 @@ public class NodeStoreTest {
             }
         });
         Mockito.when(sessionValidatorMock.validate("dataset_1", 1000L)).thenReturn(new SessionValidator.SessionValidationResponse(true, "bob", 12345L));
+        Mockito.when(diskManagerMock.init(nodeConfiguration)).thenReturn(true);
         Mockito.when(diskManagerMock.allocate(Mockito.anyLong())).thenReturn(storageDir.getAbsolutePath());
 
         NodeStore nodeStore = new NodeStore(sessionValidatorMock, loggerMock, 1024, 200,
@@ -155,5 +159,27 @@ public class NodeStoreTest {
 
         assertEquals(session1, session2); // same session id
         assertNotEquals(session1, session3); // different session ids
+    }
+
+    @Test
+    void testDiskManagerInitFail() throws StorageException {
+        NodeConfiguration nodeConfiguration = new NodeConfiguration();
+        Context.getInstance().initialize(nodeConfiguration);
+        MockitoAnnotations.initMocks(this);
+        Mockito.when(loggerMock.iterator()).thenReturn(new Iterator<byte[]>() {
+            @Override
+            public boolean hasNext() {
+                return false;
+            }
+
+            @Override
+            public byte[] next() {
+                return null;
+            }
+        });
+        Mockito.when(diskManagerMock.init(nodeConfiguration)).thenReturn(false);
+        NodeStore nodeStore = new NodeStore(sessionValidatorMock, loggerMock, 1024, 200,
+                metadataStoreDir.getAbsolutePath(), diskManagerMock);
+        Assertions.assertThrows(StorageException.class, nodeStore::init);
     }
 }

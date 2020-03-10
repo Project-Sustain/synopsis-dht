@@ -1,5 +1,7 @@
 package sustain.synopsis.dht.store.node;
 
+import org.apache.commons.collections4.Trie;
+import org.apache.commons.collections4.trie.PatriciaTrie;
 import sustain.synopsis.dht.Context;
 import sustain.synopsis.dht.Util;
 import sustain.synopsis.dht.journal.Logger;
@@ -23,7 +25,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class NodeStore {
     // package level access to support unit testing
-    Map<String, Map<String, EntityStore>> entityStoreMap = new ConcurrentHashMap<>();
+    Map<String, Trie<String, EntityStore>> entityStoreMap = new ConcurrentHashMap<>();
     Map<Long, SessionValidator.SessionValidationResponse> validatedSessions = new ConcurrentHashMap<>();
     private org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(NodeStore.class);
     private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -36,7 +38,7 @@ public class NodeStore {
     private DiskManager diskManager;
 
 
-    public NodeStore() throws StorageException {
+    public NodeStore() {
         this(new SessionValidator(),
                 new Logger(getRootJournalFileName(Context.getInstance().getNodeConfig().getRootJournalLoc())),
                 Context.getInstance().getNodeConfig().getMemTableSize() * 1024 * 1024, // MB -> Bytes
@@ -96,7 +98,7 @@ public class NodeStore {
                     logger.debug("Completed initializing entity store: " + createEntityStore.getEntityId() + ", " +
                             "elapsed time (s): " + (entityStoreEndTS - entityStoreStartTS) / (1000.0));
                 }
-                entityStoreMap.putIfAbsent(createEntityStore.getDataSetId(), new ConcurrentHashMap<>());
+                entityStoreMap.putIfAbsent(createEntityStore.getDataSetId(), new PatriciaTrie<>());
                 entityStoreMap.get(createEntityStore.getDataSetId()).put(createEntityStore.getEntityId(), entityStore);
             } catch (IOException | StorageException e) {
                 logger.error(e);
@@ -148,7 +150,7 @@ public class NodeStore {
         if (!entityStoreMap.containsKey(datasetId)) {
             try {
                 lock.writeLock().lock();
-                entityStoreMap.putIfAbsent(datasetId, new ConcurrentHashMap<>());
+                entityStoreMap.putIfAbsent(datasetId, new PatriciaTrie<>());
                 if (logger.isDebugEnabled()) {
                     logger.debug("Adding a new dataset. Dataset Id: " + datasetId);
                 }

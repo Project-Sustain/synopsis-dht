@@ -162,7 +162,7 @@ public class NodeStoreTest {
     }
 
     @Test
-    void testDiskManagerInitFail() throws StorageException {
+    void testDiskManagerInitFail() {
         NodeConfiguration nodeConfiguration = new NodeConfiguration();
         Context.getInstance().initialize(nodeConfiguration);
         MockitoAnnotations.initMocks(this);

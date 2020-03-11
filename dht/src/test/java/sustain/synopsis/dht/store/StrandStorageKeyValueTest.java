@@ -101,6 +101,13 @@ public class StrandStorageKeyValueTest {
         Assertions.assertEquals(from + "_" + to, key.toString());
     }
 
+    @Test
+    void testStrandStorageKeyGetters(){
+        StrandStorageKey key = new StrandStorageKey(10, 20);
+        Assertions.assertEquals(10, key.getStartTS());
+        Assertions.assertEquals(20, key.getEndTS());
+    }
+
     public static Strand createStrand(String geohash, long ts, long to, double... features) {
         Path path = new Path(features.length);
         for (int i = 0; i < features.length; i++) {

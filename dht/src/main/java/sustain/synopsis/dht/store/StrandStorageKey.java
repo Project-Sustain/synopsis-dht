@@ -59,4 +59,12 @@ public class StrandStorageKey implements Comparable<StrandStorageKey>, Serializa
     public String toString(){
         return startTS + "_" + endTS;
     }
+
+    public long getStartTS() {
+        return startTS;
+    }
+
+    public long getEndTS() {
+        return endTS;
+    }
 }

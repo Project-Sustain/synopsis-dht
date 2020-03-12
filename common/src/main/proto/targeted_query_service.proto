@@ -8,11 +8,12 @@ service TargetedQueryService {
 }
 
 message TargetQueryRequest {
+    string dataset = 1;
     // spatial scope is defines using a list of geohashes
-    repeated Predicate spatialScope = 1;
-    Expression temporalScope = 2;
-    repeated Expression featurePredicates = 3;
-    repeated Expression metadataPredicates = 4;
+    repeated Predicate spatialScope = 2;
+    Expression temporalScope = 3;
+    repeated Expression featurePredicates = 4;
+    repeated Expression metadataPredicates = 5;
 }
 
 // a single response message may pack zero or more strands

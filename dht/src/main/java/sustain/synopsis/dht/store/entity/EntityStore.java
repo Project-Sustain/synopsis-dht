@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -41,10 +42,11 @@ public class EntityStore {
     /**
      * Queryiable metadata is accessed by both the reader threads and the writer threads
      */
-    List<Metadata<StrandStorageKey>> queryiableMetadata;
+    TreeMap<StrandStorageKey, Metadata<StrandStorageKey>> queryiableMetadata;
     private ReentrantReadWriteLock lock;
 
-    public EntityStore(String entityId, String metadataDir, long memTableSize, long blockSize, DiskManager diskManager) {
+    public EntityStore(String entityId, String metadataDir, long memTableSize, long blockSize,
+                       DiskManager diskManager) {
         this(entityId, new EntityStoreJournal(entityId, metadataDir), memTableSize, blockSize, diskManager);
     }
 
@@ -58,7 +60,7 @@ public class EntityStore {
         this.compressor = new LZ4BlockCompressor();
         this.memTableSize = memTableSize;
         this.entityStoreJournal = entityStoreJournal;
-        this.queryiableMetadata = new ArrayList<>();
+        this.queryiableMetadata = new TreeMap<>();
         this.sequenceId = new AtomicInteger(-1);
         this.lock = new ReentrantReadWriteLock();
         this.diskManager = diskManager;
@@ -75,7 +77,7 @@ public class EntityStore {
             List<Metadata<StrandStorageKey>> metadataList = entityStoreJournal.getMetadata();
             this.sequenceId.set(entityStoreJournal.getSequenceId());
             this.queryiableMetadata =
-                    metadataList.stream().filter(Metadata::isSessionComplete).collect(Collectors.toList());
+                    metadataList.stream().filter(Metadata::isSessionComplete).collect(Collectors.toMap(Metadata<StrandStorageKey>::getMin, Function.identity(), (o1, o2) -> o1, TreeMap::new));
             // todo: how to handle sessions  active during the node crash/shutdown?
             // todo: populate activeSessions and activeMetadata
         } catch (ChecksumGenerator.ChecksumError checksumError) {
@@ -142,7 +144,7 @@ public class EntityStore {
         // there can be multiple concurrent reader threads accessing the queryiable data
         try {
             lock.writeLock().lock();
-            queryiableMetadata.addAll(activeMetadata.get(session));
+            queryiableMetadata.putAll(activeMetadata.get(session).stream().collect(Collectors.toMap(Metadata<StrandStorageKey>::getMin, Function.identity())));
         } finally {
             lock.writeLock().unlock();
         }
@@ -153,7 +155,6 @@ public class EntityStore {
     // we inject a disk manager instance for unit testing purposes
     public void toSSTable(IngestionSession session, DiskManager diskManager, Metadata<StrandStorageKey> metadata) throws StorageException, IOException {
         MemTable<StrandStorageKey, StrandStorageValue> memTable = activeSessions.get(session);
-        //memTable.setReadOnly();
         String dir = diskManager.allocate(memTable.getEstimatedSize());
         String storagePath = getSSTableOutputPath(memTable.getFirstKey(), memTable.getLastKey(), dir, sequenceId.get());
         try (FileOutputStream fos = new FileOutputStream(storagePath); DataOutputStream dos =
@@ -175,7 +176,7 @@ public class EntityStore {
         return path + File.separator + entityId + "_" + firstKey + "_" + lastKey + "_" + seqId + ".sd";
     }
 
-    public String getJournalFilePath() {
-        return entityStoreJournal.getJournalFilePath();
+    public String getEntityId() {
+        return entityId;
     }
 }

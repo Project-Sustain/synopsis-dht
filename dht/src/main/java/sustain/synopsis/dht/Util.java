@@ -11,7 +11,6 @@ import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.NavigableMap;
-import java.util.TreeMap;
 
 /**
  * @author Thilina Buddhika
@@ -65,22 +64,32 @@ public class Util {
         return Runtime.getRuntime().availableProcessors() * 2;
     }
 
-    public static <T> NavigableMap<StrandStorageKey, T> temporalLookup(TreeMap<StrandStorageKey, T> metadataMap,
-                                                                       long from, long to, boolean inclusionTo) {
-        StrandStorageKey floorKey = metadataMap.floorKey(new StrandStorageKey(from, to));
-        StrandStorageKey ceilingKey = metadataMap.ceilingKey(new StrandStorageKey(to, Long.MAX_VALUE));
-        if (floorKey != null && ceilingKey != null) {
-            boolean includeFrom = floorKey.getEndTS() > from;
-            boolean includeTo = inclusionTo && (ceilingKey.getStartTS() == to);
-            return metadataMap.subMap(floorKey, includeFrom, ceilingKey, includeTo);
-        } else if (ceilingKey != null) {
-            boolean includeTo = inclusionTo && (ceilingKey.getStartTS() == to);
-            return metadataMap.headMap(ceilingKey, includeTo);
-        } else if (floorKey != null) {
-            boolean includeFrom = floorKey.getEndTS() > from;
-            return metadataMap.tailMap(floorKey, includeFrom);
-        } else {
-            return new TreeMap<>(metadataMap);
+    /**
+     * Filters out the {@link StrandStorageKey} objects that falls into the given temporal boundaries
+     *
+     * @param metadataMap       Map of {@link StrandStorageKey} objects arranged as a {@link NavigableMap}.
+     * @param lowerBound        Lower bound of the temporal bracket, usually specified as an epoch, inclusive
+     * @param upperBound        Upper bound of the temporal bracket, usually specified as an epoch, exclusive by default
+     * @param includeUpperBound Whether to include any strand that has a starting ts equal to the upper bound
+     * @param <T>               Value type of the map
+     * @return Matching StrandStorageKeys and their associated values as a {@link NavigableMap}
+     */
+    public static <T> NavigableMap<StrandStorageKey, T> temporalLookup(NavigableMap<StrandStorageKey, T> metadataMap,
+                                                                       long lowerBound, long upperBound,
+                                                                       boolean includeUpperBound) {
+        /* {@link StrandStorageKey} uses the 'from' attribute in the compare(). Therefore, we can use a dummy value
+        as the 'to' attribute.
+         */
+        StrandStorageKey from = new StrandStorageKey(lowerBound, Long.MAX_VALUE);
+        /* handle the case where lower bound is falling into the temporal bracket of a strand - subMap()
+        skips that strand because lowerBound > strand.getStartTS(). Also make sure the strand.getEndTS() < lowerBound
+        . */
+        StrandStorageKey floorKey = metadataMap.floorKey(new StrandStorageKey(lowerBound, upperBound));
+        if (floorKey != null && floorKey.getEndTS() > lowerBound) {
+            from = floorKey;
         }
+
+        StrandStorageKey to = new StrandStorageKey(upperBound, Long.MAX_VALUE);
+        return metadataMap.subMap(from, true, to, includeUpperBound);
     }
 }

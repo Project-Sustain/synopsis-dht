@@ -6,9 +6,12 @@ def protobufVersion = '3.11.0'
 def protocVersion = protobufVersion
 
 dependencies {
+    compileOnly "javax.annotation:javax.annotation-api:1.2"
     api 'sustain.synopsis:sketch:1.0.1'
     api "io.grpc:grpc-protobuf:${grpcVersion}"
     api "io.grpc:grpc-stub:${grpcVersion}"
+    runtimeOnly "io.grpc:grpc-netty-shaded:${grpcVersion}"
+    testImplementation "io.grpc:grpc-testing:${grpcVersion}"
 }
 
 protobuf {

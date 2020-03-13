@@ -1,8 +1,6 @@
 package sustain.synopsis.dht.store;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -47,10 +45,9 @@ public class DiskManagerTest {
 
     @Test
     void testProcessPath() throws StorageException, IOException {
-        initContext();
         // existing dir
         Mockito.when(mockFile.exists()).thenReturn(true);
-        DiskManager diskManager = DiskManager.getInstance();
+        DiskManager diskManager = new DiskManager();
         diskManager.processPath(mockFile, 1024);
         Mockito.verify(mockFile, Mockito.times(0)).mkdirs();
 
@@ -85,25 +82,12 @@ public class DiskManagerTest {
     }
 
     @Test
-    void testDiskManagerInit() throws StorageException, IOException {
+    void testDiskManagerInit() throws IOException {
         initContext();
-        DiskManager diskManager = DiskManager.getInstance();
+        DiskManager diskManager = new DiskManager();
         Assertions.assertFalse(diskManager.init(null));
         Assertions.assertFalse(diskManager.init(new NodeConfiguration()));
-
         Assertions.assertTrue(diskManager.init(Context.getInstance().getNodeConfig()));
-    }
-
-    @Test
-    void testSingletonInstanceWithFailedInit() {
-        Context.getInstance().initialize(new NodeConfiguration());
-        Assertions.assertThrows(StorageException.class, DiskManager::getInstance);
-    }
-
-    @Test
-    void testSingletonInstanceWithSuccessfulInit() throws StorageException, IOException {
-        initContext();
-        Assertions.assertNotNull(DiskManager.getInstance());
     }
 
     @Test

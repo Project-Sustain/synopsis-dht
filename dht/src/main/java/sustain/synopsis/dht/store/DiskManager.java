@@ -2,7 +2,6 @@ package sustain.synopsis.dht.store;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
-import sustain.synopsis.dht.Context;
 import sustain.synopsis.dht.NodeConfiguration;
 
 import java.io.File;
@@ -12,23 +11,6 @@ import java.util.List;
 import java.util.Set;
 
 public class DiskManager {
-
-    private static DiskManager instance;
-
-    public static DiskManager getInstance() throws StorageException {
-        if (instance == null) {
-            synchronized (DiskManager.class) {
-                if (instance == null) {
-                    instance = new DiskManager();
-                    boolean success = instance.init(Context.getInstance().getNodeConfig());
-                    if (!success) {
-                        throw new StorageException("Disk Manager initialization Error.");
-                    }
-                }
-            }
-        }
-        return instance;
-    }
 
     static class StorageDirectory {
         File path;
@@ -68,10 +50,7 @@ public class DiskManager {
     private List<StorageDirectory> directories = Collections.synchronizedList(new ArrayList<>());
     private AllocationPolicy allocationPolicy;
 
-    private DiskManager() {
-    }
-
-    boolean init(NodeConfiguration nodeConfiguration) {
+    public boolean init(NodeConfiguration nodeConfiguration) {
         if (nodeConfiguration == null || nodeConfiguration.getStorageDirs() == null) {
             logger.error("Error initializing the DiskManager. A Node Configuration is not provided.");
             return false;
@@ -80,8 +59,7 @@ public class DiskManager {
         this.allocationPolicy =
                 AllocationPolicyFactory.getAllocationPolicy(nodeConfiguration.getStorageAllocationPolicy());
         if (this.allocationPolicy == null) {
-            logger.error("Unable to find a matching storage allocation policy for the provided option: " +
-                    nodeConfiguration.getStorageAllocationPolicy());
+            logger.error("Unable to find a matching storage allocation policy for the provided option: " + nodeConfiguration.getStorageAllocationPolicy());
             return false;
         }
 
@@ -143,7 +121,7 @@ public class DiskManager {
 
     public String allocate(long size) throws StorageException {
         StorageDirectory directory = allocationPolicy.select(size, directories);
-        if(directory == null){
+        if (directory == null) {
             throw new StorageException("Could not find a storage location.");
         }
         return directory.path.getAbsolutePath();

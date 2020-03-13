@@ -8,9 +8,12 @@ import sustain.synopsis.dht.services.IngestionService;
 import sustain.synopsis.dht.store.StorageException;
 import sustain.synopsis.dht.store.services.IngestionRequest;
 import sustain.synopsis.dht.store.services.IngestionResponse;
+import sustain.synopsis.dht.store.services.Strand;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -21,24 +24,45 @@ public class Driver {
     private class LoadGenerator implements Runnable {
 
         private final String[] entities;
+        private final byte[] payload = new byte[2048];
+        private final Random rnd = new Random(Thread.currentThread().getId());
 
         private LoadGenerator(String[] entities) {
             this.entities = entities;
         }
 
+        public IngestionRequest generateIngestRequest() {
+            int entityBatchSize = 50;
+            List<Strand> strandBatchList = new ArrayList<>(entityBatchSize);
+            for (int x = 0; x < entityBatchSize; x++) {
+                rnd.nextBytes(payload);
+                ByteString serializedStrand = ByteString.copyFrom(payload);
+                strandBatchList.set(x, Strand.newBuilder()
+                        .setEntityId(entities[rnd.nextInt(entities.length)])
+                        .setFromTs(x)
+                        .setToTs(x+1)
+                        .setBytes(serializedStrand)
+                        .build()
+                );
+            }
+
+            return IngestionRequest.newBuilder()
+                            .setDatasetId("noaa")
+                            .setSessionId(1)
+                            .addAllStrand(strandBatchList)
+                            .build();
+        }
+
         @Override
         public void run() {
-            byte[] payload = new byte[2048];
-            Random rnd = new Random(Thread.currentThread().getId());
             for (int i = 0; i < 200000000; i++) {
-                if ((submittedReqCount.get() - completedReqCount.get()) > 10000) { // a primitive throttling mechanism
+                if ((submittedReqCount.get() - completedReqCount.get()) > 1000) { // a primitive throttling mechanism
                     i--;
                     continue;
                 }
-                rnd.nextBytes(payload);
-                ByteString serializedStrand = ByteString.copyFrom(payload);
-                IngestionRequest request =
-                        IngestionRequest.newBuilder().setDatasetId("noaa").setEntityId(entities[rnd.nextInt(entities.length)]).setFromTS(i).setToTS(i + 1).setSessionId(1).setStrand(serializedStrand).build();
+
+                IngestionRequest request = generateIngestRequest();
+
                 CompletableFuture<IngestionResponse> future = dispatcher.dispatch(request);
                 future.thenAccept(ingestionResponse -> {
                     completedReqCount.getAndAdd(ingestionResponse.getStatus() ? 1 : 0);

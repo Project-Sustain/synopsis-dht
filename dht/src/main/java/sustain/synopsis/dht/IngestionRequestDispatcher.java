@@ -4,12 +4,14 @@ import sustain.synopsis.dht.store.StorageException;
 import sustain.synopsis.dht.store.StrandStorageKey;
 import sustain.synopsis.dht.store.StrandStorageValue;
 import sustain.synopsis.dht.store.node.NodeStore;
-import sustain.synopsis.dht.store.services.IngestionRequest;
-import sustain.synopsis.dht.store.services.IngestionResponse;
+import sustain.synopsis.dht.store.services.*;
 import sustain.synopsis.dht.store.workers.WriterPool;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 public class IngestionRequestDispatcher {
     private final WriterPool writerPool;
@@ -27,19 +29,41 @@ public class IngestionRequestDispatcher {
     }
 
     public CompletableFuture<IngestionResponse> dispatch(IngestionRequest ingestionRequest) {
-        return CompletableFuture.supplyAsync(() -> {
-            boolean status = false;
-            try {
-                nodeStore.store(ingestionRequest.getDatasetId(), ingestionRequest.getEntityId(),
-                        ingestionRequest.getSessionId(), new StrandStorageKey(ingestionRequest.getFromTS(),
-                                ingestionRequest.getToTS()),
-                        new StrandStorageValue(ingestionRequest.getStrand().toByteArray()));
-                status = true;
-            } catch (IOException | StorageException e) {
-                e.printStackTrace();
-            }
-            return IngestionResponse.newBuilder().setSessionId(ingestionRequest.getSessionId()).setStatus(status).build();
-        }, writerPool.getExecutor(ingestionRequest.getEntityId().hashCode()));
+        CompletableFuture<NodeMapping>[] nodeMappingCompletableFutures = new CompletableFuture[ingestionRequest.getEntityCount()];
+        for (int i = 0; i < nodeMappingCompletableFutures.length; i++) {
+            Entity entity = ingestionRequest.getEntity(i);
+            nodeMappingCompletableFutures[i] = CompletableFuture.supplyAsync(() -> {
+                try {
+                    nodeStore.store(
+                            ingestionRequest.getDatasetId(),
+                            entity.getEntityId(),
+                            ingestionRequest.getSessionId(),
+                            new StrandStorageKey(entity.getFromTs(), entity.getToTs()),
+                            new StrandStorageValue(entity.getBytes().toByteArray())
+                    );
+                } catch (IOException | StorageException e) {
+                    e.printStackTrace();
+                }
+                return NodeMapping.newBuilder().build();
+            }, writerPool.getExecutor(entity.getEntityId().hashCode()));
+        }
+
+        CompletableFuture<List<NodeMapping>> allCompletableFuture = CompletableFuture.allOf(nodeMappingCompletableFutures).thenApply(future -> {
+            return Arrays.stream(nodeMappingCompletableFutures)
+                    .map(CompletableFuture::join)
+                    .collect(Collectors.toList());
+        });
+
+        return allCompletableFuture.thenApply(nodeMappings -> {
+            return IngestionResponse.newBuilder()
+                    .setSessionId(ingestionRequest.getSessionId())
+                    .setStatus(true)
+                    .addAllMapping(nodeMappings.stream()
+                            .filter(mapping -> mapping.getDhtNodeAddress() != null)
+                            .collect(Collectors.toList())
+                    )
+                    .build();
+        });
     }
 
 }

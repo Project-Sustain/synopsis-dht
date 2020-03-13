@@ -6,11 +6,14 @@ import org.apache.log4j.Logger;
 import sustain.synopsis.dht.*;
 import sustain.synopsis.dht.services.IngestionService;
 import sustain.synopsis.dht.store.StorageException;
+import sustain.synopsis.dht.store.services.Entity;
 import sustain.synopsis.dht.store.services.IngestionRequest;
 import sustain.synopsis.dht.store.services.IngestionResponse;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -31,14 +34,32 @@ public class Driver {
             byte[] payload = new byte[2048];
             Random rnd = new Random(Thread.currentThread().getId());
             for (int i = 0; i < 200000000; i++) {
-                if ((submittedReqCount.get() - completedReqCount.get()) > 10000) { // a primitive throttling mechanism
+                if ((submittedReqCount.get() - completedReqCount.get()) > 1000) { // a primitive throttling mechanism
                     i--;
                     continue;
                 }
-                rnd.nextBytes(payload);
-                ByteString serializedStrand = ByteString.copyFrom(payload);
+
+                int entityBatchSize = 50;
+                List<Entity> entityBatchList = new ArrayList<>(entityBatchSize);
+                for (int x = 0; x < entityBatchSize; x++) {
+                    rnd.nextBytes(payload);
+                    ByteString serializedStrand = ByteString.copyFrom(payload);
+                    entityBatchList.set(x, Entity.newBuilder()
+                            .setEntityId(entities[rnd.nextInt(entities.length)])
+                            .setFromTs(x)
+                            .setToTs(x+1)
+                            .setBytes(serializedStrand)
+                            .build()
+                    );
+                }
+
                 IngestionRequest request =
-                        IngestionRequest.newBuilder().setDatasetId("noaa").setEntityId(entities[rnd.nextInt(entities.length)]).setFromTS(i).setToTS(i + 1).setSessionId(1).setStrand(serializedStrand).build();
+                        IngestionRequest.newBuilder()
+                                .setDatasetId("noaa")
+                                .setSessionId(1)
+                                .addAllEntity(entityBatchList)
+                                .build();
+
                 CompletableFuture<IngestionResponse> future = dispatcher.dispatch(request);
                 future.thenAccept(ingestionResponse -> {
                     completedReqCount.getAndAdd(ingestionResponse.getStatus() ? 1 : 0);

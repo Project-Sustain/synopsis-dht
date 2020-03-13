@@ -4,7 +4,10 @@ import sustain.synopsis.sketch.graph.Path;
 import sustain.synopsis.sketch.graph.Vertex;
 import sustain.synopsis.sketch.serialization.SerializationOutputStream;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
 
 public class Strand {
     private final String geohash;

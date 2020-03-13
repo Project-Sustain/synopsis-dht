@@ -2,9 +2,6 @@ package sustain.synopsis.samples.client.nwqmc;
 
 import com.opencsv.CSVReaderHeaderAware;
 import com.opencsv.exceptions.CsvValidationException;
-import sustain.synopsis.ingestion.client.connectors.file.CsvFileParser;
-import sustain.synopsis.ingestion.client.core.Record;
-import sustain.synopsis.ingestion.client.core.RecordCallbackHandler;
 
 import java.io.BufferedReader;
 import java.io.File;

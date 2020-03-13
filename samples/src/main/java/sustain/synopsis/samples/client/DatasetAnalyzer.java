@@ -2,6 +2,7 @@ package sustain.synopsis.samples.client;
 
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
+import sustain.synopsis.ingestion.client.core.Record;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -10,6 +11,7 @@ import java.util.*;
 
 public class DatasetAnalyzer {
 
+    int totalRows = 0;
     String[] header = null;
     Map<BitSet, RecordData> types = new HashMap<>();
 
@@ -21,21 +23,45 @@ public class DatasetAnalyzer {
 
     public void acceptRecord(String[] line) {
         BitSet lineBitSet = getBitSetForLine(line);
-
         RecordData newRecordData = new RecordData(lineBitSet, line, 1);
         if (types.putIfAbsent(lineBitSet, newRecordData) != null) {
             RecordData existingData = types.get(lineBitSet);
             existingData.count++;
         }
+        totalRows++;
     }
 
-    public void printCounts(int limit) {
+    public List<RecordData> getTopCounts(int n) {
         ArrayList<RecordData> countsList = new ArrayList<>(types.values());
         countsList.sort((a,b) -> Integer.compare(b.count,a.count));
-        for (int i = 0; i < countsList.size() && i < limit; i++) {
-            RecordData recordData = countsList.get(i);
-            System.out.print(getRecordDataStringRepr(recordData));
+        return countsList.subList(0,Math.min(n,countsList.size()));
+    }
+
+    public void printRecordDataList(List<RecordData> recordDataList) {
+        for (RecordData r : recordDataList) {
+            System.out.printf("%d\n%s\n%s\n", r.count, getHeaderForBitSet(r.containedFields), getMinimalStringForLine(r.example));
         }
+    }
+
+    public void printUniqueHeaderFields(List<RecordData> recordDataList) {
+        BitSet commonFields = getCommonFieldsInList(recordDataList);
+        for (RecordData r : recordDataList) {
+            BitSet uniqueFields = (BitSet) r.containedFields.clone();
+            uniqueFields.andNot(commonFields);
+            System.out.printf("%d\n%s\n%s\n", r.count, getHeaderForBitSet(uniqueFields), getMinimalStringForLine(r.example));
+        }
+    }
+
+    public BitSet getCommonFieldsInList(List<RecordData> recordDataList) {
+        if (recordDataList.size() == 0) {
+            return null;
+        }
+
+        BitSet commonFeatures = recordDataList.get(0).containedFields;
+        for (int i = 1; i < recordDataList.size(); i++) {
+            commonFeatures.and(recordDataList.get(i).containedFields);
+        }
+        return commonFeatures;
     }
 
     private static String getMinimalStringForLine(String[] line) {
@@ -55,6 +81,21 @@ public class DatasetAnalyzer {
         return sb.toString();
     }
 
+    public String getStringForLineFields(String[] line, BitSet fields) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < line.length-1; i++) {
+            if (fields.get(i)) {
+                sb.append(line[i]+",");
+            }
+        }
+        if (line.length - 1 >= 0) {
+            if (fields.get(line.length-1)) {
+                sb.append(line[line.length-1]);
+            }
+        }
+        return sb.toString();
+    }
+
     private static BitSet getBitSetForLine(String[] line) {
         BitSet bitSet = new BitSet(line.length);
         for (int i = 0; i < line.length; i++) {
@@ -69,10 +110,6 @@ public class DatasetAnalyzer {
         StringBuilder sb = new StringBuilder();
         bitSet.stream().forEach(i -> sb.append(header[i]+","));
         return sb.toString();
-    }
-
-    private String getRecordDataStringRepr(RecordData r) {
-        return String.format("%d\n%s\n%s\n", r.count, getHeaderForBitSet(r.containedFields), getMinimalStringForLine(r.example));
     }
 
     private static class RecordData {
@@ -100,7 +137,8 @@ public class DatasetAnalyzer {
             datasetAnalyzer.acceptRecord(line);
         }
 
-        datasetAnalyzer.printCounts(10);
+        System.out.println("total records: "+datasetAnalyzer.totalRows);
+        datasetAnalyzer.printUniqueHeaderFields(datasetAnalyzer.getTopCounts(5));
     }
 
 }

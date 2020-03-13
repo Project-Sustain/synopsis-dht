@@ -59,7 +59,7 @@ public class Client {
         FileParser fileParser = (FileParser) Class.forName(fileParserClassName).newInstance();
         File[] files = Util.getFilesFromStrings(3, args);
 
-        StrandPublisherImpl strandPublisher = new StrandPublisherImpl();
+        DHTStrandPublisher strandPublisher = new DHTStrandPublisher("localhost:9099", datasetId, sessionId);
 
         StrandConversionTaskManager strandConversionManager = new StrandConversionTaskManager(
                 1,
@@ -74,8 +74,6 @@ public class Client {
         dataConnector.start();
         strandConversionManager.awaitCompletion();
         dataConnector.terminate();
-
-        System.out.println(strandPublisher.getCountAvg());
     }
 
 }

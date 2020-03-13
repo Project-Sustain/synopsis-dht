@@ -1,9 +1,7 @@
-package sustain.synopsis.samples.client;
+package sustain.synopsis.ingestion.client.core;
 
 import org.apache.log4j.Logger;
 import sustain.synopsis.common.Strand;
-import sustain.synopsis.ingestion.client.core.StrandPublisher;
-import sustain.synopsis.ingestion.client.core.TemporalQuantizer;
 import sustain.synopsis.sketch.graph.DataContainer;
 import sustain.synopsis.sketch.graph.Path;
 import sustain.synopsis.sketch.graph.Vertex;

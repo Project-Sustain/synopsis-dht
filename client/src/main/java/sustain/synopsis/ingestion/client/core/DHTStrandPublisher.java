@@ -1,9 +1,12 @@
 package sustain.synopsis.ingestion.client.core;
 
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.protobuf.ByteString;
 import io.grpc.Channel;
 import io.grpc.ManagedChannelBuilder;
+import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 import sustain.synopsis.common.Strand;
 import sustain.synopsis.dht.store.services.IngestionRequest;
 import sustain.synopsis.dht.store.services.IngestionResponse;
@@ -77,24 +80,21 @@ public class DHTStrandPublisher implements StrandPublisher {
 
                 IngestionRequest req = getIngestionRequestForStrand(strand);
                 ListenableFuture<IngestionResponse> ingestFuture = stub.ingest(req);
-                ingestFuture.addListener(() -> {
-                    limiter.release();
 
-                    // TODO FIX THIS
-                    try {
-                        IngestionResponse resp = ingestFuture.get();
-                        String primary = resp.getPrimary();
-
+                Futures.addCallback(ingestFuture, new FutureCallback<IngestionResponse>() {
+                    @Override
+                    public void onSuccess(@NullableDecl IngestionResponse result) {
+                        String primary = result.getPrimary();
                         if (!geohashStubMap.containsKey(primary)) {
                             IngestionServiceFutureStub stubForAddress = getStubForAddress(primary);
                             geohashStubMap.put(strand.getGeohash(), stubForAddress);
                             sendLimitMap.put(stubForAddress, new Semaphore(channelSendLimit));
                         }
+                    }
 
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    } catch (ExecutionException e) {
-                        e.printStackTrace();
+                    @Override
+                    public void onFailure(Throwable t) {
+
                     }
                 }, executorService);
 

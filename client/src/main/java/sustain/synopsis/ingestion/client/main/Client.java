@@ -1,16 +1,19 @@
-package sustain.synopsis.ingestion.client.core;
+package sustain.synopsis.ingestion.client.main;
 
 import io.grpc.Channel;
 import io.grpc.ManagedChannelBuilder;
 import sustain.synopsis.ingestion.client.connectors.DataConnector;
 import sustain.synopsis.ingestion.client.connectors.file.FileParser;
 import sustain.synopsis.ingestion.client.connectors.file.FileDataConnector;
+import sustain.synopsis.ingestion.client.core.DHTStrandPublisher;
+import sustain.synopsis.ingestion.client.core.SessionSchema;
+import sustain.synopsis.ingestion.client.core.StrandConversionTaskManager;
+import sustain.synopsis.ingestion.client.core.Util;
 import sustain.synopsis.metadata.DatasetServiceGrpc;
 import sustain.synopsis.metadata.DatasetServiceGrpc.DatasetServiceBlockingStub;
 import sustain.synopsis.metadata.DatasetServiceOuterClass.GetDatasetSessionRequest;
 import sustain.synopsis.metadata.DatasetServiceOuterClass.GetDatasetSessionResponse;
 import sustain.synopsis.metadata.DatasetServiceOuterClass.Session;
-import sustain.synopsis.samples.client.nwqmc.WaterTemperatureParser;
 import sustain.synopsis.sketch.dataset.Quantizer;
 
 import java.io.File;
@@ -51,8 +54,8 @@ public class Client {
 
         String datasetId = args[0];
         long sessionId = Long.parseLong(args[1]);
-//        SessionSchema config = fetchSessionSchema(datasetId, sessionId);
-        SessionSchema schema = WaterTemperatureParser.getHardCodedSessionSchema();
+        SessionSchema schema = fetchSessionSchema(datasetId, sessionId);
+//        SessionSchema schema = WaterTemperatureParser.getHardCodedSessionSchema();
 
 
         String fileParserClassName = args[2];

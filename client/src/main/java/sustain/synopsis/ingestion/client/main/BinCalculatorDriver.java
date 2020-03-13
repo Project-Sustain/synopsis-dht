@@ -1,15 +1,12 @@
-package sustain.synopsis.ingestion.client.core;
-
-import sustain.synopsis.ingestion.client.connectors.DataConnector;
-import sustain.synopsis.ingestion.client.connectors.file.FileDataConnector;
+package sustain.synopsis.ingestion.client.main;
 import sustain.synopsis.ingestion.client.connectors.file.FileParser;
-import sustain.synopsis.sketch.dataset.feature.Feature;
+import sustain.synopsis.ingestion.client.core.BinCalculator;
+import sustain.synopsis.ingestion.client.core.Record;
+import sustain.synopsis.ingestion.client.core.RecordCallbackHandler;
+import sustain.synopsis.ingestion.client.core.Util;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 public class BinCalculatorDriver {
 

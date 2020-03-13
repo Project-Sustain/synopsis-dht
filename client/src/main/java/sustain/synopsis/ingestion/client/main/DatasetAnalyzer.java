@@ -1,8 +1,7 @@
-package sustain.synopsis.samples.client;
+package sustain.synopsis.ingestion.client.main;
 
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
-import sustain.synopsis.ingestion.client.core.Record;
 
 import java.io.BufferedReader;
 import java.io.FileReader;

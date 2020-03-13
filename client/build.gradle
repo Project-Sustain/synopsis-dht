@@ -1,7 +1,6 @@
 apply plugin: 'java-library'
 
 dependencies {
-    implementation project(':samples')
     api project(':common')
     api group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: '3.8.0'
     api group: 'com.datastax.cassandra', name: 'cassandra-driver-mapping', version: '3.8.0'

@@ -13,13 +13,11 @@ public class NoaaFileParser implements FileParser {
 
     @Override
     public void initWithSchemaAndHandler(SessionSchema schema, RecordCallbackHandler handler) {
-
         CsvFileParser.CsvFileParserBuilder builder = CsvFileParser.newBuilder()
                 .setSkipHeader(true);
 
         for (String feature : schema.getFeatures()) {
         }
-
     }
 
     @Override

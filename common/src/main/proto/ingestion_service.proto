@@ -7,17 +7,27 @@ service IngestionService {
     rpc Ingest (IngestionRequest) returns (IngestionResponse);
 }
 
+message Strand {
+    string entityId = 1;
+    int64 fromTs = 2;
+    int64 toTs = 3;
+    bytes bytes = 4;
+}
+
 message IngestionRequest {
-    int64 sessionId = 1;
-    string datasetId = 2;
-    string entityId = 3;
-    int64 fromTS = 4;
-    int64 toTS = 5;
-    bytes strand = 6;
+    string datasetId = 1;
+    int64 sessionId = 2;
+    repeated Strand strand = 3;
+}
+
+message NodeMapping {
+    string entityId = 1;
+    string dhtNodeAddress = 2;
 }
 
 message IngestionResponse {
-    int64 sessionId = 1;
-    bool status = 2;
-    string primary = 3;
+    string datasetId = 1;
+    int64 sessionId = 2;
+    bool status = 3;
+    repeated NodeMapping mapping = 4;
 }

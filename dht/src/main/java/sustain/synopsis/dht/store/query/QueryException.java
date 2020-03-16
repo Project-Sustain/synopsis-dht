@@ -1,4 +1,4 @@
-package sustain.synopsis.dht.store.queries;
+package sustain.synopsis.dht.store.query;
 
 public class QueryException extends Exception {
     public QueryException(String message) {

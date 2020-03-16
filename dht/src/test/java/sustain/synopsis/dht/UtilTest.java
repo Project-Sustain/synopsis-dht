@@ -5,9 +5,7 @@ import org.junit.jupiter.api.Test;
 import sustain.synopsis.dht.store.StrandStorageKey;
 import sustain.synopsis.storage.lsmtree.Metadata;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 public class UtilTest {
     @Test
@@ -78,5 +76,67 @@ public class UtilTest {
         metadata.put(new StrandStorageKey(1600L, 2000L), emptyMetadata);
         results = Util.temporalLookup(metadata, 60L, 80L, false);
         Assertions.assertTrue(results.isEmpty());
+    }
+
+    @Test
+    void testOverlappingIntervals() {
+        // this method is supposed to be commutative
+        Assertions.assertFalse(Util.areOverlappingIntervals(new long[]{0, 10}, new long[]{11, 15}));
+        Assertions.assertFalse(Util.areOverlappingIntervals(new long[]{11, 15}, new long[]{0, 10}));
+
+        Assertions.assertFalse(Util.areOverlappingIntervals(new long[]{0, 10}, new long[]{10, 15}));
+
+        Assertions.assertTrue(Util.areOverlappingIntervals(new long[]{0, 10}, new long[]{8, 11}));
+        Assertions.assertTrue(Util.areOverlappingIntervals(new long[]{8, 11}, new long[]{0, 10}));
+
+        Assertions.assertTrue(Util.areOverlappingIntervals(new long[]{0, 10}, new long[]{5, 8}));
+        Assertions.assertTrue(Util.areOverlappingIntervals(new long[]{5, 8}, new long[]{0, 10}));
+
+        Assertions.assertTrue(Util.areOverlappingIntervals(new long[]{0, 10}, new long[]{0, 5}));
+        Assertions.assertTrue(Util.areOverlappingIntervals(new long[]{0, 5}, new long[]{0, 10}));
+    }
+
+    @Test
+    void testMergeTemporalBracketsAsUnion() {
+        ArrayList<long[]> brackets = new ArrayList<>(Arrays.asList(new long[]{0, 100}, new long[]{200, 300},
+                new long[]{250, 350}, new long[]{340, 400}, new long[]{380, 390}));
+        Util.mergeTemporalBracketsAsUnion(brackets);
+        Assertions.assertEquals(2, brackets.size());
+        Assertions.assertArrayEquals(brackets.get(0), new long[]{0, 100});
+        Assertions.assertArrayEquals(brackets.get(1), new long[]{200, 400});
+    }
+
+    @Test
+    void testMergeTemporalBracketsAsIntersect() {
+        ArrayList<long[]> brackets1 = new ArrayList<>(Arrays.asList(new long[]{0, 100}, new long[]{200, 300}));
+        ArrayList<long[]> brackets2 = new ArrayList<>(Arrays.asList(new long[]{80, 120}, new long[]{220, 240}));
+        ArrayList<long[]> merged = Util.mergeTemporalBracketsAsIntersect(brackets1, brackets2);
+        Assertions.assertEquals(2, merged.size());
+        Assertions.assertArrayEquals(new long[]{80, 100}, merged.get(0));
+        Assertions.assertArrayEquals(new long[]{220, 240}, merged.get(1));
+
+        brackets2 = new ArrayList<>(Arrays.asList(new long[]{0, 100}));
+        merged = Util.mergeTemporalBracketsAsIntersect(brackets1, brackets2);
+        Assertions.assertEquals(1, merged.size());
+        Assertions.assertArrayEquals(new long[]{0, 100}, merged.get(0));
+
+        // ensure consolidation happens in the operands before merging
+        brackets1 = new ArrayList<>(Arrays.asList(new long[]{0, 100}, new long[]{10, 30}));
+        brackets2 = new ArrayList<>(Arrays.asList(new long[]{0, 10}, new long[]{9, 20}));
+        merged = Util.mergeTemporalBracketsAsIntersect(brackets1, brackets2);
+        Assertions.assertEquals(1, merged.size());
+        Assertions.assertArrayEquals(new long[]{0, 20}, merged.get(0));
+
+        // ensure consolidation happens in the output
+        brackets1 = new ArrayList<>(Arrays.asList(new long[]{0, 100}));
+        brackets2 = new ArrayList<>(Arrays.asList(new long[]{0, 10}, new long[]{9, 20}));
+        merged = Util.mergeTemporalBracketsAsIntersect(brackets1, brackets2);
+        Assertions.assertEquals(1, merged.size());
+        Assertions.assertArrayEquals(new long[]{0, 20}, merged.get(0));
+
+        // empty operands
+        brackets1 = new ArrayList<>();
+        merged = Util.mergeTemporalBracketsAsIntersect(brackets1, brackets2);
+        Assertions.assertEquals(0, merged.size());
     }
 }

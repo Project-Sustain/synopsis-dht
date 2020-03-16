@@ -12,7 +12,7 @@ import sustain.synopsis.dht.NodeConfiguration;
 import sustain.synopsis.dht.journal.Logger;
 import sustain.synopsis.dht.store.*;
 import sustain.synopsis.dht.store.entity.EntityStore;
-import sustain.synopsis.dht.store.queries.QueryException;
+import sustain.synopsis.dht.store.query.QueryException;
 import sustain.synopsis.dht.store.services.Predicate;
 import sustain.synopsis.dht.store.services.TargetQueryRequest;
 

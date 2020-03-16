@@ -7,7 +7,7 @@ import sustain.synopsis.dht.Util;
 import sustain.synopsis.dht.journal.Logger;
 import sustain.synopsis.dht.store.*;
 import sustain.synopsis.dht.store.entity.EntityStore;
-import sustain.synopsis.dht.store.queries.QueryException;
+import sustain.synopsis.dht.store.query.QueryException;
 import sustain.synopsis.dht.store.services.Predicate;
 import sustain.synopsis.dht.store.services.TargetQueryRequest;
 
@@ -235,7 +235,7 @@ public class NodeStore {
      * @param queryRequest Query request
      * @return List of matching entity stores
      */
-    Set<EntityStore> getMatchingEntityStores(TargetQueryRequest queryRequest) throws QueryException {
+    public Set<EntityStore> getMatchingEntityStores(TargetQueryRequest queryRequest) throws QueryException {
         try {
             lock.readLock().lock();
             String dataset = queryRequest.getDataset();

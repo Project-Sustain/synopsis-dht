@@ -4,7 +4,7 @@ option java_multiple_files = true;
 option java_package = "sustain.synopsis.dht.store.services";
 
 service TargetedQueryService {
-    rpc Ingest (TargetQueryRequest) returns (stream TargetQueryResponse);
+    rpc Query (TargetQueryRequest) returns (stream TargetQueryResponse);
 }
 
 message TargetQueryRequest {

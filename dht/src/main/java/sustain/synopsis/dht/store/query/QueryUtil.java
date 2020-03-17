@@ -44,7 +44,7 @@ public class QueryUtil {
     /**
      * Evaluate a temporal query expression against the given temporal scope
      *
-     * @param expression Temporal boundary defined using {@link Expression}
+     * @param expression      Temporal boundary defined using {@link Expression}
      * @param temporalBracket Current temporal scope. During the first call, it may correspond to the scope of the
      *                        available data. During subsequent invocations, the original scope may get reduced
      *                        after evaluating previous predicates/expressions.
@@ -52,32 +52,24 @@ public class QueryUtil {
      * @throws QueryException If an unsupported combiner operation is used.
      */
     public static ArrayList<long[]> evaluateTemporalExpression(Expression expression, long[] temporalBracket) throws QueryException {
-        ArrayList<long[]> scope1 = new ArrayList<>();
-        switch (expression.getFirstCase()) {
-            case EXPRESSION1:
-                scope1 = evaluateTemporalExpression(expression.getExpression1(), temporalBracket);
-                break;
-            case PREDICATE1:
-                long[] result = evaluateTemporalPredicate(expression.getPredicate1(), temporalBracket);
-                if (result != null) {
-                    scope1.add(result);
-                }
-                break;
-        }
-
-        ArrayList<long[]> scope2 = new ArrayList<>();
-        switch (expression.getSecondCase()) {
-            case EXPRESSION2:
-                scope2 = evaluateTemporalExpression(expression.getExpression2(), temporalBracket);
-                break;
-            case PREDICATE2:
-                long[] result = evaluateTemporalPredicate(expression.getPredicate2(), temporalBracket);
-                if (result != null) {
-                    scope2.add(result);
-                }
-                break;
-        }
+        ArrayList<long[]> scope1 = handleCase(expression.hasExpression1() ? expression.getExpression1() : null,
+                expression.hasPredicate1() ? expression.getPredicate1() : null, temporalBracket);
+        ArrayList<long[]> scope2 = handleCase(expression.hasExpression2() ? expression.getExpression2() : null,
+                expression.hasPredicate2() ? expression.getPredicate2() : null, temporalBracket);
         return mergeResults(expression, scope1, scope2);
+    }
+
+    private static ArrayList<long[]> handleCase(Expression expression, Predicate predicate, long[] interval) throws QueryException {
+        ArrayList<long[]> results = new ArrayList<>();
+        if (expression != null) {
+            results.addAll(evaluateTemporalExpression(expression, interval));
+        } else if (predicate != null) {
+            long[] result = evaluateTemporalPredicate(predicate, interval);
+            if (result != null) {
+                results.add(result);
+            }
+        }
+        return results;
     }
 
     private static ArrayList<long[]> mergeResults(Expression expression, ArrayList<long[]> scope1,

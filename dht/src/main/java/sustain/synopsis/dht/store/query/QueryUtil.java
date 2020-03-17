@@ -1,6 +1,7 @@
 package sustain.synopsis.dht.store.query;
 
 import sustain.synopsis.dht.store.StrandStorageKey;
+import sustain.synopsis.dht.store.services.Expression;
 import sustain.synopsis.dht.store.services.Predicate;
 import sustain.synopsis.sketch.dataset.Pair;
 
@@ -38,6 +39,67 @@ public class QueryUtil {
 
         StrandStorageKey to = new StrandStorageKey(upperBound, Long.MAX_VALUE);
         return metadataMap.subMap(from, true, to, includeUpperBound);
+    }
+
+    /**
+     * Evaluate a temporal query expression against the given temporal scope
+     *
+     * @param expression Temporal boundary defined using {@link Expression}
+     * @param temporalBracket Current temporal scope. During the first call, it may correspond to the scope of the
+     *                        available data. During subsequent invocations, the original scope may get reduced
+     *                        after evaluating previous predicates/expressions.
+     * @return ArrayList of matching temporal intervals
+     * @throws QueryException If an unsupported combiner operation is used.
+     */
+    public static ArrayList<long[]> evaluateTemporalExpression(Expression expression, long[] temporalBracket) throws QueryException {
+        ArrayList<long[]> scope1 = new ArrayList<>();
+        switch (expression.getFirstCase()) {
+            case EXPRESSION1:
+                scope1 = evaluateTemporalExpression(expression.getExpression1(), temporalBracket);
+                break;
+            case PREDICATE1:
+                long[] result = evaluateTemporalPredicate(expression.getPredicate1(), temporalBracket);
+                if (result != null) {
+                    scope1.add(result);
+                }
+                break;
+        }
+
+        ArrayList<long[]> scope2 = new ArrayList<>();
+        switch (expression.getSecondCase()) {
+            case EXPRESSION2:
+                scope2 = evaluateTemporalExpression(expression.getExpression2(), temporalBracket);
+                break;
+            case PREDICATE2:
+                long[] result = evaluateTemporalPredicate(expression.getPredicate2(), temporalBracket);
+                if (result != null) {
+                    scope2.add(result);
+                }
+                break;
+        }
+        return mergeResults(expression, scope1, scope2);
+    }
+
+    private static ArrayList<long[]> mergeResults(Expression expression, ArrayList<long[]> scope1,
+                                                  ArrayList<long[]> scope2) throws QueryException {
+        // only one side of the expression has produced results. No need to run the combine operation.
+        if (scope1.isEmpty() || scope2.isEmpty()) {
+            scope1.addAll(scope2);
+            return scope1;
+        }
+
+        Expression.CombineOperator combineOp = expression.getCombineOp();
+        switch (combineOp) {
+            case OR:
+                scope1.addAll(scope2);
+                mergeTemporalBracketsAsUnion(scope1);
+                return scope1;
+            case AND:
+                return mergeTemporalBracketsAsIntersect(scope1, scope2);
+            default: // we may support DIFF operator in the future
+                throw new QueryException("Combine operator " + combineOp.toString() + " is not supported for " +
+                        "temporal constraints.");
+        }
     }
 
     /**

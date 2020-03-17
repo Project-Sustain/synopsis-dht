@@ -3,6 +3,7 @@ package sustain.synopsis.dht.store.query;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import sustain.synopsis.dht.store.StrandStorageKey;
+import sustain.synopsis.dht.store.services.Expression;
 import sustain.synopsis.dht.store.services.Predicate;
 import sustain.synopsis.storage.lsmtree.Metadata;
 
@@ -209,5 +210,120 @@ public class QueryUtilTest {
         Assertions.assertNull(QueryUtil.evaluateTemporalPredicate(predicate, new long[]{0, 1000}));
         Assertions.assertNull(QueryUtil.evaluateTemporalPredicate(predicate, new long[]{0, 100}));
         Assertions.assertNull(QueryUtil.evaluateTemporalPredicate(predicate, new long[]{1100, 1200}));
+    }
+
+    @Test
+    void testEvaluateTemporalExpressionWithPredicates() throws QueryException {
+        // 1000 < t
+        Predicate predicate1 =
+                Predicate.newBuilder().setComparisonOp(Predicate.ComparisonOperator.GREATER_THAN).setIntegerValue(1000).build();
+        // t < 2000
+        Predicate predicate2 =
+                Predicate.newBuilder().setComparisonOp(Predicate.ComparisonOperator.LESS_THAN).setIntegerValue(2000).build();
+
+        // one sided expression: 1000 < t
+        Expression temporalExpression = Expression.newBuilder().setPredicate1(predicate1).build();
+        List<long[]> result = QueryUtil.evaluateTemporalExpression(temporalExpression, new long[]{0, 5000});
+        Assertions.assertEquals(1, result.size());
+        Assertions.assertArrayEquals(new long[]{1001, 5000}, result.get(0));
+
+        // two sides expression with two predicates: 1000 < t < 2000 (using AND)
+        temporalExpression =
+                Expression.newBuilder().setPredicate1(predicate1).setCombineOp(Expression.CombineOperator.AND).setPredicate2(predicate2).build();
+        result = QueryUtil.evaluateTemporalExpression(temporalExpression, new long[]{0, 5000});
+        Assertions.assertEquals(1, result.size());
+        Assertions.assertArrayEquals(new long[]{1001, 2000}, result.get(0));
+
+        // two sides expression with two predicates: 1000 > t OR t > 2000 (using OR)
+        predicate1 =
+                Predicate.newBuilder().setComparisonOp(Predicate.ComparisonOperator.LESS_THAN).setIntegerValue(1000).build();
+        predicate2 =
+                Predicate.newBuilder().setComparisonOp(Predicate.ComparisonOperator.GREATER_THAN).setIntegerValue(2000).build();
+        temporalExpression =
+                Expression.newBuilder().setPredicate1(predicate1).setCombineOp(Expression.CombineOperator.OR).setPredicate2(predicate2).build();
+        result = QueryUtil.evaluateTemporalExpression(temporalExpression, new long[]{0, 5000});
+        Assertions.assertEquals(2, result.size());
+        Assertions.assertArrayEquals(new long[]{0, 1000}, result.get(0));
+        Assertions.assertArrayEquals(new long[]{2001, 5000}, result.get(1));
+
+    }
+
+    @Test
+    void testEvaluateTemporalExpressionWithExpressions() throws QueryException {
+        Predicate predicate1 =
+                Predicate.newBuilder().setComparisonOp(Predicate.ComparisonOperator.GREATER_THAN).setIntegerValue(1000).build();
+        Predicate predicate2 =
+                Predicate.newBuilder().setComparisonOp(Predicate.ComparisonOperator.LESS_THAN).setIntegerValue(2000).build();
+        // two sides expression with two predicates: 1000 < t < 2000
+        Expression temporalExpression1 =
+                Expression.newBuilder().setPredicate1(predicate1).setCombineOp(Expression.CombineOperator.AND).setPredicate2(predicate2).build();
+
+        Predicate predicate3 =
+                Predicate.newBuilder().setComparisonOp(Predicate.ComparisonOperator.GREATER_THAN).setIntegerValue(1500).build();
+        Predicate predicate4 =
+                Predicate.newBuilder().setComparisonOp(Predicate.ComparisonOperator.LESS_THAN).setIntegerValue(3000).build();
+        // two sides expression with two predicates: 1500 < t < 3000
+        Expression temporalExpression2 =
+                Expression.newBuilder().setPredicate1(predicate3).setCombineOp(Expression.CombineOperator.AND).setPredicate2(predicate4).build();
+
+        // combined expression with AND
+        Expression combinedExpression =
+                Expression.newBuilder().setExpression1(temporalExpression1).setCombineOp(Expression.CombineOperator.AND).setExpression2(temporalExpression2).build();
+        List<long[]> result = QueryUtil.evaluateTemporalExpression(combinedExpression, new long[]{0, 5000});
+        Assertions.assertEquals(1, result.size());
+        Assertions.assertArrayEquals(new long[]{1501, 2000}, result.get(0));
+
+        // combined expression with OR
+        combinedExpression =
+                Expression.newBuilder().setExpression1(temporalExpression1).setCombineOp(Expression.CombineOperator.OR).setExpression2(temporalExpression2).build();
+        result = QueryUtil.evaluateTemporalExpression(combinedExpression, new long[]{0, 5000});
+        Assertions.assertEquals(1, result.size());
+        Assertions.assertArrayEquals(new long[]{1001, 3000}, result.get(0));
+
+        // unsupported combine operator
+        Expression finalCombinedExpression =
+                Expression.newBuilder().setExpression1(temporalExpression1).setCombineOp(Expression.CombineOperator.DIFF).setExpression2(temporalExpression2).build();
+        Assertions.assertThrows(QueryException.class, ()-> QueryUtil.evaluateTemporalExpression(finalCombinedExpression,
+                new long[]{0, 5000}));
+    }
+
+    @Test
+    void testEvaluateTemporalExpressionWithExpressionsAndPredicates() throws QueryException {
+        Predicate predicate1 =
+                Predicate.newBuilder().setComparisonOp(Predicate.ComparisonOperator.GREATER_THAN).setIntegerValue(1000).build();
+        Predicate predicate2 =
+                Predicate.newBuilder().setComparisonOp(Predicate.ComparisonOperator.LESS_THAN).setIntegerValue(2000).build();
+        // 1500 < t < 3000
+        Expression temporalExpression =
+                Expression.newBuilder().setPredicate1(predicate1).setCombineOp(Expression.CombineOperator.AND).setPredicate2(predicate2).build();
+        // t > 4500
+        Predicate predicate3 =
+                Predicate.newBuilder().setComparisonOp(Predicate.ComparisonOperator.GREATER_THAN).setIntegerValue(4500).build();
+
+        Expression combinedExpression =
+                Expression.newBuilder().setExpression1(temporalExpression).setCombineOp(Expression.CombineOperator.AND).setPredicate2(predicate3).build();
+        List<long[]> result = QueryUtil.evaluateTemporalExpression(combinedExpression, new long[]{0, 5000});
+        Assertions.assertEquals(0, result.size());
+
+        combinedExpression =
+                Expression.newBuilder().setExpression1(temporalExpression).setCombineOp(Expression.CombineOperator.OR).setPredicate2(predicate3).build();
+        result = QueryUtil.evaluateTemporalExpression(combinedExpression, new long[]{0, 5000});
+        Assertions.assertEquals(2, result.size());
+        Assertions.assertArrayEquals(new long[]{1001, 2000}, result.get(0));
+        Assertions.assertArrayEquals(new long[]{4501, 5000}, result.get(1));
+    }
+
+    @Test
+    void testEvaluateTemporalExpressionWithNonMatchingPredicates() throws QueryException {
+        Predicate predicate1 =
+                Predicate.newBuilder().setComparisonOp(Predicate.ComparisonOperator.GREATER_THAN).setIntegerValue(10000).build();
+        Predicate predicate2 =
+                Predicate.newBuilder().setComparisonOp(Predicate.ComparisonOperator.LESS_THAN).setIntegerValue(1000).build();
+        // 1500 < t < 3000
+        Expression temporalExpression =
+                Expression.newBuilder().setPredicate1(predicate1).setCombineOp(Expression.CombineOperator.AND).setPredicate2(predicate2).build();
+
+        List<long[]> result = QueryUtil.evaluateTemporalExpression(temporalExpression, new long[]{1200, 5000});
+        Assertions.assertEquals(0, result.size());
     }
 }

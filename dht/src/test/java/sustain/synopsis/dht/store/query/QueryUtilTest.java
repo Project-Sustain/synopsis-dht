@@ -3,6 +3,7 @@ package sustain.synopsis.dht.store.query;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import sustain.synopsis.dht.store.StrandStorageKey;
+import sustain.synopsis.dht.store.services.Predicate;
 import sustain.synopsis.storage.lsmtree.Metadata;
 
 import java.util.*;
@@ -115,7 +116,7 @@ public class QueryUtilTest {
         Assertions.assertArrayEquals(new long[]{80, 100}, merged.get(0));
         Assertions.assertArrayEquals(new long[]{220, 240}, merged.get(1));
 
-        brackets2 = new ArrayList<>(Arrays.asList(new long[]{0, 100}));
+        brackets2 = new ArrayList<>(Collections.singletonList(new long[]{0, 100}));
         merged = QueryUtil.mergeTemporalBracketsAsIntersect(brackets1, brackets2);
         Assertions.assertEquals(1, merged.size());
         Assertions.assertArrayEquals(new long[]{0, 100}, merged.get(0));
@@ -128,7 +129,7 @@ public class QueryUtilTest {
         Assertions.assertArrayEquals(new long[]{0, 20}, merged.get(0));
 
         // ensure consolidation happens in the output
-        brackets1 = new ArrayList<>(Arrays.asList(new long[]{0, 100}));
+        brackets1 = new ArrayList<>(Collections.singletonList(new long[]{0, 100}));
         brackets2 = new ArrayList<>(Arrays.asList(new long[]{0, 10}, new long[]{9, 20}));
         merged = QueryUtil.mergeTemporalBracketsAsIntersect(brackets1, brackets2);
         Assertions.assertEquals(1, merged.size());
@@ -138,5 +139,75 @@ public class QueryUtilTest {
         brackets1 = new ArrayList<>();
         merged = QueryUtil.mergeTemporalBracketsAsIntersect(brackets1, brackets2);
         Assertions.assertEquals(0, merged.size());
+    }
+
+    @Test
+    void testEvaluateTemporalPredicateLessThan() {
+        Predicate predicate =
+                Predicate.newBuilder().setIntegerValue(1000).setComparisonOp(Predicate.ComparisonOperator.LESS_THAN).build();
+        Assertions.assertArrayEquals(new long[]{0, 1000}, QueryUtil.evaluateTemporalPredicate(predicate, new long[]{0
+                , 2000}));
+        Assertions.assertArrayEquals(new long[]{0, 200}, QueryUtil.evaluateTemporalPredicate(predicate, new long[]{0,
+                200}));
+        Assertions.assertArrayEquals(new long[]{0, 1000}, QueryUtil.evaluateTemporalPredicate(predicate, new long[]{0
+                , 1000}));
+        Assertions.assertNull(QueryUtil.evaluateTemporalPredicate(predicate, new long[]{1000, 2000}));
+        Assertions.assertNull(QueryUtil.evaluateTemporalPredicate(predicate, new long[]{1200, 2000}));
+    }
+
+    @Test
+    void testEvaluateTemporalPredicateLessThanOrEqual() {
+        Predicate predicate =
+                Predicate.newBuilder().setIntegerValue(1000).setComparisonOp(Predicate.ComparisonOperator.LESS_THAN_OR_EQUAL).build();
+        Assertions.assertArrayEquals(new long[]{0, 1001}, QueryUtil.evaluateTemporalPredicate(predicate, new long[]{0
+                , 2000}));
+        Assertions.assertArrayEquals(new long[]{0, 200}, QueryUtil.evaluateTemporalPredicate(predicate, new long[]{0,
+                200}));
+        Assertions.assertArrayEquals(new long[]{0, 1000}, QueryUtil.evaluateTemporalPredicate(predicate, new long[]{0
+                , 1000}));
+        Assertions.assertArrayEquals(new long[]{1000, 1001}, QueryUtil.evaluateTemporalPredicate(predicate,
+                new long[]{1000, 2000}));
+        Assertions.assertNull(QueryUtil.evaluateTemporalPredicate(predicate, new long[]{1200, 2000}));
+    }
+
+    @Test
+    void testEvaluateTemporalPredicateGreaterThan() {
+        Predicate predicate =
+                Predicate.newBuilder().setIntegerValue(1000).setComparisonOp(Predicate.ComparisonOperator.GREATER_THAN).build();
+        Assertions.assertArrayEquals(new long[]{1001, 2000}, QueryUtil.evaluateTemporalPredicate(predicate,
+                new long[]{0, 2000}));
+        Assertions.assertArrayEquals(new long[]{1001, 2000}, QueryUtil.evaluateTemporalPredicate(predicate,
+                new long[]{1000, 2000}));
+        Assertions.assertArrayEquals(new long[]{1500, 2000}, QueryUtil.evaluateTemporalPredicate(predicate,
+                new long[]{1500, 2000}));
+        Assertions.assertNull(QueryUtil.evaluateTemporalPredicate(predicate, new long[]{0, 1000}));
+        Assertions.assertNull(QueryUtil.evaluateTemporalPredicate(predicate, new long[]{0, 100}));
+    }
+
+    @Test
+    void testEvaluateTemporalPredicateGreaterThanOrEqual() {
+        Predicate predicate =
+                Predicate.newBuilder().setIntegerValue(1000).setComparisonOp(Predicate.ComparisonOperator.GREATER_THAN_OR_EQUAL).build();
+        Assertions.assertArrayEquals(new long[]{1000, 2000}, QueryUtil.evaluateTemporalPredicate(predicate,
+                new long[]{0, 2000}));
+        Assertions.assertArrayEquals(new long[]{1000, 2000}, QueryUtil.evaluateTemporalPredicate(predicate,
+                new long[]{1000, 2000}));
+        Assertions.assertArrayEquals(new long[]{1500, 2000}, QueryUtil.evaluateTemporalPredicate(predicate,
+                new long[]{1500, 2000}));
+        Assertions.assertNull(QueryUtil.evaluateTemporalPredicate(predicate, new long[]{0, 1000}));
+        Assertions.assertNull(QueryUtil.evaluateTemporalPredicate(predicate, new long[]{0, 100}));
+    }
+
+    @Test
+    void testEvaluateTemporalPredicateEqual() {
+        Predicate predicate =
+                Predicate.newBuilder().setIntegerValue(1000).setComparisonOp(Predicate.ComparisonOperator.EQUAL).build();
+        Assertions.assertArrayEquals(new long[]{1000, 1001}, QueryUtil.evaluateTemporalPredicate(predicate,
+                new long[]{0, 2000}));
+        Assertions.assertArrayEquals(new long[]{1000, 1001}, QueryUtil.evaluateTemporalPredicate(predicate,
+                new long[]{1000, 1100}));
+        Assertions.assertNull(QueryUtil.evaluateTemporalPredicate(predicate, new long[]{0, 1000}));
+        Assertions.assertNull(QueryUtil.evaluateTemporalPredicate(predicate, new long[]{0, 100}));
+        Assertions.assertNull(QueryUtil.evaluateTemporalPredicate(predicate, new long[]{1100, 1200}));
     }
 }

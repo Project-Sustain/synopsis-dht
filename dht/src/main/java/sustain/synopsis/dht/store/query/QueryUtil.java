@@ -1,6 +1,7 @@
 package sustain.synopsis.dht.store.query;
 
 import sustain.synopsis.dht.store.StrandStorageKey;
+import sustain.synopsis.dht.store.services.Predicate;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -17,7 +18,9 @@ public class QueryUtil {
      * @param <T>               Value type of the map
      * @return Matching StrandStorageKeys and their associated values as a {@link NavigableMap}
      */
-    public static <T> NavigableMap<StrandStorageKey, T> temporalLookup(NavigableMap<StrandStorageKey, T> metadataMap, long lowerBound, long upperBound, boolean includeUpperBound) {
+    public static <T> NavigableMap<StrandStorageKey, T> temporalLookup(NavigableMap<StrandStorageKey, T> metadataMap,
+                                                                       long lowerBound, long upperBound,
+                                                                       boolean includeUpperBound) {
         /* {@link StrandStorageKey} uses the 'from' attribute in the compare(). Therefore, we can use a dummy value
         as the 'to' attribute.
          */
@@ -35,8 +38,44 @@ public class QueryUtil {
     }
 
     /**
+     * Evaluate temporal predicates against a given temporal scope
+     * @param predicate Temporal constraint specified as a {@link Predicate}
+     * @param currentScope Current temporal scope
+     * @return Matching temporal scope if there is any, <code>Null</code> otherwise.
+     */
+    static long[] evaluateTemporalPredicate(Predicate predicate, long[] currentScope){
+        long parameter = predicate.getIntegerValue();
+        Predicate.ComparisonOperator op = predicate.getComparisonOp();
+        long from = currentScope[0];
+        long to = currentScope[1];
+        switch (op) {
+            case GREATER_THAN:
+                from = Math.max(parameter + 1, currentScope[0]);
+                break;
+            case GREATER_THAN_OR_EQUAL:
+                from = Math.max(parameter, currentScope[0]);
+                break;
+            case LESS_THAN:
+                to = Math.min(currentScope[1], parameter);
+                break;
+            case LESS_THAN_OR_EQUAL: // the upper bound is exclusive
+                to = Math.min(currentScope[1], parameter + 1);
+                break;
+            case EQUAL:
+                from = Math.max(parameter, currentScope[0]);
+                to = Math.min(currentScope[1], parameter + 1);
+                break;
+        }
+        if (from >= to) { // scope does not satisfy the constraint
+            return null;
+        }
+        return new long[]{from, to};
+    }
+
+    /**
      * Calculate the union of a set of temporal brackets. If two temporal brackets are overlapping merge them into a
      * one interval. This is an in-place operation.
+     *
      * @param brackets List of temporal brackets.
      */
     static void mergeTemporalBracketsAsUnion(ArrayList<long[]> brackets) {
@@ -61,12 +100,13 @@ public class QueryUtil {
      * between two entries from each groups.
      * Each temporal bracket from a group is matched against the every temporal bracket from the other group
      * to find intersecting regions.
+     *
      * @param brackets1 first group of temporal brackets
      * @param brackets2 second group of temporal brackets
      * @return List of temporal brackets with intersecting intervals
      */
     static ArrayList<long[]> mergeTemporalBracketsAsIntersect(ArrayList<long[]> brackets1,
-                                                                     ArrayList<long[]> brackets2) {
+                                                              ArrayList<long[]> brackets2) {
         mergeTemporalBracketsAsUnion(brackets1);
         mergeTemporalBracketsAsUnion(brackets2);
         ArrayList<long[]> mergedList = new ArrayList<>();
@@ -85,11 +125,11 @@ public class QueryUtil {
         return mergedList;
     }
 
-    static boolean areOverlappingIntervals(long[] interval1, long[] interval2){
-        if(interval1[0] > interval2[0]){
+    static boolean areOverlappingIntervals(long[] interval1, long[] interval2) {
+        if (interval1[0] > interval2[0]) {
             return interval2[1] > interval1[0];
         }
-        if (interval2[0] > interval1[0]){
+        if (interval2[0] > interval1[0]) {
             return interval1[1] > interval2[0];
         }
         return true; // interval1[0] == interval2[0];

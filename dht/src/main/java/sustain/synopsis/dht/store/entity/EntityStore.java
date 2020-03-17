@@ -2,6 +2,10 @@ package sustain.synopsis.dht.store.entity;
 
 import org.apache.log4j.Logger;
 import sustain.synopsis.dht.store.*;
+import sustain.synopsis.dht.store.query.QueryException;
+import sustain.synopsis.dht.store.query.QueryUtil;
+import sustain.synopsis.dht.store.services.Expression;
+import sustain.synopsis.dht.store.services.TargetQueryRequest;
 import sustain.synopsis.storage.lsmtree.ChecksumGenerator;
 import sustain.synopsis.storage.lsmtree.MemTable;
 import sustain.synopsis.storage.lsmtree.Metadata;
@@ -42,7 +46,7 @@ public class EntityStore {
     /**
      * Queryiable metadata is accessed by both the reader threads and the writer threads
      */
-    TreeMap<StrandStorageKey, Metadata<StrandStorageKey>> queryiableMetadata;
+    TreeMap<StrandStorageKey, Metadata<StrandStorageKey>> queryableMetadata;
     private ReentrantReadWriteLock lock;
 
     public EntityStore(String entityId, String metadataDir, long memTableSize, long blockSize,
@@ -60,7 +64,7 @@ public class EntityStore {
         this.compressor = new LZ4BlockCompressor();
         this.memTableSize = memTableSize;
         this.entityStoreJournal = entityStoreJournal;
-        this.queryiableMetadata = new TreeMap<>();
+        this.queryableMetadata = new TreeMap<>();
         this.sequenceId = new AtomicInteger(-1);
         this.lock = new ReentrantReadWriteLock();
         this.diskManager = diskManager;
@@ -76,7 +80,7 @@ public class EntityStore {
             }
             List<Metadata<StrandStorageKey>> metadataList = entityStoreJournal.getMetadata();
             this.sequenceId.set(entityStoreJournal.getSequenceId());
-            this.queryiableMetadata =
+            this.queryableMetadata =
                     metadataList.stream().filter(Metadata::isSessionComplete).collect(Collectors.toMap(Metadata<StrandStorageKey>::getMin, Function.identity(), (o1, o2) -> o1, TreeMap::new));
             // todo: how to handle sessions  active during the node crash/shutdown?
             // todo: populate activeSessions and activeMetadata
@@ -144,7 +148,7 @@ public class EntityStore {
         // there can be multiple concurrent reader threads accessing the queryiable data
         try {
             lock.writeLock().lock();
-            queryiableMetadata.putAll(activeMetadata.get(session).stream().collect(Collectors.toMap(Metadata<StrandStorageKey>::getMin, Function.identity())));
+            queryableMetadata.putAll(activeMetadata.get(session).stream().collect(Collectors.toMap(Metadata<StrandStorageKey>::getMin, Function.identity())));
         } finally {
             lock.writeLock().unlock();
         }
@@ -178,5 +182,22 @@ public class EntityStore {
 
     public String getEntityId() {
         return entityId;
+    }
+
+    public Set<Metadata<StrandStorageKey>> query(TargetQueryRequest queryRequest) throws QueryException {
+        try {
+            lock.readLock();
+            if (queryableMetadata.isEmpty()) {
+                return new HashSet<>();
+            }
+            long[] scope = new long[]{queryableMetadata.firstKey().getStartTS(),
+                    queryableMetadata.lastKey().getEndTS()};
+            Expression temporalConstraint = queryRequest.getTemporalScope();
+            List<long[]> matchingTemporalConstraint = QueryUtil.evaluateTemporalExpression(temporalConstraint, scope);
+            return matchingTemporalConstraint.stream().map(interval -> QueryUtil.temporalLookup(queryableMetadata,
+                    interval[0], interval[1], false)).flatMap(set -> set.values().stream()).collect(Collectors.toSet());
+        } finally {
+            lock.writeLock();
+        }
     }
 }

@@ -2,10 +2,13 @@ package sustain.synopsis.dht.store.query;
 
 import sustain.synopsis.dht.store.StrandStorageKey;
 import sustain.synopsis.dht.store.services.Predicate;
+import sustain.synopsis.sketch.dataset.Pair;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.NavigableMap;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class QueryUtil {
     /**
@@ -39,11 +42,12 @@ public class QueryUtil {
 
     /**
      * Evaluate temporal predicates against a given temporal scope
-     * @param predicate Temporal constraint specified as a {@link Predicate}
+     *
+     * @param predicate    Temporal constraint specified as a {@link Predicate}
      * @param currentScope Current temporal scope
      * @return Matching temporal scope if there is any, <code>Null</code> otherwise.
      */
-    static long[] evaluateTemporalPredicate(Predicate predicate, long[] currentScope){
+    static long[] evaluateTemporalPredicate(Predicate predicate, long[] currentScope) {
         long parameter = predicate.getIntegerValue();
         long from = currentScope[0];
         long to = currentScope[1];
@@ -109,17 +113,8 @@ public class QueryUtil {
         // consolidate each temporal bracket list to improve the efficiency
         mergeTemporalBracketsAsUnion(brackets1);
         mergeTemporalBracketsAsUnion(brackets2);
-        ArrayList<long[]> mergedList = new ArrayList<>();
-        for (long[] interval1 : brackets1) {
-            for (long[] interval2 : brackets2) {
-                if (areOverlappingIntervals(interval1, interval2)) {
-                    // find the intersecting region between the two intervals
-                    long[] merged = new long[]{Math.max(interval1[0], interval2[0]), Math.min(interval1[1],
-                            interval2[1])};
-                    mergedList.add(merged);
-                }
-            }
-        }
+        ArrayList<long[]> mergedList =
+                IntStream.range(0, Math.min(brackets1.size(), brackets2.size())).mapToObj(i -> new Pair<>(brackets1.get(i), brackets2.get(i))).filter(pair -> areOverlappingIntervals(pair.a, pair.b)).map(pair -> new long[]{Math.max(pair.a[0], pair.b[0]), Math.min(pair.a[1], pair.b[1])}).collect(Collectors.toCollection(ArrayList::new));
         // optimize the merged list to merge any overlapping intervals
         mergeTemporalBracketsAsUnion(mergedList);
         return mergedList;

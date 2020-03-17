@@ -45,10 +45,9 @@ public class QueryUtil {
      */
     static long[] evaluateTemporalPredicate(Predicate predicate, long[] currentScope){
         long parameter = predicate.getIntegerValue();
-        Predicate.ComparisonOperator op = predicate.getComparisonOp();
         long from = currentScope[0];
         long to = currentScope[1];
-        switch (op) {
+        switch (predicate.getComparisonOp()) {
             case GREATER_THAN:
                 from = Math.max(parameter + 1, currentScope[0]);
                 break;
@@ -107,6 +106,7 @@ public class QueryUtil {
      */
     static ArrayList<long[]> mergeTemporalBracketsAsIntersect(ArrayList<long[]> brackets1,
                                                               ArrayList<long[]> brackets2) {
+        // consolidate each temporal bracket list to improve the efficiency
         mergeTemporalBracketsAsUnion(brackets1);
         mergeTemporalBracketsAsUnion(brackets2);
         ArrayList<long[]> mergedList = new ArrayList<>();

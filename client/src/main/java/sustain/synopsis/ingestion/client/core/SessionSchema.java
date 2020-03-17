@@ -5,6 +5,7 @@ import sustain.synopsis.sketch.dataset.Quantizer;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
 
 public class SessionSchema {
     private final Map<String, Quantizer> quantizers;
@@ -29,7 +30,7 @@ public class SessionSchema {
         return geohashLength;
     }
 
-    public Collection<String> getFeatures() {
+    public Set<String> getFeatures() {
         return quantizers.keySet();
     }
 

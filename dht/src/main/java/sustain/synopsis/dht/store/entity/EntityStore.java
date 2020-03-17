@@ -2,6 +2,7 @@ package sustain.synopsis.dht.store.entity;
 
 import org.apache.log4j.Logger;
 import sustain.synopsis.dht.store.*;
+import sustain.synopsis.dht.store.query.Interval;
 import sustain.synopsis.dht.store.query.QueryException;
 import sustain.synopsis.dht.store.query.QueryUtil;
 import sustain.synopsis.dht.store.services.Expression;
@@ -190,12 +191,12 @@ public class EntityStore {
             if (queryableMetadata.isEmpty()) {
                 return new HashSet<>();
             }
-            long[] scope = new long[]{queryableMetadata.firstKey().getStartTS(),
-                    queryableMetadata.lastKey().getEndTS()};
+            Interval scope = new Interval(queryableMetadata.firstKey().getStartTS(),
+                    queryableMetadata.lastKey().getEndTS());
             Expression temporalConstraint = queryRequest.getTemporalScope();
-            List<long[]> matchingTemporalConstraint = QueryUtil.evaluateTemporalExpression(temporalConstraint, scope);
+            List<Interval> matchingTemporalConstraint = QueryUtil.evaluateTemporalExpression(temporalConstraint, scope);
             return matchingTemporalConstraint.stream().map(interval -> QueryUtil.temporalLookup(queryableMetadata,
-                    interval[0], interval[1], false)).flatMap(set -> set.values().stream()).collect(Collectors.toSet());
+                    interval.getFrom(), interval.getTo(), false)).flatMap(set -> set.values().stream()).collect(Collectors.toSet());
         } finally {
             lock.writeLock();
         }

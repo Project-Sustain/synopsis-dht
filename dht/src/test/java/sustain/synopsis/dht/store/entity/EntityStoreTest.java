@@ -7,16 +7,16 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import sustain.synopsis.dht.store.*;
+import sustain.synopsis.dht.store.query.Interval;
+import sustain.synopsis.dht.store.query.MatchedSSTable;
 import sustain.synopsis.dht.store.query.QueryException;
 import sustain.synopsis.dht.store.services.Expression;
 import sustain.synopsis.dht.store.services.Predicate;
-import sustain.synopsis.dht.store.services.TargetQueryRequest;
 import sustain.synopsis.storage.lsmtree.Metadata;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Set;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -196,16 +196,15 @@ public class EntityStoreTest {
 
         // there are no queryable sessions at the moment
         Expression exp =
-                Expression.newBuilder().setPredicate1(Predicate.newBuilder().setIntegerValue(10000).setComparisonOp(Predicate.ComparisonOperator.LESS_THAN).build()).build();
-        TargetQueryRequest targetQueryRequest = TargetQueryRequest.newBuilder().setTemporalScope(exp).build();
-        Set<Metadata<StrandStorageKey>> results = entityStore.query(targetQueryRequest);
+                Expression.newBuilder().setPredicate1(Predicate.newBuilder().setIntegerValue(1750).setComparisonOp(Predicate.ComparisonOperator.LESS_THAN).build()).setCombineOp(Expression.CombineOperator.OR).setPredicate2(Predicate.newBuilder().setIntegerValue(1800).setComparisonOp(Predicate.ComparisonOperator.GREATER_THAN).build()).build();
+        List<MatchedSSTable> results = entityStore.temporalQuery(exp);
         Assertions.assertTrue(results.isEmpty());
 
         // size of key and value used here - 187 bytes
         // storing 2 strands should fill out the memTable
         StrandStorageKey key1 = new StrandStorageKey(1000, 1500);
         StrandStorageValue value1 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1000, 1500, 1.0, 2.0)));
-        entityStore.store(session, key1, value1); // this should fill up the memTable
+        entityStore.store(session, key1, value1);
         StrandStorageKey key2 = new StrandStorageKey(1500, 2000);
         StrandStorageValue value2 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1500, 2000, 1.0, 2.0)));
         entityStore.store(session, key2, value2);
@@ -215,10 +214,20 @@ public class EntityStoreTest {
         entityStore.store(session, key3, value3);
         // end session
         entityStore.endSession(session);
-
         Assertions.assertEquals(2, entityStore.queryableMetadata.size());
-        results = entityStore.query(targetQueryRequest);
+
+        results = entityStore.temporalQuery(exp);
         Assertions.assertEquals(2, results.size());
+        // sort the results by the strand timestamps, so that we can check individual values
+        results.sort(Comparator.comparing(o -> o.getMetadata().getMin()));
+        Assertions.assertEquals(2, results.get(0).getMatchedIntervals().size());
+        List<Interval> intervals = results.get(0).getMatchedIntervals();
+        intervals.sort(Comparator.comparingLong(Interval::getFrom));
+        Assertions.assertEquals(Arrays.asList(new Interval(1000, 1750), new Interval(1801, 2500)), intervals);
+
+        Assertions.assertEquals(1, results.get(1).getMatchedIntervals().size());
+        Assertions.assertEquals(Collections.singletonList(new Interval(1801, 2500)),
+                results.get(1).getMatchedIntervals());
     }
 }
 

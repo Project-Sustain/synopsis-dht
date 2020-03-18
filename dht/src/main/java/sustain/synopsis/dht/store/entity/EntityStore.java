@@ -3,10 +3,10 @@ package sustain.synopsis.dht.store.entity;
 import org.apache.log4j.Logger;
 import sustain.synopsis.dht.store.*;
 import sustain.synopsis.dht.store.query.Interval;
+import sustain.synopsis.dht.store.query.MatchedSSTable;
 import sustain.synopsis.dht.store.query.QueryException;
 import sustain.synopsis.dht.store.query.QueryUtil;
 import sustain.synopsis.dht.store.services.Expression;
-import sustain.synopsis.dht.store.services.TargetQueryRequest;
 import sustain.synopsis.storage.lsmtree.ChecksumGenerator;
 import sustain.synopsis.storage.lsmtree.MemTable;
 import sustain.synopsis.storage.lsmtree.Metadata;
@@ -82,7 +82,7 @@ public class EntityStore {
             List<Metadata<StrandStorageKey>> metadataList = entityStoreJournal.getMetadata();
             this.sequenceId.set(entityStoreJournal.getSequenceId());
             this.queryableMetadata =
-                    metadataList.stream().filter(Metadata::isSessionComplete).collect(Collectors.toMap(Metadata<StrandStorageKey>::getMin, Function.identity(), (o1, o2) -> o1, TreeMap::new));
+                    metadataList.stream().filter(Metadata::isSessionComplete).collect(Collectors.toMap((metadata) -> new StrandStorageKey(metadata.getMin().getStartTS(), metadata.getMax().getEndTS()), Function.identity(), (o1, o2) -> o1, TreeMap::new));
             // todo: how to handle sessions  active during the node crash/shutdown?
             // todo: populate activeSessions and activeMetadata
         } catch (ChecksumGenerator.ChecksumError checksumError) {
@@ -149,7 +149,7 @@ public class EntityStore {
         // there can be multiple concurrent reader threads accessing the queryiable data
         try {
             lock.writeLock().lock();
-            queryableMetadata.putAll(activeMetadata.get(session).stream().collect(Collectors.toMap(Metadata<StrandStorageKey>::getMin, Function.identity())));
+            queryableMetadata.putAll(activeMetadata.get(session).stream().collect(Collectors.toMap((metadata) -> new StrandStorageKey(metadata.getMin().getStartTS(), metadata.getMax().getEndTS()), Function.identity())));
         } finally {
             lock.writeLock().unlock();
         }
@@ -185,20 +185,32 @@ public class EntityStore {
         return entityId;
     }
 
-    public Set<Metadata<StrandStorageKey>> query(TargetQueryRequest queryRequest) throws QueryException {
+    /**
+     * Query the entity data for a given temporal expression
+     * @param temporalExpression Temporal constraint expressed as {@link Expression}
+     * @return List of matching SSTables and the corresponding time intervals - A given temporal expression
+     * can get mapped into multiple time intervals
+     * @throws QueryException Error during temporal expression evaluation
+     */
+    public List<MatchedSSTable> temporalQuery(Expression temporalExpression) throws QueryException {
         try {
-            lock.readLock();
-            if (queryableMetadata.isEmpty()) {
-                return new HashSet<>();
+            lock.readLock().lock();
+            if (queryableMetadata.isEmpty()) { // there are no completed SSTables yet
+                return new ArrayList<>();
             }
-            Interval scope = new Interval(queryableMetadata.firstKey().getStartTS(),
-                    queryableMetadata.lastKey().getEndTS());
-            Expression temporalConstraint = queryRequest.getTemporalScope();
-            List<Interval> matchingTemporalConstraint = QueryUtil.evaluateTemporalExpression(temporalConstraint, scope);
-            return matchingTemporalConstraint.stream().map(interval -> QueryUtil.temporalLookup(queryableMetadata,
-                    interval.getFrom(), interval.getTo(), false)).flatMap(set -> set.values().stream()).collect(Collectors.toSet());
+            Map<String, MatchedSSTable> matchingMetadata = new HashMap<>();
+            List<Interval> matchingIntervals = QueryUtil.evaluateTemporalExpression(temporalExpression,
+                    new Interval(queryableMetadata.firstKey().getStartTS(), queryableMetadata.lastKey().getEndTS()));
+            for (Interval interval : matchingIntervals) {
+                QueryUtil.temporalLookup(queryableMetadata, interval.getFrom(), interval.getTo(), false).values().forEach((metadata) -> {
+                    matchingMetadata.putIfAbsent(metadata.getPath(), new MatchedSSTable(metadata));
+                    MatchedSSTable matchedSSTable = matchingMetadata.get(metadata.getPath());
+                    matchedSSTable.addMatchedInterval(interval);
+                });
+            }
+            return new ArrayList<>(matchingMetadata.values());
         } finally {
-            lock.writeLock();
+            lock.readLock().unlock();
         }
     }
 }

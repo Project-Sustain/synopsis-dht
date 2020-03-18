@@ -40,6 +40,13 @@ public class QueryUtilTest {
         expected.put(new StrandStorageKey(400L, 1000L), emptyMetadata);
         Assertions.assertEquals(expected, results);
 
+        results = QueryUtil.temporalLookup(metadata, 1400L, 2500L, false);
+        expected = new TreeMap<>();
+        expected.put(new StrandStorageKey(1000L, 1500L), emptyMetadata);
+        expected.put(new StrandStorageKey(1600L, 2000L), emptyMetadata);
+        Assertions.assertEquals(expected, results);
+
+
         results = QueryUtil.temporalLookup(metadata, 1750L, 1900L, false);
         expected = Collections.singletonMap(new StrandStorageKey(1600L, 2000L), emptyMetadata);
         Assertions.assertEquals(expected, results);
@@ -227,7 +234,8 @@ public class QueryUtilTest {
     void testEvaluateTemporalPredicateWithUnsupportedComparison() {
         Predicate predicate =
                 Predicate.newBuilder().setIntegerValue(1000).setComparisonOpValue(Predicate.ComparisonOperator.values().length + 1).build();
-        Assertions.assertThrows(QueryException.class, () -> QueryUtil.evaluateTemporalPredicate(predicate, new Interval(0, 2000)));
+        Assertions.assertThrows(QueryException.class, () -> QueryUtil.evaluateTemporalPredicate(predicate,
+                new Interval(0, 2000)));
     }
 
     @Test
@@ -334,5 +342,17 @@ public class QueryUtilTest {
 
         List<Interval> result = QueryUtil.evaluateTemporalExpression(temporalExpression, new Interval(1200, 5000));
         Assertions.assertEquals(0, result.size());
+    }
+
+    @Test
+    void testMatchedSSTable() {
+        Metadata<StrandStorageKey> metadata = new Metadata<>();
+        MatchedSSTable matchedSSTable = new MatchedSSTable(metadata);
+        matchedSSTable.addMatchedInterval(new Interval(100, 200));
+        matchedSSTable.addMatchedInterval(new Interval(200, 300));
+
+        Assertions.assertEquals(metadata, matchedSSTable.getMetadata()); // object comparison
+        Assertions.assertEquals(Arrays.asList(new Interval(100, 200), new Interval(200, 300)),
+                matchedSSTable.getMatchedIntervals());
     }
 }

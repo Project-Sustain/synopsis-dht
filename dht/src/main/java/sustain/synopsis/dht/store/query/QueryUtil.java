@@ -124,15 +124,13 @@ public class QueryUtil {
             case UNRECOGNIZED:
                 throw new QueryException("Unrecognized comparison operator: " + predicate.getComparisonOpValue());
         }
-        if (from >= to) { // scope does not satisfy the constraint
-            return null;
-        }
-        return new Interval(from, to);
+        return from >= to ? null : new Interval(from, to); // return null if scope does not satisfy the constraint
     }
 
     /**
      * Calculate the union of a set of temporal brackets. If two temporal brackets are overlapping merge them into a
      * one interval.
+     *
      * @param brackets List of input intervals
      * @return Input intervals after merging
      */

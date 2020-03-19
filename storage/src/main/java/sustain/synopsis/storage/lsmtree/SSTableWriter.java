@@ -8,7 +8,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.List;
 
-public class SSTableWriter<K extends Comparable<K> & Serializable, V extends Serializable> {
+public class SSTableWriter<K extends Comparable<K> & StreamSerializable, V extends StreamSerializable> {
 
     private final Logger logger = Logger.getLogger(SSTableWriter.class);
     private List<TableIterator<K, V>> iterators;

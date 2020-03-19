@@ -11,42 +11,62 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 public class NwqmcParser implements LineHandler {
 
-    Map<String, Location> stationLocationMap;
+    Map<String, String> stationGeohashMap;
     DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-dd-mm hh:mm:ss");
     RecordTypeParser recordTypeParser;
-    Map<String, CsvRecordType> csvRecordTypeMap;
+    Set<RecordType> requiredRecordTypes;
 
     public NwqmcParser() {
-        stationLocationMap = StationLocationParser.locationsForFile(new File("/Users/keegan/Sustain/etc/data/nwqmc_stations.csv"));
+    }
+
+    void initRecordTypeParser(Set<String> features) {
+        RecordType[] recordTypes = new RecordType[]{
+                RecordType.newBuilder()
+                        .setId("Temperature, water")
+                        .columnMustMatch("CharacteristicName","Temperature, water")
+                        .build(),
+                RecordType.newBuilder()
+                        .setId("Stream flow, instantaneous")
+                        .columnMustMatch("CharacteristicName","Stream flow, instantaneous")
+                        .build(),
+                RecordType.newBuilder()
+                        .setId("RBP Stream width")
+                        .columnMustMatch("CharacteristicName","RBP Stream width")
+                        .build(),
+                RecordType.newBuilder()
+                        .setId("Specific conductance")
+                        .columnMustMatch("CharacteristicName","Specific conductance")
+                        .build(),
+        };
+
+        RecordTypeParser.RecordTypeParserBuilder recordTypeParserBuilder = RecordTypeParser.newBuilder();
+        for (RecordType recordType : recordTypes) {
+            if (features.contains(recordType.id)) {
+                recordTypeParserBuilder.addRecordType(recordType);
+            }
+        }
+        recordTypeParser = recordTypeParserBuilder.build();
     }
 
     @Override
     public void initWithSchemaAndHandler(SessionSchema schema, RecordCallbackHandler handler) {
-        Set<String> features = schema.getFeatures();
-        RecordTypeParser.RecordTypeParserBuilder builder = RecordTypeParser.newBuilder()
-                .addRecordType("temperature", CsvRecordType.newBuilder()
-                        .columnMustMatch("ResultMeasureValue", "\\d+[.]\\d")
-                        .columnMustMatch("CharacteristicName","Temperature, water")
-                        .build())
-                .addRecordType("", CsvRecordType.newBuilder()
-                        .columnMustMatch("ResultMeasureValue", "\\d+[.]\\d")
-                        .columnMustMatch("CharacteristicName","Temperature, water")
-                        .build())
-
-        }
-        if (features.contains(""))
+        initRecordTypeParser(schema.getFeatures());
+        stationGeohashMap = StationLocationParser.getGeohashMapFromFile(
+                new File("/Users/keegan/Sustain/etc/data/nwqmc_stations.csv"),
+                schema.getGeohashLength());
 
     }
 
     @Override
     public void onDataAvailability(Map<String, Integer> columnMap, String[] splits) {
-
-
+        recordTypeParser.getRecordTypeForLine(columnMap, splits);
 
 
     }

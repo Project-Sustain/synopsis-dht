@@ -12,21 +12,24 @@ import sustain.synopsis.dht.store.services.IngestionRequest;
 import sustain.synopsis.dht.store.services.IngestionResponse;
 import sustain.synopsis.dht.store.services.IngestionServiceGrpc;
 import sustain.synopsis.dht.store.services.IngestionServiceGrpc.IngestionServiceFutureStub;
+import sustain.synopsis.dht.store.services.NodeMapping;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
-import java.util.Collection;
-import java.util.HashMap;
+import java.util.*;
 import java.util.concurrent.*;
 
 public class DHTStrandPublisher implements StrandPublisher {
 
-    public final int channelSendLimit = 50;
-    private final HashMap<String, IngestionServiceFutureStub> geohashStubMap = new HashMap<>();
-    private final HashMap<IngestionServiceFutureStub, Semaphore> sendLimitMap = new HashMap<>();
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    public final int channelSendLimit = 3;
+    //TODO these maps will need some locking
+    private final Map<String, IngestionServiceFutureStub> geohashStubMap = new HashMap<>();
+    private final Map<IngestionServiceFutureStub, Semaphore> sendLimitMap = new HashMap<>();
+
+    private final ExecutorService senderExecutorService = Executors.newFixedThreadPool(4);
+    private final ExecutorService responseExecutorService = Executors.newSingleThreadExecutor();
 
     private final String datasetId;
     private final long sessionId;
@@ -39,7 +42,15 @@ public class DHTStrandPublisher implements StrandPublisher {
         this.sessionId = sessionId;
     }
 
-    private IngestionServiceFutureStub getStubForAddress(String address) {
+    // https://stackoverflow.com/a/30968827
+    static byte[] serializeToBytes(Object o) throws IOException {
+        try (ByteArrayOutputStream bos = new ByteArrayOutputStream(); ObjectOutput out = new ObjectOutputStream(bos)) {
+            out.writeObject(o);
+            return bos.toByteArray();
+        }
+    }
+
+    IngestionServiceFutureStub getStubForAddress(String address) {
         String host = address.split(":")[0];
         int port = Integer.parseInt(address.split(":")[1]);
 
@@ -50,57 +61,80 @@ public class DHTStrandPublisher implements StrandPublisher {
         return IngestionServiceGrpc.newFutureStub(channel);
     }
 
-    // https://stackoverflow.com/a/30968827
-    public static byte[] serializeToBytes(Object o) throws IOException {
-        try (ByteArrayOutputStream bos = new ByteArrayOutputStream(); ObjectOutput out = new ObjectOutputStream(bos)) {
-            out.writeObject(o);
-            return bos.toByteArray();
+    Map<IngestionServiceFutureStub, List<Strand>> getStrandsForStubMap(Collection<Strand> strands) {
+        Map<IngestionServiceFutureStub, List<Strand>> strandsForStub = new HashMap<>();
+        for (Strand s : strands) {
+            IngestionServiceFutureStub stub = geohashStubMap.getOrDefault(s.getGeohash(), defaultStub);
+
+            List<Strand> strandList = strandsForStub.computeIfAbsent(stub, k -> new ArrayList<>());
+            strandList.add(s);
+        }
+        return strandsForStub;
+    }
+
+    sustain.synopsis.dht.store.services.Strand convertStrand(Strand strand) {
+        try {
+            return sustain.synopsis.dht.store.services.Strand.newBuilder()
+                    .setEntityId(strand.getGeohash())
+                    .setToTs(strand.getToTimestamp())
+                    .setFromTs(strand.getFromTimeStamp())
+                    .setBytes(ByteString.copyFrom(serializeToBytes(strand)))
+                    .build();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
         }
     }
 
-    private IngestionRequest getIngestionRequestForStrand(Strand strand) throws IOException {
-        ByteString strandBytes = ByteString.copyFrom(serializeToBytes(strand));
-        return IngestionRequest.newBuilder()
-                .setDatasetId(datasetId)
-                .setSessionId(sessionId)
-                .setFromTS(strand.getFromTimeStamp())
-                .setToTS(strand.getToTimestamp())
-                .setEntityId(strand.getGeohash())
-                .setStrand(strandBytes)
-                .build();
+    void processNodeMapping(NodeMapping mapping) {
+        String nodeAddress = mapping.getDhtNodeAddress();
+        if (!geohashStubMap.containsKey(nodeAddress)) {
+            IngestionServiceFutureStub stubForAddress = getStubForAddress(nodeAddress);
+            geohashStubMap.put(mapping.getEntityId(), stubForAddress);
+            sendLimitMap.put(stubForAddress, new Semaphore(channelSendLimit));
+        }
+    }
+
+
+    void publishStrandsForStub(IngestionServiceFutureStub stub, List<Strand> strands) {
+        try {
+            Semaphore limiter = sendLimitMap.get(stub);
+            limiter.acquire();
+
+            List<sustain.synopsis.dht.store.services.Strand> convertedStrandList = new ArrayList<>(strands.size());
+            strands.stream().forEach(s -> convertedStrandList.add(convertStrand(s)));
+
+            IngestionRequest req = IngestionRequest.newBuilder()
+                    .setDatasetId(datasetId)
+                    .setSessionId(sessionId)
+                    .addAllStrand(convertedStrandList)
+                    .build();
+            ListenableFuture<IngestionResponse> ingestFuture = stub.ingest(req);
+
+            Futures.addCallback(ingestFuture, new FutureCallback<IngestionResponse>() {
+                @Override
+                public void onSuccess(IngestionResponse result) {
+                   for (int i = 0; i < result.getMappingCount(); i++) {
+                       processNodeMapping(result.getMapping(i));
+                   }
+                }
+
+                @Override
+                public void onFailure(Throwable t) {
+
+                }
+            }, responseExecutorService);
+
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public void publish(Collection<Strand> strands) {
-        for (Strand strand : strands) {
-            try {
-                IngestionServiceFutureStub stub = geohashStubMap.getOrDefault(strand.getGeohash(), defaultStub);
-                Semaphore limiter = sendLimitMap.get(stub);
-                limiter.acquire();
-
-                IngestionRequest req = getIngestionRequestForStrand(strand);
-                ListenableFuture<IngestionResponse> ingestFuture = stub.ingest(req);
-
-                Futures.addCallback(ingestFuture, new FutureCallback<IngestionResponse>() {
-                    @Override
-                    public void onSuccess(@NullableDecl IngestionResponse result) {
-                        String primary = result.getPrimary();
-                        if (!geohashStubMap.containsKey(primary)) {
-                            IngestionServiceFutureStub stubForAddress = getStubForAddress(primary);
-                            geohashStubMap.put(strand.getGeohash(), stubForAddress);
-                            sendLimitMap.put(stubForAddress, new Semaphore(channelSendLimit));
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Throwable t) {
-
-                    }
-                }, executorService);
-
-            } catch (InterruptedException | IOException e) {
-                e.printStackTrace();
-            }
+        Map<IngestionServiceFutureStub, List<Strand>> strandsForStub = getStrandsForStubMap(strands);
+        for (IngestionServiceFutureStub stub : strandsForStub.keySet()) {
+            publishStrandsForStub(stub, strandsForStub.get(stub));
         }
     }
 

@@ -5,13 +5,13 @@ import java.util.Map;
 
 public class RecordTypeParser {
 
-    private final Map<String, CsvRecordType> recordTypes;
+    private final List<RecordType> recordTypes;
 
-    private RecordTypeParser(Map<String, CsvRecordType> recordTypes) {
+    private RecordTypeParser(List<RecordType> recordTypes) {
         this.recordTypes = recordTypes;
     }
 
-    private boolean lineDoesMatchRecordType(CsvRecordType recordType, Map<String,Integer> headerMap, String[] splits) {
+    private boolean lineDoesMatchRecordType(RecordType recordType, Map<String,Integer> headerMap, String[] splits) {
         for (String colName : recordType.columnMatches.keySet())
         {
             Integer colIdx = headerMap.get(colName);
@@ -27,10 +27,9 @@ public class RecordTypeParser {
         return true;
     }
 
-    public CsvRecordType getRecordTypeForLine(Map<String,Integer> headerMap, String[] splits) {
-        for (String recordTypeId : recordTypes.keySet()) {
-            CsvRecordType recordType = recordTypes.get(recordTypeId);
-            if (lineDoesMatchRecordType(recordType, headerMap, splits)) {
+    public RecordType getRecordTypeForLine(Map<String,Integer> columnMap, String[] splits) {
+        for (RecordType recordType : recordTypes) {
+            if (lineDoesMatchRecordType(recordType, columnMap, splits)) {
                 return recordType;
             }
         }
@@ -43,7 +42,7 @@ public class RecordTypeParser {
 
     public static class RecordTypeParserBuilder {
 
-        private Map<String, CsvRecordType> recordTypes;
+        private List<RecordType> recordTypes;
 
         private RecordTypeParserBuilder() {}
 
@@ -51,8 +50,8 @@ public class RecordTypeParser {
             return new RecordTypeParser(recordTypes);
         }
 
-        public RecordTypeParserBuilder addRecordType(String id, CsvRecordType recordType) {
-            this.recordTypes.put(id, recordType);
+        public RecordTypeParserBuilder addRecordType(RecordType recordType) {
+            this.recordTypes.add(recordType);
             return this;
         }
 

@@ -17,7 +17,7 @@ import static java.nio.file.StandardOpenOption.READ;
 import static sustain.synopsis.storage.lsmtree.Util.readFully;
 
 /**
- * @param <K>
+ * @param <K> Type of the key
  */
 public class SSTableReader<K extends Comparable<K> & StreamSerializable> {
 
@@ -50,36 +50,38 @@ public class SSTableReader<K extends Comparable<K> & StreamSerializable> {
         return getPairIterator(data);
     }
 
-    Iterator<TableIterator.TableEntry<K, byte[]>> getPairIterator(byte[] data) {
-        ByteArrayInputStream bais = new ByteArrayInputStream(data);
-        DataInputStream dis = new DataInputStream(bais);
-        return new Iterator<TableIterator.TableEntry<K, byte[]>>() {
-            private TableIterator.TableEntry<K, byte[]> nextElem = null;
-            @Override
-            public boolean hasNext() {
-                return bais.available() > 0 && (nextElem = getNextElem()) != null;
-            }
+    Iterator<TableIterator.TableEntry<K, byte[]>> getPairIterator(byte[] data) throws IOException {
+        try (ByteArrayInputStream bais = new ByteArrayInputStream(data); DataInputStream dis =
+                new DataInputStream(bais)) {
+            return new Iterator<TableIterator.TableEntry<K, byte[]>>() {
+                private TableIterator.TableEntry<K, byte[]> nextElem = null;
 
-            @Override
-            public TableIterator.TableEntry<K, byte[]> next() {
-                return nextElem;
-            }
-
-            private TableIterator.TableEntry<K, byte[]> getNextElem() {
-                try {
-                    K key = clazz.newInstance();
-                    key.deserialize(dis);
-                    byte[] value = new byte[dis.readInt()];
-                    dis.readFully(value);
-                    return new TableIterator.TableEntry<>(key, value);
-                } catch (InstantiationException | IllegalAccessException e) {
-                    logger.error("Reflection error when creating instance of " + clazz.getName(), e);
-                } catch (IOException e) {
-                    logger.error("Error reading from the block.", e);
+                @Override
+                public boolean hasNext() {
+                    return bais.available() > 0 && (nextElem = getNextElem()) != null;
                 }
-                return null;
-            }
-        };
+
+                @Override
+                public TableIterator.TableEntry<K, byte[]> next() {
+                    return nextElem;
+                }
+
+                private TableIterator.TableEntry<K, byte[]> getNextElem() {
+                    try {
+                        K key = clazz.newInstance();
+                        key.deserialize(dis);
+                        byte[] value = new byte[dis.readInt()];
+                        dis.readFully(value);
+                        return new TableIterator.TableEntry<>(key, value);
+                    } catch (InstantiationException | IllegalAccessException e) {
+                        logger.error("Reflection error when creating instance of " + clazz.getName(), e);
+                    } catch (IOException e) {
+                        logger.error("Error reading from the block.", e);
+                    }
+                    return null;
+                }
+            };
+        }
     }
 
     byte[] extractBlockData(SeekableByteChannel channel) throws IOException {

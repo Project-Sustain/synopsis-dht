@@ -39,8 +39,10 @@ public class SSTableReaderTest {
         fos.close();
 
         FileChannel channel = FileChannel.open(file.toPath(), READ);
-        // we do not need to properly initialize the SSTableReader
-        SSTableReader<LSMTestKey> reader = new SSTableReader<>(null, null);
+        Metadata<LSMTestKey> metadata = new Metadata<>();
+        metadata.setPath(file.getAbsolutePath());
+        SSTableReader<LSMTestKey> reader = new SSTableReader<>(metadata, LSMTestKey.class);
+
         byte[] readData = reader.extractBlockData(channel);
         Assertions.assertArrayEquals(data, readData);
     }
@@ -63,8 +65,10 @@ public class SSTableReaderTest {
         fos.close();
 
         FileChannel channel = FileChannel.open(file.toPath(), READ);
-        // we do not need to properly initialize the SSTableReader
-        SSTableReader<LSMTestKey> reader = new SSTableReader<>(null, null);
+        Metadata<LSMTestKey> metadata = new Metadata<>();
+        metadata.setPath(file.getAbsolutePath());
+
+        SSTableReader<LSMTestKey> reader = new SSTableReader<>(metadata, LSMTestKey.class);
         byte[] readData = reader.extractBlockData(channel);
         Assertions.assertArrayEquals(data, readData);
     }
@@ -87,7 +91,13 @@ public class SSTableReaderTest {
         baos.flush();
         byte[] block = baos.toByteArray();
 
-        SSTableReader<LSMTestKey> reader = new SSTableReader<>(null, LSMTestKey.class);
+        // dummy file
+        File file = new File(tempDir.getAbsolutePath() + File.separator + "temp.file");
+        file.createNewFile();
+        Metadata<LSMTestKey> metadata = new Metadata<>();
+        metadata.setPath(file.getAbsolutePath());
+
+        SSTableReader<LSMTestKey> reader = new SSTableReader<>(metadata, LSMTestKey.class);
         Iterator<TableIterator.TableEntry<LSMTestKey, byte[]>> iterator = reader.getPairIterator(block);
         int elemCount = 0;
         random = new Random(1); // reinitialize the random number generator
@@ -98,5 +108,129 @@ public class SSTableReaderTest {
             Assertions.assertArrayEquals(payload, entry.getValue());
         }
         Assertions.assertEquals(ELEM_COUNT, elemCount);
+    }
+
+    @Test
+    void testGetPairIteratorWithEmptyBlock() throws IOException {
+        // dummy file
+        File file = new File(tempDir.getAbsolutePath() + File.separator + "temp.file");
+        file.createNewFile();
+        Metadata<LSMTestKey> metadata = new Metadata<>();
+        metadata.setPath(file.getAbsolutePath());
+        SSTableReader<LSMTestKey> reader = new SSTableReader<>(metadata, LSMTestKey.class);
+        Iterator<TableIterator.TableEntry<LSMTestKey, byte[]>> iterator = reader.getPairIterator(new byte[0]);
+        Assertions.assertFalse(iterator.hasNext());
+    }
+
+    @Test
+    void testGetPairIteratorInstantiationError() throws IOException {
+        class NoDefaultConstructor implements Comparable<NoDefaultConstructor>, StreamSerializable {
+
+            NoDefaultConstructor(int param) {
+
+            }
+
+            @Override
+            public int compareTo(NoDefaultConstructor o) {
+                return 0;
+            }
+
+            @Override
+            public void serialize(DataOutputStream dataOutputStream) throws IOException {
+
+            }
+
+            @Override
+            public void deserialize(DataInputStream dataInputStream) throws IOException {
+
+            }
+        }
+
+        // dummy file
+        File file = new File(tempDir.getAbsolutePath() + File.separator + "temp.file");
+        file.createNewFile();
+        Metadata<NoDefaultConstructor> metadata = new Metadata<>();
+        metadata.setPath(file.getAbsolutePath());
+        SSTableReader<NoDefaultConstructor> reader = new SSTableReader<>(metadata, NoDefaultConstructor.class);
+        Iterator<TableIterator.TableEntry<NoDefaultConstructor, byte[]>> iterator =
+                reader.getPairIterator(new byte[100]);
+        Assertions.assertFalse(iterator.hasNext());
+    }
+
+    @Test
+    void testGetPairIteratorIOError() throws IOException {
+        // dummy file
+        File file = new File(tempDir.getAbsolutePath() + File.separator + "temp.file");
+        file.createNewFile();
+        Metadata<LSMTestKey> metadata = new Metadata<>();
+        metadata.setPath(file.getAbsolutePath());
+        SSTableReader<LSMTestKey> reader = new SSTableReader<>(metadata, LSMTestKey.class);
+        Iterator<TableIterator.TableEntry<LSMTestKey, byte[]>> iterator =
+                reader.getPairIterator(new byte[1]); // not enough data to deserialize
+        Assertions.assertFalse(iterator.hasNext());
+    }
+
+    @Test
+    void testReadBlock() throws IOException {
+        final int BLOCK_COUNT = 3;
+        final int ELEM_COUNT_PER_BLOCK = 10;
+
+        File f = new File(tempDir + File.separator + "temp.file");
+        Metadata<LSMTestKey> metadata = new Metadata<>();
+        metadata.setPath(f.getAbsolutePath());
+        BlockCompressor compressor = new LZ4BlockCompressor();
+        FileOutputStream fos = new FileOutputStream(f);
+
+        DataOutputStream dos = new DataOutputStream(fos);
+        for (int blockId = 0; blockId < BLOCK_COUNT; blockId++) {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            DataOutputStream blockDataOS = new DataOutputStream(baos);
+            Random random = new Random(1);
+            byte[] payload = new byte[100];
+            for (int i = 0; i < ELEM_COUNT_PER_BLOCK; i++) {
+                LSMTestKey key = new LSMTestKey(blockId * 10 + i);
+                if (i == 0) {
+                    // update the index
+                    metadata.addBlockIndex(key, dos.size());
+                }
+                random.nextBytes(payload);
+                key.serialize(blockDataOS);
+                blockDataOS.writeInt(payload.length);
+                blockDataOS.write(payload);
+            }
+            dos.flush();
+            baos.flush();
+            byte[] block = baos.toByteArray();
+            byte[] compressedData = compressor.compress(block);
+            dos.writeBoolean(blockId == (BLOCK_COUNT - 1));
+            dos.writeBoolean(true); // compressed
+            dos.writeInt(block.length);
+            dos.writeInt(compressedData.length);
+            dos.write(compressedData);
+            dos.flush();
+        }
+        dos.close();
+        fos.flush();
+        fos.close();
+
+        SSTableReader<LSMTestKey> reader = new SSTableReader<>(metadata, LSMTestKey.class);
+        for (int blockId = 0; blockId < BLOCK_COUNT; blockId++) {
+            LSMTestKey expectedFirstKey = new LSMTestKey(blockId * ELEM_COUNT_PER_BLOCK);
+            Iterator<TableIterator.TableEntry<LSMTestKey, byte[]>> iter = reader.readBlock(expectedFirstKey);
+            // check the first key - we have tested the iterator content in testGetPairIterator()
+            Assertions.assertTrue(iter.hasNext());
+            TableIterator.TableEntry<LSMTestKey, byte[]> firstEntry = iter.next();
+            Assertions.assertEquals(expectedFirstKey, firstEntry.getKey());
+        }
+    }
+
+    @Test
+    void testReadBlockInValidIndex() throws IOException {
+        File f = new File(tempDir + File.separator + "temp.file");
+        f.createNewFile();
+        Metadata<LSMTestKey> metadata = new Metadata<>();
+        metadata.setPath(f.getAbsolutePath());
+        SSTableReader<LSMTestKey> reader = new SSTableReader<>(metadata, LSMTestKey.class);
+        Assertions.assertThrows(IOException.class, () -> reader.readBlock(new LSMTestKey(1)));
     }
 }

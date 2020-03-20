@@ -76,7 +76,7 @@ public class SSTableReaderTest {
         Random random = new Random(1);
         byte[] payload = new byte[100];
         final int ELEM_COUNT = 10;
-        for(int i = 0; i < ELEM_COUNT; i++) {
+        for (int i = 0; i < ELEM_COUNT; i++) {
             LSMTestKey key = new LSMTestKey(i);
             random.nextBytes(payload);
             key.serialize(dos);
@@ -88,14 +88,14 @@ public class SSTableReaderTest {
         byte[] block = baos.toByteArray();
 
         SSTableReader<LSMTestKey> reader = new SSTableReader<>(null, LSMTestKey.class);
-        Iterator<SSTableReader.Pair<LSMTestKey>> iterator = reader.getPairIterator(block);
+        Iterator<TableIterator.TableEntry<LSMTestKey, byte[]>> iterator = reader.getPairIterator(block);
         int elemCount = 0;
         random = new Random(1); // reinitialize the random number generator
-        while(iterator.hasNext()){
-            SSTableReader.Pair<LSMTestKey> pair = iterator.next();
-            Assertions.assertEquals(new LSMTestKey(elemCount++), pair.getK());
+        while (iterator.hasNext()) {
+            TableIterator.TableEntry<LSMTestKey, byte[]> entry = iterator.next();
+            Assertions.assertEquals(new LSMTestKey(elemCount++), entry.getKey());
             random.nextBytes(payload);
-            Assertions.assertArrayEquals(payload, pair.getData());
+            Assertions.assertArrayEquals(payload, entry.getValue());
         }
         Assertions.assertEquals(ELEM_COUNT, elemCount);
     }

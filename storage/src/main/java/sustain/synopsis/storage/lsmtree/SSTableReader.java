@@ -21,35 +21,6 @@ import static sustain.synopsis.storage.lsmtree.Util.readFully;
  */
 public class SSTableReader<K extends Comparable<K> & StreamSerializable> {
 
-    /**
-     * Helper class to pack a key and the serialized value
-     *
-     * @param <K> Type of the key during storage
-     */
-    public static class Pair<K> {
-        /**
-         * Storage key
-         */
-        private final K k;
-        /**
-         * Serialized value
-         */
-        private final byte[] data;
-
-        public Pair(K k, byte[] data) {
-            this.k = k;
-            this.data = data;
-        }
-
-        public K getK() {
-            return k;
-        }
-
-        public byte[] getData() {
-            return data;
-        }
-    }
-
     private final Logger logger = Logger.getLogger(SSTableReader.class);
     private final Metadata<K> metadata;
     private final Class<K> clazz;
@@ -62,11 +33,12 @@ public class SSTableReader<K extends Comparable<K> & StreamSerializable> {
 
     /**
      * Returns an iterator of key and serialized value pairs
+     *
      * @param key corresponding to the the offset - the block starts with the entry with this key
-     * @return An {@link Iterator<Pair>} of the block data
+     * @return An {@link Iterator<sustain.synopsis.storage.lsmtree.TableIterator.TableEntry>} of the block data
      * @throws IOException Error reading from disk
      */
-    public Iterator<Pair<K>> readBlock(K key) throws IOException {
+    public Iterator<TableIterator.TableEntry<K, byte[]>> readBlock(K key) throws IOException {
         Integer offset = metadata.getBlockIndex().get(key);
         if (offset == null) {
             throw new IOException("Invalid offset: " + offset + ", available range: " + metadata.getBlockIndex().firstEntry().getValue() + ", " + metadata.getBlockIndex().lastEntry().getValue());
@@ -77,23 +49,23 @@ public class SSTableReader<K extends Comparable<K> & StreamSerializable> {
         return getPairIterator(data);
     }
 
-    Iterator<Pair<K>> getPairIterator(byte[] data) {
+    Iterator<TableIterator.TableEntry<K, byte[]>> getPairIterator(byte[] data) {
         ByteArrayInputStream bais = new ByteArrayInputStream(data);
         DataInputStream dis = new DataInputStream(bais);
-        return new Iterator<Pair<K>>() {
+        return new Iterator<TableIterator.TableEntry<K, byte[]>>() {
             @Override
             public boolean hasNext() {
                 return bais.available() > 0;
             }
 
             @Override
-            public Pair<K> next() {
+            public TableIterator.TableEntry<K, byte[]> next() {
                 try {
                     K key = clazz.newInstance();
                     key.deserialize(dis);
                     byte[] value = new byte[dis.readInt()];
                     dis.readFully(value);
-                    return new Pair<>(key, value);
+                    return new TableIterator.TableEntry<>(key, value);
                 } catch (InstantiationException | IllegalAccessException e) {
                     logger.error("Reflection error when creating instace of " + clazz.getName(), e);
                 } catch (IOException e) {

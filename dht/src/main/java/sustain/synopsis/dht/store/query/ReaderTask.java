@@ -63,16 +63,15 @@ public class ReaderTask implements Runnable {
         SSTableReader<StrandStorageKey> reader = new SSTableReader<>(matchedSSTable.getMetadata(),
                 StrandStorageKey.class);
         for (StrandStorageKey firstKey : matchingBlocks) {
-            readBlock(reader, firstKey, matchedSSTable.getMatchedIntervals());
+            sendStrandsAsBatches(readBlock(reader, firstKey, matchedSSTable.getMatchedIntervals()));
         }
     }
 
-    private void readBlock(SSTableReader<StrandStorageKey> reader, StrandStorageKey firstKey,
-                           List<Interval> intervals) throws IOException {
+    List<TableIterator.TableEntry<StrandStorageKey, byte[]>> readBlock(SSTableReader<StrandStorageKey> reader
+            , StrandStorageKey firstKey, List<Interval> intervals) throws IOException {
         // read the block data and filter individual strands again
-        List<TableIterator.TableEntry<StrandStorageKey, byte[]>> entries =
-                StreamSupport.stream(Spliterators.spliteratorUnknownSize(reader.readBlock(firstKey),
-                        Spliterator.ORDERED), false).filter(entry -> {
+        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(reader.readBlock(firstKey),
+                Spliterator.ORDERED), false).filter(entry -> {
             boolean include = false;
             Interval scope = new Interval(entry.getKey().getStartTS(), entry.getKey().getEndTS());
             for (Interval interval : intervals) {
@@ -84,7 +83,6 @@ public class ReaderTask implements Runnable {
             }
             return include;
         }).collect(Collectors.toList());
-        sendStrandsAsBatches(entries);
     }
 
     void sendStrandsAsBatches(List<TableIterator.TableEntry<StrandStorageKey, byte[]>> entries) {

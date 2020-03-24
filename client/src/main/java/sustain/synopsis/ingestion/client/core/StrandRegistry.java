@@ -23,17 +23,23 @@ import java.util.*;
 public class StrandRegistry {
     private final Logger logger = Logger.getLogger(StrandRegistry.class);
     private final StrandPublisher publisher;
-    private final Map<String, Strand> registry = new HashMap<>();
+    private final Map<String, Strand> strandKeyMap = new HashMap<>();
     private final LRUCache<Strand> lruCache = new LRUCache<>();
-
-    private final int publishAtCacheSize = 100000;
-    private final int numToPublish = 100;
+    private final int cacheSize;
+    private final int publishBatchSize;
 
     private long totalPublishedStrandCount = 0;
 
-
     public StrandRegistry(StrandPublisher publisher) {
         this.publisher = publisher;
+        this.cacheSize = 10000;
+        this.publishBatchSize = 100;
+    }
+
+    public StrandRegistry(StrandPublisher publisher, int cacheSize, int publishBatchSize) {
+        this.publisher = publisher;
+        this.cacheSize = cacheSize;
+        this.publishBatchSize = publishBatchSize;
     }
 
     /**
@@ -42,27 +48,27 @@ public class StrandRegistry {
      * @return Current number of strands in the registry
      */
     public long add(Strand strand) {
-        Strand existing = registry.get(strand.getKey());
+        Strand existing = strandKeyMap.get(strand.getKey());
         if (existing != null) {
             existing.merge(strand);
             lruCache.use(existing);
         } else {
-            registry.put(strand.getKey(), strand);
+            strandKeyMap.put(strand.getKey(), strand);
             lruCache.use(strand);
         }
 
         if (logger.isTraceEnabled()) {
             logger.trace("[" + Thread.currentThread().getName() + "] Strand is added. Key: " + strand.getKey() +
-                    ", " + "Registry size: " + registry.size() + ", " + "Merged: " + (existing == null ? "false" :
+                    ", " + "Registry size: " + strandKeyMap.size() + ", " + "Merged: " + (existing == null ? "false" :
                     "true"));
         }
 
-        if (lruCache.size() >= publishAtCacheSize) {
-            Collection<Strand> strands = lruCache.evictLRU(numToPublish);
-            strands.forEach(s -> registry.remove(s.getKey()));
+        if (lruCache.size() >= cacheSize) {
+            Collection<Strand> strands = lruCache.evictLRU(publishBatchSize);
+            strands.forEach(s -> strandKeyMap.remove(s.getKey()));
             publish(strands);
         }
-        return registry.size();
+        return strandKeyMap.size();
     }
 
     public long getTotalPublishedStrandCount() {
@@ -79,9 +85,16 @@ public class StrandRegistry {
      * @return Total number of strands ingested during the session.
      */
     public long terminateSession() {
+        List<Strand> strands = lruCache.evictAll();
+        for (int i = 0; i < lruCache.size(); i+= publishBatchSize) {
+            int endIdx = Math.min(i + publishBatchSize, lruCache.size());
+            publish(strands.subList(i, endIdx));
+        }
+
         publish(lruCache.evictAll());
         logger.info("[" + Thread.currentThread().getName() + "] Publishing all strands. Published strand count: " +
-                registry.size());
+                strandKeyMap.size());
+
         return totalPublishedStrandCount;
     }
 

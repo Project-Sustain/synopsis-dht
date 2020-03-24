@@ -43,12 +43,10 @@ public class ReaderTask implements Runnable {
     public void run() {
         try {
             List<MatchedSSTable> matchingSSTables = entityStore.temporalQuery(queryRequest.getTemporalScope());
-            if (matchingSSTables.isEmpty()) {
-                container.complete();
-                return;
-            }
-            for (MatchedSSTable matchedSSTable : matchingSSTables) {
-                readSSTable(matchedSSTable);
+            if (!matchingSSTables.isEmpty()) {
+                for (MatchedSSTable matchedSSTable : matchingSSTables) {
+                    readSSTable(matchedSSTable);
+                }
             }
         } catch (Throwable e) { // not letting the thread get killed.
             logger.error(e.getMessage(), e);
@@ -57,7 +55,7 @@ public class ReaderTask implements Runnable {
         }
     }
 
-    private void readSSTable(MatchedSSTable matchedSSTable) throws IOException {
+    void readSSTable(MatchedSSTable matchedSSTable) throws IOException {
         Set<StrandStorageKey> matchingBlocks =
                 matchedSSTable.getMatchedIntervals().stream().flatMap(interval -> QueryUtil.temporalLookup(matchedSSTable.getMetadata().getBlockIndex(), interval.getFrom(), interval.getTo(), false).keySet().stream()).collect(Collectors.toSet());
         SSTableReader<StrandStorageKey> reader = new SSTableReader<>(matchedSSTable.getMetadata(),
@@ -67,8 +65,9 @@ public class ReaderTask implements Runnable {
         }
     }
 
-    List<TableIterator.TableEntry<StrandStorageKey, byte[]>> readBlock(SSTableReader<StrandStorageKey> reader
-            , StrandStorageKey firstKey, List<Interval> intervals) throws IOException {
+    List<TableIterator.TableEntry<StrandStorageKey, byte[]>> readBlock(SSTableReader<StrandStorageKey> reader,
+                                                                       StrandStorageKey firstKey,
+                                                                       List<Interval> intervals) throws IOException {
         // read the block data and filter individual strands again
         return StreamSupport.stream(Spliterators.spliteratorUnknownSize(reader.readBlock(firstKey),
                 Spliterator.ORDERED), false).filter(entry -> {
@@ -93,7 +92,7 @@ public class ReaderTask implements Runnable {
                     MatchingStrand.newBuilder().setSpatialScope(entityStore.getEntityId()).setFromTS(entry.getKey().getStartTS()).setToTS(entry.getKey().getEndTS()).setStrand(ByteString.copyFrom(entry.getValue())).build();
             response = response.toBuilder().addStrands(strand).buildPartial();
             payloadSize += response.getSerializedSize();
-            if (payloadSize > batchSize) {
+            if (payloadSize >= batchSize) {
                 container.write(response.toBuilder().build());
                 response = TargetQueryResponse.newBuilder().buildPartial();
                 payloadSize = 0;

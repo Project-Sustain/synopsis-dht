@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
 
-public class LSMTestValue implements Serializable, Mergeable<LSMTestValue> {
+public class LSMTestValue implements StreamSerializable, Mergeable<LSMTestValue> {
     private byte[] val;
 
     LSMTestValue() {

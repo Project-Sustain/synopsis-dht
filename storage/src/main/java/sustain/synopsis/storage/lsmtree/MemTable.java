@@ -11,7 +11,7 @@ import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 
-public class MemTable<K extends Comparable<K> & Serializable, V extends Serializable & Mergeable<V>> {
+public class MemTable<K extends Comparable<K> & StreamSerializable, V extends StreamSerializable & Mergeable<V>> {
 
     private static final int DEFAULT_MAX_ENTRY_COUNT = 100;
     private Logger logger = Logger.getLogger(MemTable.class);

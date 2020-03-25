@@ -5,7 +5,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Objects;
 
-public class LSMTestKey implements Serializable, Comparable<LSMTestKey> {
+public class LSMTestKey implements StreamSerializable, Comparable<LSMTestKey> {
 
     private int key;
 

@@ -4,7 +4,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-public interface Serializable {
+public interface StreamSerializable {
     void serialize(DataOutputStream dataOutputStream) throws IOException;
     void deserialize(DataInputStream dataInputStream) throws IOException;
 }

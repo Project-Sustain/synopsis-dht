@@ -6,9 +6,10 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.TreeMap;
 
-public class Metadata<K extends Comparable<K> & Serializable> {
+public class Metadata<K extends Comparable<K> & StreamSerializable> {
     private final Logger logger = Logger.getLogger(Metadata.class);
     /**
      * Minimum key of a SSTable
@@ -23,12 +24,12 @@ public class Metadata<K extends Comparable<K> & Serializable> {
     /**
      * Index of the offset for each block and the first key of the block
      */
-    private Map<K, Integer> blockIndex = new TreeMap<>();
+    private NavigableMap<K, Integer> blockIndex = new TreeMap<>();
 
     /**
      * Checksums for each block
      */
-    private Map<K, byte[]> checksums = new TreeMap<>();
+    private NavigableMap<K, byte[]> checksums = new TreeMap<>();
 
     /**
      * On-disk storage path
@@ -71,7 +72,7 @@ public class Metadata<K extends Comparable<K> & Serializable> {
         return max;
     }
 
-    public Map<K, Integer> getBlockIndex() {
+    public NavigableMap<K, Integer> getBlockIndex() {
         return blockIndex;
     }
 

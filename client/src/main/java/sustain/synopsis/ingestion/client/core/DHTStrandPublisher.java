@@ -13,6 +13,7 @@ import sustain.synopsis.dht.store.services.IngestionResponse;
 import sustain.synopsis.dht.store.services.IngestionServiceGrpc;
 import sustain.synopsis.dht.store.services.IngestionServiceGrpc.IngestionServiceFutureStub;
 import sustain.synopsis.dht.store.services.NodeMapping;
+import sustain.synopsis.sketch.serialization.SerializationOutputStream;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -43,9 +44,9 @@ public class DHTStrandPublisher implements StrandPublisher {
     }
 
     // https://stackoverflow.com/a/30968827
-    static byte[] serializeToBytes(Object o) throws IOException {
-        try (ByteArrayOutputStream bos = new ByteArrayOutputStream(); ObjectOutput out = new ObjectOutputStream(bos)) {
-            out.writeObject(o);
+    static byte[] serializeToBytes(Strand s) throws IOException {
+        try (ByteArrayOutputStream bos = new ByteArrayOutputStream(); SerializationOutputStream sos = new SerializationOutputStream(new ObjectOutputStream(bos))) {
+            s.serialize(sos);
             return bos.toByteArray();
         }
     }
@@ -72,7 +73,7 @@ public class DHTStrandPublisher implements StrandPublisher {
         return strandsForStub;
     }
 
-    sustain.synopsis.dht.store.services.Strand convertStrand(Strand strand) {
+    static sustain.synopsis.dht.store.services.Strand convertStrand(Strand strand) {
         try {
             return sustain.synopsis.dht.store.services.Strand.newBuilder()
                     .setEntityId(strand.getGeohash())

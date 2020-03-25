@@ -4,12 +4,14 @@ import sustain.synopsis.dht.store.StorageException;
 import sustain.synopsis.dht.store.StrandStorageKey;
 import sustain.synopsis.dht.store.StrandStorageValue;
 import sustain.synopsis.dht.store.node.NodeStore;
-import sustain.synopsis.dht.store.services.*;
+import sustain.synopsis.dht.store.services.IngestionRequest;
+import sustain.synopsis.dht.store.services.IngestionResponse;
+import sustain.synopsis.dht.store.services.NodeMapping;
+import sustain.synopsis.dht.store.services.Strand;
 import sustain.synopsis.dht.store.workers.WriterPool;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -18,15 +20,9 @@ public class IngestionRequestDispatcher {
     private final WriterPool writerPool;
     private final NodeStore nodeStore;
 
-    public IngestionRequestDispatcher() throws StorageException {
-        this(new NodeStore(), Context.getInstance().getNodeConfig().getWriterPoolSize());
-    }
-
-    // used for unit testing with injected mocks
-    public IngestionRequestDispatcher(NodeStore nodeStore, int writerPoolSize) throws StorageException {
+    public IngestionRequestDispatcher(NodeStore nodeStore) {
         this.nodeStore = nodeStore;
-        nodeStore.init();
-        this.writerPool = new WriterPool(writerPoolSize);
+        this.writerPool = new WriterPool(Context.getInstance().getNodeConfig().getWriterPoolSize());
     }
 
     public CompletableFuture<NodeMapping> getNodeMappingCompletableFuture(String datasetId, long sessionId, Strand strand) {

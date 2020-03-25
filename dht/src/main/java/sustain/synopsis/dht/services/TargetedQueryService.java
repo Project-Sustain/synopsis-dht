@@ -9,13 +9,13 @@ import sustain.synopsis.dht.store.services.TargetQueryResponse;
 import sustain.synopsis.dht.store.services.TargetedQueryServiceGrpc;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class TargetedQueryService extends TargetedQueryServiceGrpc.TargetedQueryServiceImplBase {
     private final QueryCoordinator coordinator;
 
-    public TargetedQueryService(NodeStore nodeStore, ExecutorService readers) {
-        this.coordinator = new QueryCoordinator(nodeStore, readers);
+    public TargetedQueryService(NodeStore nodeStore) {
+        this.coordinator = new QueryCoordinator(nodeStore, Executors.newCachedThreadPool());
     }
 
     @Override

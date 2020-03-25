@@ -133,19 +133,4 @@ public class SSTableWriter<K extends Comparable<K> & StreamSerializable, V exten
             metadata.addChecksum(firstKey, checksum);
         }
     }
-
-    /*public void deserialize(DataInputStream inputStream, Class<K> keyClazz, Class<V> valueClazz) throws IOException {
-        int entryCount = inputStream.readInt();
-        for (int i = 0; i < entryCount; i++) {
-            try {
-                K key = keyClazz.newInstance();
-                key.deserialize(inputStream);
-                V val = valueClazz.newInstance();
-                val.deserialize(inputStream);
-                elements.put(key, val);
-            } catch (InstantiationException | IllegalAccessException e) {
-                e.printStackTrace();
-            }
-        }
-    }*/
 }

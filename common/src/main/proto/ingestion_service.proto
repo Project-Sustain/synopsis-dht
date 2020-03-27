@@ -5,6 +5,7 @@ option java_package = "sustain.synopsis.dht.store.services";
 
 service IngestionService {
     rpc Ingest (IngestionRequest) returns (IngestionResponse);
+    rpc TerminateSession(TerminateSessionRequest) returns (TerminateSessionResponse);
 }
 
 message Strand {
@@ -31,3 +32,14 @@ message IngestionResponse {
     bool status = 3;
     repeated NodeMapping mapping = 4;
 }
+
+message TerminateSessionRequest{
+    string datasetId = 1;
+    int64 sessionId = 2;
+}
+
+message TerminateSessionResponse{
+    bool status = 1;
+}
+
+

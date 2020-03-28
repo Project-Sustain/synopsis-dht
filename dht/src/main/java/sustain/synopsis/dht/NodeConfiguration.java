@@ -94,7 +94,7 @@ public class NodeConfiguration {
     }
 
     public void setMetadataStoreDir(String metadataStoreDir) {
-        this.metadataStoreDir = metadataStoreDir;
+        this.metadataStoreDir = metadataStoreDir.replace(HOSTNAME_PLACEHOLDER, hostname);
     }
 
     public int getWriterPoolSize() {

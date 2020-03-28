@@ -41,8 +41,14 @@ public class ReaderTask implements Runnable {
 
     @Override
     public void run() {
+        if (logger.isDebugEnabled()) {
+            logger.debug("Reader task started for entity: " + entityStore.getEntityId());
+        }
         try {
             List<MatchedSSTable> matchingSSTables = entityStore.temporalQuery(queryRequest.getTemporalScope());
+            if (logger.isDebugEnabled()) {
+                logger.debug("Number of matching SSTables" + matchingSSTables.size());
+            }
             if (!matchingSSTables.isEmpty()) {
                 for (MatchedSSTable matchedSSTable : matchingSSTables) {
                     readSSTable(matchedSSTable);
@@ -56,6 +62,7 @@ public class ReaderTask implements Runnable {
     }
 
     void readSSTable(MatchedSSTable matchedSSTable) throws IOException {
+        long t1 = System.currentTimeMillis();
         Set<StrandStorageKey> matchingBlocks =
                 matchedSSTable.getMatchedIntervals().stream().flatMap(interval -> QueryUtil.temporalLookup(matchedSSTable.getMetadata().getBlockIndex(), interval.getFrom(), interval.getTo(), false).keySet().stream()).collect(Collectors.toSet());
         SSTableReader<StrandStorageKey> reader = new SSTableReader<>(matchedSSTable.getMetadata(),
@@ -63,14 +70,21 @@ public class ReaderTask implements Runnable {
         for (StrandStorageKey firstKey : matchingBlocks) {
             sendStrandsAsBatches(readBlock(reader, firstKey, matchedSSTable.getMatchedIntervals()));
         }
+        long t2 = System.currentTimeMillis();
+        if (logger.isDebugEnabled()) {
+            logger.debug("Time spent on processing the SSTable (" + matchedSSTable.getMetadata().getPath() + "): (ms)"
+                    + (t2 - t1));
+        }
     }
 
     List<TableIterator.TableEntry<StrandStorageKey, byte[]>> readBlock(SSTableReader<StrandStorageKey> reader,
                                                                        StrandStorageKey firstKey,
                                                                        List<Interval> intervals) throws IOException {
         // read the block data and filter individual strands again
-        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(reader.readBlock(firstKey),
-                Spliterator.ORDERED), false).filter(entry -> {
+        long t1 = System.currentTimeMillis();
+        List<TableIterator.TableEntry<StrandStorageKey, byte[]>> result =
+                StreamSupport.stream(Spliterators.spliteratorUnknownSize(reader.readBlock(firstKey),
+                        Spliterator.ORDERED), false).filter(entry -> {
             boolean include = false;
             Interval scope = new Interval(entry.getKey().getStartTS(), entry.getKey().getEndTS());
             for (Interval interval : intervals) {
@@ -82,9 +96,15 @@ public class ReaderTask implements Runnable {
             }
             return include;
         }).collect(Collectors.toList());
+        long t2 = System.currentTimeMillis();
+        if (logger.isDebugEnabled()) {
+            logger.debug("Time spent on reading a block(ms): " + (t2 - t1));
+        }
+        return result;
     }
 
     void sendStrandsAsBatches(List<TableIterator.TableEntry<StrandStorageKey, byte[]>> entries) {
+        long t1 = System.currentTimeMillis();
         TargetQueryResponse response = TargetQueryResponse.newBuilder().buildPartial();
         int payloadSize = 0;
         for (TableIterator.TableEntry<StrandStorageKey, byte[]> entry : entries) {
@@ -100,6 +120,10 @@ public class ReaderTask implements Runnable {
         }
         if (payloadSize > 0) {
             container.write(response.toBuilder().build());
+        }
+        long t2 = System.currentTimeMillis();
+        if (logger.isDebugEnabled()) {
+            logger.debug("Time spent on sending the response back: " + (t2 - t1));
         }
     }
 }

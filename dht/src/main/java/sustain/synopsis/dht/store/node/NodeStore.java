@@ -10,12 +10,14 @@ import sustain.synopsis.dht.store.entity.EntityStore;
 import sustain.synopsis.dht.store.query.QueryException;
 import sustain.synopsis.dht.store.services.Predicate;
 import sustain.synopsis.dht.store.services.TargetQueryRequest;
+import sustain.synopsis.dht.store.workers.WriterPool;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -180,7 +182,7 @@ public class NodeStore {
                     entityStoreMap.get(datasetId).put(entityId, entityStore);
                     if (logger.isDebugEnabled()) {
                         logger.debug("Added and initialized a new entity store. Dataset id: " + datasetId + ", " +
-                                "entity id: " + entityId);
+                                "entity id: " + entityId + ", total entity count: " + entityStoreMap.get(datasetId).size());
                     }
                 }
             } catch (StorageException e) {
@@ -197,6 +199,12 @@ public class NodeStore {
         entityStore.store(new IngestionSession(userId, sessionCreationTs, sessionId), storageKey, storageValue);
     }
 
+
+    public List<CompletableFuture<Boolean>> endSession(String datasetId, long sessionId, WriterPool writers) {
+        SessionValidator.SessionValidationResponse response = validatedSessions.get(sessionId);
+        return entityStoreMap.get(datasetId).keySet().stream().map(entityId -> CompletableFuture.supplyAsync(() -> endSession(datasetId, entityId, response.userId, sessionId, response.sessionStartTS), writers.getExecutor(entityId.hashCode()))).collect(Collectors.toList());
+    }
+
     /**
      * Terminate session. Informs all entity stores of the corresponding dataset to terminate their sessions.
      * Terminating a session makes the data ingested during that session available for the subsequent queries.
@@ -206,21 +214,22 @@ public class NodeStore {
      * @param sessionId      Session id
      * @param sessionStartTS session start timestamp
      */
-    public void endSession(String datasetId, String user, long sessionId, long sessionStartTS) {
+    public boolean endSession(String datasetId, String entityId, String user, long sessionId, long sessionStartTS) {
         // Acknowledge every entity store of the dataset
         // There may be sessions that did not receive any data for this session - this case is handled by the entity
         // store.
-        entityStoreMap.get(datasetId).forEach((entityId, entityStore) -> {
-            try {
-                // we use the IngestionSession constructor with the session id here. It is used only for
-                // looking up a session.
-                entityStore.endSession(new IngestionSession(user, sessionId, sessionStartTS));
-            } catch (StorageException | IOException e) {
-                logger.error("Error terminating session on the entity store. Dataset Id: " + datasetId + ", session " + "id:" + sessionId + ", entity id: " + entityId);
+        try {
+            // we use the IngestionSession constructor with the session id here. It is used only for
+            // looking up a session.
+            if (logger.isDebugEnabled()) {
+                logger.debug("Processing end session request. Dataset id: " + datasetId + ", entity id:" + entityId + ", session id: " + sessionId);
             }
-        });
-        if (logger.isDebugEnabled()) {
-            logger.debug("Processed end session message. Dataset id: " + datasetId + ", session id: " + sessionId);
+            return entityStoreMap.get(datasetId).get(entityId).endSession(new IngestionSession(user, sessionStartTS,
+                    sessionId));
+        } catch (StorageException | IOException e) {
+            logger.error("Error terminating session on the entity store. Dataset Id: " + datasetId + ", session " +
+                    "id:" + sessionId + ", entity id: " + entityId);
+            return false;
         }
     }
 

@@ -120,7 +120,7 @@ public class EntityStoreTest {
         entityStore.store(session, key3, value3);
 
         // end session
-        entityStore.endSession(session);
+        Assertions.assertTrue(entityStore.endSession(session));
         // at this point, there should be two calls to the disk_manager#allcate method
         Mockito.verify(diskManagerMock, Mockito.times(2)).allocate(Mockito.anyLong());
         Mockito.verify(entityStoreJournalMock, Mockito.times(2)).addSerializedSSTable(Mockito.any(), Mockito.any());
@@ -151,7 +151,7 @@ public class EntityStoreTest {
                 1391216400100L, 1.0, 2.0)));
         entityStore.store(session, key3, value3);
         // end session
-        entityStore.endSession(session);
+        Assertions.assertTrue(entityStore.endSession(session));
 
         // Simulate a node restart
         EntityStore restartedEntityStore = new EntityStore("noaa:9xj", metadataDir.getAbsolutePath(), 200, 50,
@@ -176,7 +176,7 @@ public class EntityStoreTest {
         assertEquals(2, restartedEntityStore.queryableMetadata.size());
         assertEquals(1, restartedEntityStore.activeSessions.size());
         assertEquals(1, restartedEntityStore.activeMetadata.size());
-        restartedEntityStore.endSession(session);
+        Assertions.assertTrue(restartedEntityStore.endSession(session));
         assertEquals(3, restartedEntityStore.queryableMetadata.size());
     }
 
@@ -213,7 +213,7 @@ public class EntityStoreTest {
         StrandStorageValue value3 = new StrandStorageValue(serializeStrand(createStrand("9xj", 2000, 2500, 1.0, 2.0)));
         entityStore.store(session, key3, value3);
         // end session
-        entityStore.endSession(session);
+        Assertions.assertTrue(entityStore.endSession(session));
         Assertions.assertEquals(2, entityStore.queryableMetadata.size());
 
         results = entityStore.temporalQuery(exp);

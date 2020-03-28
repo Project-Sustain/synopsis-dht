@@ -137,24 +137,40 @@ public class EntityStore {
         memTable.clear();
     }
 
-    public void endSession(IngestionSession session) throws StorageException, IOException {
+    public boolean endSession(IngestionSession session) throws StorageException, IOException {
         if (!activeSessions.containsKey(session)) {
-            return;
+            if(logger.isDebugEnabled()){
+                logger.debug("Unable to end the session. Invalid session id: " + session.getSessionId());
+            }
+            return false;
         }
         MemTable<StrandStorageKey, StrandStorageValue> memTable = activeSessions.get(session);
         if (memTable.getEntryCount() > 0) {
             purgeMemTable(session, memTable);
+            if(logger.isDebugEnabled()){
+                logger.debug("Ending session: " + session.getSessionId() + ", purged mem table.");
+            }
         }
         entityStoreJournal.endSession(session);
+        if(logger.isDebugEnabled()){
+            logger.debug("Ending session: " + session.getSessionId() + ", updated commit log.");
+        }
         // there can be multiple concurrent reader threads accessing the queryiable data
         try {
             lock.writeLock().lock();
+            int beforeSize = queryableMetadata.size();
             queryableMetadata.putAll(activeMetadata.get(session).stream().collect(Collectors.toMap((metadata) -> new StrandStorageKey(metadata.getMin().getStartTS(), metadata.getMax().getEndTS()), Function.identity())));
+            int afterSize = queryableMetadata.size();
+            if(logger.isDebugEnabled()){
+                logger.debug("Added the SSTables into queryable metadata. Before size: " + beforeSize + ", after " +
+                        "size: " + afterSize);
+            }
         } finally {
             lock.writeLock().unlock();
         }
         activeSessions.remove(session);
         activeMetadata.remove(session);
+        return true;
     }
 
     // we inject a disk manager instance for unit testing purposes
@@ -196,11 +212,17 @@ public class EntityStore {
         try {
             lock.readLock().lock();
             if (queryableMetadata.isEmpty()) { // there are no completed SSTables yet
+                if(logger.isDebugEnabled()){
+                    logger.debug("There are queryable SSTables for the entity: "+ entityId);
+                }
                 return new ArrayList<>();
             }
             Map<String, MatchedSSTable> matchingMetadata = new HashMap<>();
             List<Interval> matchingIntervals = QueryUtil.evaluateTemporalExpression(temporalExpression,
                     new Interval(queryableMetadata.firstKey().getStartTS(), queryableMetadata.lastKey().getEndTS()));
+            if(logger.isDebugEnabled()){
+                logger.debug("Number of matching intervals: " + matchingIntervals.size());
+            }
             for (Interval interval : matchingIntervals) {
                 QueryUtil.temporalLookup(queryableMetadata, interval.getFrom(), interval.getTo(), false).values().forEach((metadata) -> {
                     matchingMetadata.putIfAbsent(metadata.getPath(), new MatchedSSTable(metadata));

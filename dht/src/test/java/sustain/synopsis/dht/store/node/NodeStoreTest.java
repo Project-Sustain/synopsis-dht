@@ -109,7 +109,9 @@ public class NodeStoreTest {
         assertTrue(nodeStore.entityStoreMap.containsKey("dataset_2"));
 
         // test end_session
-        nodeStore.endSession("dataset_2", "bob", 1000L, 123456L);
+        nodeStore.endSession("dataset_1", "entity_1", "bob", 1000L, 123456L);
+        nodeStore.endSession("dataset_1", "entity_2", "bob", 1000L, 123456L);
+        nodeStore.endSession("dataset_2", "entity_2", "bob", 1000L, 123456L);
     }
 
     @Test
@@ -140,7 +142,9 @@ public class NodeStoreTest {
         nodeStore.store("bob", "dataset_2", "entity_2", 1001L, 123456L, new StrandStorageKey(1391216400100L,
                 1391216400200L), new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400100L,
                 1391216400200L, 1.0, 2.0))));
-        nodeStore.endSession("dataset_1", "bob", 1000L, 123456L);
+        nodeStore.endSession("dataset_1", "entity_1", "bob", 1000L, 123456L);
+        nodeStore.endSession("dataset_1", "entity_2", "bob", 1000L, 123456L);
+        nodeStore.endSession("dataset_2", "entity_2", "bob", 1000L, 123456L);
 
 
         // simulate a restarted node store by starting a NodeStore by pointing to the same commit log
@@ -302,13 +306,16 @@ public class NodeStoreTest {
         nodeStore.store("bob", "dataset_1", "8x", 1000L, 123456L, new StrandStorageKey(1391216400100L,
                 1391216400200L), new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400100L,
                 1391216400200L, 1.0, 2.0))));
-        nodeStore.endSession("dataset_1", "bob", 1000L, 123456L);
+        nodeStore.endSession("dataset_1","9xi", "bob", 1000L, 123456L);
+        nodeStore.endSession("dataset_1","9xi5", "bob", 1000L, 123456L);
+        nodeStore.endSession("dataset_1","9x", "bob", 1000L, 123456L);
+        nodeStore.endSession("dataset_1","8x", "bob", 1000L, 123456L);
 
         // dataset_2
         nodeStore.store("bob", "dataset_2", "8qr", 1001L, 123456L, new StrandStorageKey(1391216400000L,
                 1391216400100L), new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L,
                 1391216400100L, 1.0, 2.0))));
-        nodeStore.endSession("dataset_2", "bob", 1001L, 123456L);
+        nodeStore.endSession("dataset_2","8qr", "bob", 1001L, 123456L);
         return nodeStore;
     }
 }

@@ -15,7 +15,8 @@ public class TargetedQueryService extends TargetedQueryServiceGrpc.TargetedQuery
     private final QueryCoordinator coordinator;
 
     public TargetedQueryService(NodeStore nodeStore) {
-        this.coordinator = new QueryCoordinator(nodeStore, Executors.newCachedThreadPool());
+        this.coordinator = new QueryCoordinator(nodeStore,
+                Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2));
     }
 
     @Override

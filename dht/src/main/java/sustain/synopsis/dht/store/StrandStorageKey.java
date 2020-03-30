@@ -1,6 +1,6 @@
 package sustain.synopsis.dht.store;
 
-import sustain.synopsis.storage.lsmtree.Serializable;
+import sustain.synopsis.storage.lsmtree.StreamSerializable;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -12,7 +12,7 @@ import java.util.Objects;
  * We only use the temporal attributes to construct a key, because the data is stored
  * in the temporal order for a given entity.
  */
-public class StrandStorageKey implements Comparable<StrandStorageKey>, Serializable {
+public class StrandStorageKey implements Comparable<StrandStorageKey>, StreamSerializable {
 
     private long startTS;
     private long endTS;
@@ -58,5 +58,13 @@ public class StrandStorageKey implements Comparable<StrandStorageKey>, Serializa
 
     public String toString(){
         return startTS + "_" + endTS;
+    }
+
+    public long getStartTS() {
+        return startTS;
+    }
+
+    public long getEndTS() {
+        return endTS;
     }
 }

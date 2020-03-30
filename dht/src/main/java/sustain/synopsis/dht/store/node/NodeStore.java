@@ -7,13 +7,19 @@ import sustain.synopsis.dht.Util;
 import sustain.synopsis.dht.journal.Logger;
 import sustain.synopsis.dht.store.*;
 import sustain.synopsis.dht.store.entity.EntityStore;
+import sustain.synopsis.dht.store.query.QueryException;
+import sustain.synopsis.dht.store.services.Predicate;
+import sustain.synopsis.dht.store.services.TargetQueryRequest;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 
 /**
  * Orchestrates data storage within a storage node. Keeps track of various entity stores, organized by the dataset.
@@ -221,5 +227,28 @@ public class NodeStore {
 
     static String getRootJournalFileName(String rootJournalLoc) {
         return rootJournalLoc + File.separator + Util.getHostname() + "_root.slog";
+    }
+
+    /**
+     * Get the list of matching entity stores for a given query.
+     *
+     * @param queryRequest Query request
+     * @return List of matching entity stores
+     */
+    public Set<EntityStore> getMatchingEntityStores(TargetQueryRequest queryRequest) throws QueryException {
+        try {
+            lock.readLock().lock();
+            String dataset = queryRequest.getDataset();
+            if (!entityStoreMap.containsKey(dataset)) {
+                throw new QueryException("Non existing dataset: " + dataset);
+            }
+            Trie<String, EntityStore> entityStores = entityStoreMap.get(dataset);
+            List<Predicate> spatialPredicates = queryRequest.getSpatialScopeList();
+            // Currently we expect the spatial scopes to be available as geohash prefix
+            return spatialPredicates.stream().map(Predicate::getStringValue).map(entityStores::prefixMap).
+                    flatMap(sortedMap -> sortedMap.values().stream()).collect(Collectors.toSet());
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 }

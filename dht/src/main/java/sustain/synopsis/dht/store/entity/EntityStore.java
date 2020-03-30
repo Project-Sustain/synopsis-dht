@@ -2,6 +2,11 @@ package sustain.synopsis.dht.store.entity;
 
 import org.apache.log4j.Logger;
 import sustain.synopsis.dht.store.*;
+import sustain.synopsis.dht.store.query.Interval;
+import sustain.synopsis.dht.store.query.MatchedSSTable;
+import sustain.synopsis.dht.store.query.QueryException;
+import sustain.synopsis.dht.store.query.QueryUtil;
+import sustain.synopsis.dht.store.services.Expression;
 import sustain.synopsis.storage.lsmtree.ChecksumGenerator;
 import sustain.synopsis.storage.lsmtree.MemTable;
 import sustain.synopsis.storage.lsmtree.Metadata;
@@ -16,6 +21,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -41,10 +47,11 @@ public class EntityStore {
     /**
      * Queryiable metadata is accessed by both the reader threads and the writer threads
      */
-    List<Metadata<StrandStorageKey>> queryiableMetadata;
+    TreeMap<StrandStorageKey, Metadata<StrandStorageKey>> queryableMetadata;
     private ReentrantReadWriteLock lock;
 
-    public EntityStore(String entityId, String metadataDir, long memTableSize, long blockSize, DiskManager diskManager) {
+    public EntityStore(String entityId, String metadataDir, long memTableSize, long blockSize,
+                       DiskManager diskManager) {
         this(entityId, new EntityStoreJournal(entityId, metadataDir), memTableSize, blockSize, diskManager);
     }
 
@@ -58,7 +65,7 @@ public class EntityStore {
         this.compressor = new LZ4BlockCompressor();
         this.memTableSize = memTableSize;
         this.entityStoreJournal = entityStoreJournal;
-        this.queryiableMetadata = new ArrayList<>();
+        this.queryableMetadata = new TreeMap<>();
         this.sequenceId = new AtomicInteger(-1);
         this.lock = new ReentrantReadWriteLock();
         this.diskManager = diskManager;
@@ -74,8 +81,8 @@ public class EntityStore {
             }
             List<Metadata<StrandStorageKey>> metadataList = entityStoreJournal.getMetadata();
             this.sequenceId.set(entityStoreJournal.getSequenceId());
-            this.queryiableMetadata =
-                    metadataList.stream().filter(Metadata::isSessionComplete).collect(Collectors.toList());
+            this.queryableMetadata =
+                    metadataList.stream().filter(Metadata::isSessionComplete).collect(Collectors.toMap((metadata) -> new StrandStorageKey(metadata.getMin().getStartTS(), metadata.getMax().getEndTS()), Function.identity(), (o1, o2) -> o1, TreeMap::new));
             // todo: how to handle sessions  active during the node crash/shutdown?
             // todo: populate activeSessions and activeMetadata
         } catch (ChecksumGenerator.ChecksumError checksumError) {
@@ -142,7 +149,7 @@ public class EntityStore {
         // there can be multiple concurrent reader threads accessing the queryiable data
         try {
             lock.writeLock().lock();
-            queryiableMetadata.addAll(activeMetadata.get(session));
+            queryableMetadata.putAll(activeMetadata.get(session).stream().collect(Collectors.toMap((metadata) -> new StrandStorageKey(metadata.getMin().getStartTS(), metadata.getMax().getEndTS()), Function.identity())));
         } finally {
             lock.writeLock().unlock();
         }
@@ -153,7 +160,6 @@ public class EntityStore {
     // we inject a disk manager instance for unit testing purposes
     public void toSSTable(IngestionSession session, DiskManager diskManager, Metadata<StrandStorageKey> metadata) throws StorageException, IOException {
         MemTable<StrandStorageKey, StrandStorageValue> memTable = activeSessions.get(session);
-        //memTable.setReadOnly();
         String dir = diskManager.allocate(memTable.getEstimatedSize());
         String storagePath = getSSTableOutputPath(memTable.getFirstKey(), memTable.getLastKey(), dir, sequenceId.get());
         try (FileOutputStream fos = new FileOutputStream(storagePath); DataOutputStream dos =
@@ -175,7 +181,36 @@ public class EntityStore {
         return path + File.separator + entityId + "_" + firstKey + "_" + lastKey + "_" + seqId + ".sd";
     }
 
-    public String getJournalFilePath() {
-        return entityStoreJournal.getJournalFilePath();
+    public String getEntityId() {
+        return entityId;
+    }
+
+    /**
+     * Query the entity data for a given temporal expression
+     * @param temporalExpression Temporal constraint expressed as {@link Expression}
+     * @return List of matching SSTables and the corresponding time intervals - A given temporal expression
+     * can get mapped into multiple time intervals
+     * @throws QueryException Error during temporal expression evaluation
+     */
+    public List<MatchedSSTable> temporalQuery(Expression temporalExpression) throws QueryException {
+        try {
+            lock.readLock().lock();
+            if (queryableMetadata.isEmpty()) { // there are no completed SSTables yet
+                return new ArrayList<>();
+            }
+            Map<String, MatchedSSTable> matchingMetadata = new HashMap<>();
+            List<Interval> matchingIntervals = QueryUtil.evaluateTemporalExpression(temporalExpression,
+                    new Interval(queryableMetadata.firstKey().getStartTS(), queryableMetadata.lastKey().getEndTS()));
+            for (Interval interval : matchingIntervals) {
+                QueryUtil.temporalLookup(queryableMetadata, interval.getFrom(), interval.getTo(), false).values().forEach((metadata) -> {
+                    matchingMetadata.putIfAbsent(metadata.getPath(), new MatchedSSTable(metadata));
+                    MatchedSSTable matchedSSTable = matchingMetadata.get(metadata.getPath());
+                    matchedSSTable.addMatchedInterval(interval);
+                });
+            }
+            return new ArrayList<>(matchingMetadata.values());
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 }

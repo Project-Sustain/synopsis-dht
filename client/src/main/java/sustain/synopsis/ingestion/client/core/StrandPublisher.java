@@ -6,4 +6,6 @@ import java.util.Collection;
 
 public interface StrandPublisher {
     void publish(Collection<Strand> strands);
+
+    default void terminateSession(){};
 }

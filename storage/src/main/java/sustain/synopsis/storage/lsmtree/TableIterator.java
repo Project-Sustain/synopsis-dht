@@ -10,16 +10,16 @@ public interface TableIterator<K extends Comparable<K>, V> {
         private K key;
         private V value;
 
-        TableEntry(K key, V value) {
+        public TableEntry(K key, V value) {
             this.key = key;
             this.value = value;
         }
 
-        K getKey() {
+        public K getKey() {
             return key;
         }
 
-        V getValue() {
+        public V getValue() {
             return value;
         }
     }

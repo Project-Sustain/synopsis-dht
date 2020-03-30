@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sustain.synopsis.dht.store.services";
+
+service TargetedQueryService {
+    rpc Query (TargetQueryRequest) returns (stream TargetQueryResponse);
+}
+
+message TargetQueryRequest {
+    string dataset = 1;
+    // spatial scope is defines using a list of geohashes
+    repeated Predicate spatialScope = 2;
+    Expression temporalScope = 3;
+    repeated Expression featurePredicates = 4;
+    repeated Expression metadataPredicates = 5;
+}
+
+// a single response message may pack zero or more strands
+message TargetQueryResponse {
+    repeated MatchingStrand strands = 1;
+}
+
+// a matching strand for a given query
+message MatchingStrand {
+    string spatialScope = 1;
+    int64 fromTS = 2;
+    int64 toTS = 3;
+    bytes strand = 4;
+}
+
+// predicates are combined using combine operators to form expressions
+message Expression {
+    enum CombineOperator {
+        AND = 0;
+        OR = 1;
+        DIFF = 2;
+    }
+    oneof First {
+        Expression expression1 = 1;
+        Predicate predicate1 = 2;
+    }
+    CombineOperator combineOp = 3;
+    oneof Second {
+        Expression expression2 = 4;
+        Predicate predicate2 = 5;
+    }
+}
+
+// finest-grain condition that defines a query scope
+message Predicate {
+    enum ComparisonOperator {
+        EQUAL = 0;
+        GREATER_THAN = 1;
+        LESS_THAN = 2;
+        GREATER_THAN_OR_EQUAL = 3;
+        LESS_THAN_OR_EQUAL = 4;
+    }
+    string attribute = 1;
+    ComparisonOperator comparisonOp = 2;
+    oneof value {
+        string stringValue = 3;
+        sint64 integerValue = 4;
+        double doubleValue = 5;
+    }
+}
+
+

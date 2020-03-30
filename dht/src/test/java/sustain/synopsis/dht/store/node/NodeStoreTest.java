@@ -11,12 +11,15 @@ import sustain.synopsis.dht.Context;
 import sustain.synopsis.dht.NodeConfiguration;
 import sustain.synopsis.dht.journal.Logger;
 import sustain.synopsis.dht.store.*;
+import sustain.synopsis.dht.store.entity.EntityStore;
+import sustain.synopsis.dht.store.query.QueryException;
+import sustain.synopsis.dht.store.services.Predicate;
+import sustain.synopsis.dht.store.services.TargetQueryRequest;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static sustain.synopsis.dht.store.StrandStorageKeyValueTest.createStrand;
@@ -181,5 +184,131 @@ public class NodeStoreTest {
         NodeStore nodeStore = new NodeStore(sessionValidatorMock, loggerMock, 1024, 200,
                 metadataStoreDir.getAbsolutePath(), diskManagerMock);
         Assertions.assertThrows(StorageException.class, nodeStore::init);
+    }
+
+    @Test
+    void testGetMatchingEntityStoresForCorrectDataset() throws StorageException, IOException, QueryException {
+        NodeStore nodeStore = prepareTestNodeStore();
+        Predicate predicate = Predicate.newBuilder().setStringValue("8qr").build();
+        TargetQueryRequest req =
+                TargetQueryRequest.newBuilder().setDataset("dataset_2").addSpatialScope(predicate).build();
+        Set<EntityStore> matchingStores = nodeStore.getMatchingEntityStores(req);
+        Assertions.assertEquals(1, matchingStores.size());
+        Assertions.assertEquals("8qr", matchingStores.iterator().next().getEntityId());
+    }
+
+    @Test
+    void testGetMatchingEntityStoresForInvalidDataset() throws StorageException, IOException {
+        NodeStore nodeStore = prepareTestNodeStore();
+        Predicate predicate = Predicate.newBuilder().setStringValue("8qr").build();
+        TargetQueryRequest finalReq =
+                TargetQueryRequest.newBuilder().setDataset("non_existing_dataset").addSpatialScope(predicate).build();
+        Assertions.assertThrows(QueryException.class, () -> {
+            nodeStore.getMatchingEntityStores(finalReq);
+        });
+    }
+
+    @Test
+    void testGetMatchingEntityStoresForZeroSpatialScope() throws StorageException, IOException, QueryException {
+        NodeStore nodeStore = prepareTestNodeStore();
+        TargetQueryRequest emptyReq = TargetQueryRequest.newBuilder().setDataset("dataset_1").build();
+        Assertions.assertTrue(nodeStore.getMatchingEntityStores(emptyReq).isEmpty());
+    }
+
+    @Test
+    void testGetMatchingEntityStoresForInvalidSpatialScope() throws StorageException, IOException, QueryException {
+        NodeStore nodeStore = prepareTestNodeStore();
+        Predicate predicate = Predicate.newBuilder().setStringValue("9yyi").build();
+        TargetQueryRequest req =
+                TargetQueryRequest.newBuilder().setDataset("dataset_1").addSpatialScope(predicate).build();
+        Assertions.assertTrue(nodeStore.getMatchingEntityStores(req).isEmpty());
+    }
+
+    @Test
+    void testGetMatchingEntityStoresForPrefixMatching() throws StorageException, IOException, QueryException {
+        NodeStore nodeStore = prepareTestNodeStore();
+        // use a single character - should match with all entity stores
+        Predicate predicate = Predicate.newBuilder().setStringValue("9").build();
+        TargetQueryRequest req =
+                TargetQueryRequest.newBuilder().setDataset("dataset_1").addSpatialScope(predicate).build();
+        Assertions.assertEquals(new HashSet<>(Arrays.asList("9xi", "9xi5", "9x")),
+                nodeStore.getMatchingEntityStores(req).stream().map(EntityStore::getEntityId).collect(Collectors.toSet()));
+
+        // three characters
+        predicate = Predicate.newBuilder().setStringValue("9xi").build();
+        req = TargetQueryRequest.newBuilder().setDataset("dataset_1").addSpatialScope(predicate).build();
+        Assertions.assertEquals(new HashSet<>(Arrays.asList("9xi", "9xi5")),
+                nodeStore.getMatchingEntityStores(req).stream().map(EntityStore::getEntityId).collect(Collectors.toSet()));
+
+        // exact match
+        predicate = Predicate.newBuilder().setStringValue("9xi5").build();
+        req = TargetQueryRequest.newBuilder().setDataset("dataset_1").addSpatialScope(predicate).build();
+        Assertions.assertEquals(new HashSet<>(Collections.singletonList("9xi5")),
+                nodeStore.getMatchingEntityStores(req).stream().map(EntityStore::getEntityId).collect(Collectors.toSet()));
+    }
+
+    @Test
+    void testGetMatchingEntityStoresForPrefixMatchingWithMultipleSpatialScopes() throws IOException, StorageException
+            , QueryException {
+        NodeStore nodeStore = prepareTestNodeStore();
+        // non-overlapping scopes
+        Predicate predicate1 = Predicate.newBuilder().setStringValue("9xi").build();
+        Predicate predicate2 = Predicate.newBuilder().setStringValue("8x").build();
+        TargetQueryRequest req = TargetQueryRequest.newBuilder().setDataset("dataset_1").addSpatialScope(predicate1).
+                addSpatialScope(predicate2).build();
+        Assertions.assertEquals(new HashSet<>(Arrays.asList("9xi", "9xi5", "8x")),
+                nodeStore.getMatchingEntityStores(req).stream().map(EntityStore::getEntityId).collect(Collectors.toSet()));
+
+        // overallping scopes
+        predicate2 = Predicate.newBuilder().setStringValue("9xi5").build();
+        req = TargetQueryRequest.newBuilder().setDataset("dataset_1").addSpatialScope(predicate1).
+                addSpatialScope(predicate2).build();
+        Assertions.assertEquals(new HashSet<>(Arrays.asList("9xi", "9xi5")),
+                nodeStore.getMatchingEntityStores(req).stream().map(EntityStore::getEntityId).collect(Collectors.toSet()));
+    }
+
+    private NodeStore prepareTestNodeStore() throws StorageException, IOException {
+        NodeConfiguration nodeConfiguration = new NodeConfiguration();
+        Context.getInstance().initialize(nodeConfiguration);
+        MockitoAnnotations.initMocks(this);
+        Mockito.when(loggerMock.iterator()).thenReturn(new Iterator<byte[]>() {
+            @Override
+            public boolean hasNext() {
+                return false;
+            }
+
+            @Override
+            public byte[] next() {
+                return null;
+            }
+        });
+        Mockito.when(sessionValidatorMock.validate("dataset_1", 1000L)).thenReturn(new SessionValidator.SessionValidationResponse(true, "bob", 12345L));
+        Mockito.when(diskManagerMock.init(nodeConfiguration)).thenReturn(true);
+        Mockito.when(diskManagerMock.allocate(Mockito.anyLong())).thenReturn(storageDir.getAbsolutePath());
+
+        NodeStore nodeStore = new NodeStore(sessionValidatorMock, loggerMock, 1024, 200,
+                metadataStoreDir.getAbsolutePath(), diskManagerMock);
+        nodeStore.init();
+        // dataset_1
+        nodeStore.store("bob", "dataset_1", "9xi", 1000L, 123456L, new StrandStorageKey(1391216400000L,
+                1391216400100L), new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L,
+                1391216400100L, 1.0, 2.0))));
+        nodeStore.store("bob", "dataset_1", "9xi5", 1000L, 123456L, new StrandStorageKey(1391216400100L,
+                1391216400200L), new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400100L,
+                1391216400200L, 1.0, 2.0))));
+        nodeStore.store("bob", "dataset_1", "9x", 1000L, 123456L, new StrandStorageKey(1391216400100L,
+                1391216400200L), new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400100L,
+                1391216400200L, 1.0, 2.0))));
+        nodeStore.store("bob", "dataset_1", "8x", 1000L, 123456L, new StrandStorageKey(1391216400100L,
+                1391216400200L), new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400100L,
+                1391216400200L, 1.0, 2.0))));
+        nodeStore.endSession("dataset_1", "bob", 1000L, 123456L);
+
+        // dataset_2
+        nodeStore.store("bob", "dataset_2", "8qr", 1001L, 123456L, new StrandStorageKey(1391216400000L,
+                1391216400100L), new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L,
+                1391216400100L, 1.0, 2.0))));
+        nodeStore.endSession("dataset_2", "bob", 1001L, 123456L);
+        return nodeStore;
     }
 }

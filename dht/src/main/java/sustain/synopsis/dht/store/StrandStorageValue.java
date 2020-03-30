@@ -5,7 +5,7 @@ import sustain.synopsis.sketch.serialization.SerializationException;
 import sustain.synopsis.sketch.serialization.SerializationInputStream;
 import sustain.synopsis.sketch.serialization.SerializationOutputStream;
 import sustain.synopsis.storage.lsmtree.Mergeable;
-import sustain.synopsis.storage.lsmtree.Serializable;
+import sustain.synopsis.storage.lsmtree.StreamSerializable;
 
 import java.io.*;
 
@@ -15,7 +15,7 @@ import java.io.*;
  * If the Strand object is requested through the #getMethod(), deserialization is performed.
  * This implementation is not thread safe.
  */
-public class StrandStorageValue implements Mergeable<StrandStorageValue>, Serializable {
+public class StrandStorageValue implements Mergeable<StrandStorageValue>, StreamSerializable {
 
     private Strand strand;
     private byte[] serializedStrand;

@@ -5,10 +5,14 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
+import sustain.synopsis.dht.store.StrandStorageKey;
 
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.NavigableMap;
 
 /**
  * @author Thilina Buddhika
@@ -35,16 +39,11 @@ public class Util {
     }
 
     static String createZKDirectory(ZooKeeper zk, String path, CreateMode createMode) throws KeeperException, InterruptedException {
-        try {
-            return zk.create(path, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode);
-        } catch (InterruptedException | KeeperException e) {
-            throw e;
-        }
+        return zk.create(path, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode);
     }
 
     public static int getVirtualNodeCount() {
-        double headSizeInGB =
-                ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax() / (1024.0 * 1024 * 1024);
+        double headSizeInGB = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax() / (1024.0 * 1024 * 1024);
         int vNodeCount = 200; // 200 works well with NOAA data.
         if (headSizeInGB != -1) {
             if (headSizeInGB <= 7) {
@@ -60,4 +59,5 @@ public class Util {
     public static int getWorkerPoolSize() {
         return Runtime.getRuntime().availableProcessors() * 2;
     }
+
 }

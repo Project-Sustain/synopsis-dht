@@ -15,10 +15,7 @@ import sustain.synopsis.dht.store.services.IngestionServiceGrpc.IngestionService
 import sustain.synopsis.dht.store.services.NodeMapping;
 import sustain.synopsis.sketch.serialization.SerializationOutputStream;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutput;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -45,8 +42,11 @@ public class DHTStrandPublisher implements StrandPublisher {
 
     // https://stackoverflow.com/a/30968827
     static byte[] serializeToBytes(Strand s) throws IOException {
-        try (ByteArrayOutputStream bos = new ByteArrayOutputStream(); SerializationOutputStream sos = new SerializationOutputStream(new ObjectOutputStream(bos))) {
+        try (ByteArrayOutputStream bos = new ByteArrayOutputStream(); SerializationOutputStream sos =
+                new SerializationOutputStream(bos)) {
             s.serialize(sos);
+            sos.flush();
+            bos.flush();
             return bos.toByteArray();
         }
     }

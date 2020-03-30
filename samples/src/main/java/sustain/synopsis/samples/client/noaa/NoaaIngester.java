@@ -75,9 +75,8 @@ public class NoaaIngester {
 
     private Strand constructStrand(String geohash, long ts, Metadata metadata) {
         Set<String> features = ingestionConfig.getFeatures();
-        Path path = new Path(features.size() + 2); // additional vertices for time and location
+        Path path = new Path(features.size());
 
-        // path: time -> feature 1 -> ..... -> feature n -> geohash (data container)
         long[] temporalBracket = temporalQuantizer.getTemporalBoundaries(ts);
         double[] values = new double[features.size()]; // skip time and location
         int i = 0;
@@ -109,6 +108,7 @@ public class NoaaIngester {
             return;
         }
         try {
+            logger.info("Completed " + index + "/" + inputFiles.length);
             File currentFile = inputFiles[index++];
             FileInputStream fIn = new FileInputStream(currentFile);
             BufferedInputStream bIn = new BufferedInputStream(fIn);

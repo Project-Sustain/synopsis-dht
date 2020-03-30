@@ -3,9 +3,7 @@ package sustain.synopsis.ingestion.client.core;
 import io.grpc.Channel;
 import io.grpc.ManagedChannelBuilder;
 import sustain.synopsis.common.Strand;
-import sustain.synopsis.dht.store.services.IngestionRequest;
-import sustain.synopsis.dht.store.services.IngestionResponse;
-import sustain.synopsis.dht.store.services.IngestionServiceGrpc;
+import sustain.synopsis.dht.store.services.*;
 import sustain.synopsis.dht.store.services.IngestionServiceGrpc.IngestionServiceBlockingStub;
 
 import java.util.ArrayList;
@@ -54,5 +52,14 @@ public class SimpleStrandPublisher implements StrandPublisher {
                 .build();
 
         IngestionResponse response = stub.ingest(request);
+    }
+
+    @Override
+    public void terminateSession() {
+        TerminateSessionResponse resp =
+                stub.terminateSession(TerminateSessionRequest.newBuilder().
+                        setDatasetId(datasetId).
+                        setSessionId(sessionId).
+                        build());
     }
 }

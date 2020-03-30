@@ -88,8 +88,8 @@ public class StrandRegistry {
      */
     public long terminateSession() {
         List<Strand> strands = lruCache.evictAll();
-        for (int i = 0; i < lruCache.size(); i += publishBatchSize) {
-            int endIdx = Math.min(i + publishBatchSize, lruCache.size());
+        for (int i = 0; i < strands.size(); i += publishBatchSize) {
+            int endIdx = Math.min(i + publishBatchSize, strands.size());
             publish(strands.subList(i, endIdx));
         }
 

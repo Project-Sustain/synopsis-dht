@@ -3,12 +3,11 @@ package sustain.synopsis.samples.client.noaa;
 import sustain.synopsis.common.Strand;
 import sustain.synopsis.ingestion.client.core.*;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
-import java.util.Comparator;
-
 
 public class NoaaClient {
 
@@ -27,8 +26,7 @@ public class NoaaClient {
         String binConfig = args[3];
 
         File baseDir = new File(args[4]);
-        File[] inputFiles =
-                baseDir.listFiles(pathname -> pathname.getName().startsWith("namanl_218_201501") && pathname.getName().endsWith("001.grb" + ".mblob"));
+        File[] inputFiles = baseDir.listFiles(pathname -> pathname.getName().startsWith("namanl_218_201501") && pathname.getName().endsWith("001.grb" + ".mblob"));
 
         if (inputFiles == null) {
             System.err.println("No matching files.");
@@ -58,8 +56,7 @@ public class NoaaClient {
         }*/
 
         for (int i = 0; i < 2; i++) {   // ingest data over two sessions
-            SessionSchema sessionSchema = new SessionSchema(Util.quantizerMapFromFile(binConfig), GEOHASH_LENGTH,
-                    TEMPORAL_BRACKET_LENGTH);
+            SessionSchema sessionSchema = new SessionSchema(Util.quantizerMapFromFile(binConfig), GEOHASH_LENGTH, TEMPORAL_BRACKET_LENGTH);
 
             StrandPublisher strandPublisher = new SimpleStrandPublisher(dhtNodeAddress, datasetId, sessionId + i);
 //        StrandPublisher strandPublisher = new DHTStrandPublisher(dhtNodeAddress, datasetId, sessionId);
@@ -67,8 +64,7 @@ public class NoaaClient {
 
             StrandRegistry strandRegistry = new StrandRegistry(strandPublisher, 10000, 100);
 
-            NoaaIngester noaaIngester = new NoaaIngester(Arrays.copyOfRange(inputFiles, inputFiles.length / 2 * i,
-                    inputFiles.length / 2 * (i + 1)), sessionSchema);
+            NoaaIngester noaaIngester = new NoaaIngester(Arrays.copyOfRange(inputFiles, inputFiles.length / 2 * i, inputFiles.length / 2 * (i + 1)), sessionSchema);
 
             long timeStart = Instant.now().toEpochMilli();
             while (noaaIngester.hasNext()) {
@@ -87,5 +83,4 @@ public class NoaaClient {
             System.out.printf("Strands per second: %.1f", strandsPerSec);
         }
     }
-
 }

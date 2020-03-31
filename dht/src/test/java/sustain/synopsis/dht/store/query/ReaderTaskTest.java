@@ -40,11 +40,12 @@ public class ReaderTaskTest {
         Mockito.when(entityStoreMock.getEntityId()).thenReturn("test_entity");
         ReaderTask task = new ReaderTask(entityStoreMock, null, containerMock, 1024 * 1024);
 
-        MatchingStrand matchingStrand = MatchingStrand.newBuilder().setFromTS(1).setToTS(2).setSpatialScope(
-                "test_entity").setStrand(ByteString.copyFrom(new byte[100])).build();
+        MatchingStrand matchingStrand =
+                MatchingStrand.newBuilder().setFromTS(1).setToTS(2).setSpatialScope("test_entity")
+                              .setStrand(ByteString.copyFrom(new byte[100])).build();
         TargetQueryResponse targetQueryResponse = TargetQueryResponse.newBuilder().addStrands(matchingStrand).build();
-        task.sendStrandsAsBatches(Collections.singletonList(new TableIterator.TableEntry<>(new StrandStorageKey(1, 2)
-                , new byte[100])));
+        task.sendStrandsAsBatches(
+                Collections.singletonList(new TableIterator.TableEntry<>(new StrandStorageKey(1, 2), new byte[100])));
         Mockito.verify(containerMock, Mockito.times(1)).write(targetQueryResponse);
     }
 
@@ -54,9 +55,9 @@ public class ReaderTaskTest {
         Mockito.when(entityStoreMock.getEntityId()).thenReturn("test_entity");
         ReaderTask task = new ReaderTask(entityStoreMock, null, containerMock, 1024 * 1024);
         // with 1 MB batch size, there will be 2 strands per response msg.
-        List<TableIterator.TableEntry<StrandStorageKey, byte[]>> matchingStrands =
-                IntStream.range(0, 3).mapToObj(i -> new TableIterator.TableEntry<>(new StrandStorageKey(i, i + 1),
-                        new byte[512 * 1024])).collect(Collectors.toList());
+        List<TableIterator.TableEntry<StrandStorageKey, byte[]>> matchingStrands = IntStream.range(0, 3).mapToObj(
+                i -> new TableIterator.TableEntry<>(new StrandStorageKey(i, i + 1), new byte[512 * 1024])).collect(
+                Collectors.toList());
         task.sendStrandsAsBatches(matchingStrands);
         // We will have 1 full response, and 1 partially filled response
         Mockito.verify(containerMock, Mockito.times(2)).write(Mockito.any());
@@ -72,8 +73,8 @@ public class ReaderTaskTest {
 
         ReaderTask task = new ReaderTask(entityStoreMock, null, containerMock, 1024 * 1024);
         SSTableReader<StrandStorageKey> reader = new SSTableReader<>(metadata, StrandStorageKey.class);
-        List<TableIterator.TableEntry<StrandStorageKey, byte[]>> strands = task.readBlock(reader,
-                new StrandStorageKey(0, 1), Collections.singletonList(new Interval(0, 20)));
+        List<TableIterator.TableEntry<StrandStorageKey, byte[]>> strands =
+                task.readBlock(reader, new StrandStorageKey(0, 1), Collections.singletonList(new Interval(0, 20)));
         Assertions.assertEquals(10, strands.size());
         Assertions.assertEquals(new StrandStorageKey(0, 1), strands.get(0).getKey());
         Assertions.assertEquals(new StrandStorageKey(9, 10), strands.get(9).getKey());
@@ -90,15 +91,15 @@ public class ReaderTaskTest {
 
         // multiple intervals
         reader = new SSTableReader<>(metadata, StrandStorageKey.class);
-        strands = task.readBlock(reader, new StrandStorageKey(0, 1), Arrays.asList(new Interval(0, 5),
-                new Interval(10, 5)));
+        strands = task.readBlock(reader, new StrandStorageKey(0, 1),
+                                 Arrays.asList(new Interval(0, 5), new Interval(10, 5)));
         Assertions.assertEquals(5, strands.size());
         Assertions.assertEquals(new StrandStorageKey(0, 1), strands.get(0).getKey());
         Assertions.assertEquals(new StrandStorageKey(4, 5), strands.get(4).getKey());
 
         reader = new SSTableReader<>(metadata, StrandStorageKey.class);
-        strands = task.readBlock(reader, new StrandStorageKey(0, 1), Arrays.asList(new Interval(0, 5), new Interval(3
-                , 5)));
+        strands = task.readBlock(reader, new StrandStorageKey(0, 1),
+                                 Arrays.asList(new Interval(0, 5), new Interval(3, 5)));
         Assertions.assertEquals(5, strands.size());
         Assertions.assertEquals(new StrandStorageKey(0, 1), strands.get(0).getKey());
         Assertions.assertEquals(new StrandStorageKey(4, 5), strands.get(4).getKey());
@@ -148,7 +149,8 @@ public class ReaderTaskTest {
         MockitoAnnotations.initMocks(this);
         Mockito.when(entityStoreMock.getEntityId()).thenReturn("test_entity");
         Predicate temporalPredicate =
-                Predicate.newBuilder().setComparisonOp(Predicate.ComparisonOperator.GREATER_THAN).setIntegerValue(0).build();
+                Predicate.newBuilder().setComparisonOp(Predicate.ComparisonOperator.GREATER_THAN).setIntegerValue(0)
+                         .build();
         Predicate spatialPredicate = Predicate.newBuilder().setStringValue("test_entity").build();
         Expression exp = Expression.newBuilder().setPredicate1(temporalPredicate).build();
         TargetQueryRequest targetQueryRequest =
@@ -184,7 +186,8 @@ public class ReaderTaskTest {
     }
 
 
-    private void prepareSSTable(int strandsPerBlock, int blockCount, Metadata<StrandStorageKey> metadata) throws IOException {
+    private void prepareSSTable(int strandsPerBlock, int blockCount, Metadata<StrandStorageKey> metadata)
+            throws IOException {
         // Maximum - 10 strands per block
         File f = new File(tempDir + File.separator + "temp.file");
         metadata.setPath(f.getAbsolutePath());

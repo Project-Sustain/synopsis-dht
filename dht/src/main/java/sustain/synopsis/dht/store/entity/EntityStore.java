@@ -25,29 +25,29 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Concurrency model: Main thread of a node will run the initialization code. There is a single writer thread
- * and multiple reader threads.
+ * Concurrency model: Main thread of a node will run the initialization code. There is a single writer thread and
+ * multiple reader threads.
  */
 public class EntityStore {
+    public final long blockSize;
     private final Logger logger = Logger.getLogger(EntityStore.class);
     private final String entityId;
-    public final long blockSize;
     /**
      * There can be multiple active ingestion sessions at a given time for a single entity.
      */
     Map<IngestionSession, MemTable<StrandStorageKey, StrandStorageValue>> activeSessions;
     Map<IngestionSession, List<Metadata<StrandStorageKey>>> activeMetadata;
-    private DiskManager diskManager;
     AtomicInteger sequenceId;
+    /**
+     * Queryiable metadata is accessed by both the reader threads and the writer threads
+     */
+    TreeMap<StrandStorageKey, Metadata<StrandStorageKey>> queryableMetadata;
+    private DiskManager diskManager;
     // todo: these should be read from the config
     private BlockCompressor compressor;
     private ChecksumGenerator checksumGenerator;
     private EntityStoreJournal entityStoreJournal;
     private long memTableSize;
-    /**
-     * Queryiable metadata is accessed by both the reader threads and the writer threads
-     */
-    TreeMap<StrandStorageKey, Metadata<StrandStorageKey>> queryableMetadata;
     private ReentrantReadWriteLock lock;
 
     public EntityStore(String entityId, String metadataDir, long memTableSize, long blockSize,
@@ -81,8 +81,15 @@ public class EntityStore {
             }
             List<Metadata<StrandStorageKey>> metadataList = entityStoreJournal.getMetadata();
             this.sequenceId.set(entityStoreJournal.getSequenceId());
-            this.queryableMetadata =
-                    metadataList.stream().filter(Metadata::isSessionComplete).collect(Collectors.toMap((metadata) -> new StrandStorageKey(metadata.getMin().getStartTS(), metadata.getMax().getEndTS()), Function.identity(), (o1, o2) -> o1, TreeMap::new));
+            this.queryableMetadata = metadataList.stream().filter(Metadata::isSessionComplete).collect(Collectors
+                                                                                                               .toMap((metadata) -> new StrandStorageKey(
+                                                                                                                              metadata.getMin()
+                                                                                                                                      .getStartTS(),
+                                                                                                                              metadata.getMax()
+                                                                                                                                      .getEndTS()),
+                                                                                                                      Function.identity(),
+                                                                                                                      (o1, o2) -> o1,
+                                                                                                                      TreeMap::new));
             // todo: how to handle sessions  active during the node crash/shutdown?
             // todo: populate activeSessions and activeMetadata
         } catch (ChecksumGenerator.ChecksumError checksumError) {
@@ -125,7 +132,8 @@ public class EntityStore {
         return true;
     }
 
-    private void purgeMemTable(IngestionSession session, MemTable<StrandStorageKey, StrandStorageValue> memTable) throws IOException, StorageException {
+    private void purgeMemTable(IngestionSession session, MemTable<StrandStorageKey, StrandStorageValue> memTable)
+            throws IOException, StorageException {
         Metadata<StrandStorageKey> metadata = new Metadata<>();
         metadata.setSessionId(session.getSessionId());
         metadata.setUser(session.getIngestionUser());
@@ -159,11 +167,18 @@ public class EntityStore {
         try {
             lock.writeLock().lock();
             int beforeSize = queryableMetadata.size();
-            queryableMetadata.putAll(activeMetadata.get(session).stream().collect(Collectors.toMap((metadata) -> new StrandStorageKey(metadata.getMin().getStartTS(), metadata.getMax().getEndTS()), Function.identity())));
+            queryableMetadata.putAll(activeMetadata.get(session).stream().collect(Collectors
+                                                                                          .toMap((metadata) -> new StrandStorageKey(
+                                                                                                         metadata.getMin()
+                                                                                                                 .getStartTS(),
+                                                                                                         metadata.getMax()
+                                                                                                                 .getEndTS()),
+                                                                                                 Function.identity())));
             int afterSize = queryableMetadata.size();
             if (logger.isDebugEnabled()) {
-                logger.debug("Added the SSTables into queryable metadata. Before size: " + beforeSize + ", after " +
-                        "size: " + afterSize);
+                logger.debug(
+                        "Added the SSTables into queryable metadata. Before size: " + beforeSize + ", after " + "size: "
+                        + afterSize);
             }
         } finally {
             lock.writeLock().unlock();
@@ -174,14 +189,15 @@ public class EntityStore {
     }
 
     // we inject a disk manager instance for unit testing purposes
-    public void toSSTable(IngestionSession session, DiskManager diskManager, Metadata<StrandStorageKey> metadata) throws StorageException, IOException {
+    public void toSSTable(IngestionSession session, DiskManager diskManager, Metadata<StrandStorageKey> metadata)
+            throws StorageException, IOException {
         MemTable<StrandStorageKey, StrandStorageValue> memTable = activeSessions.get(session);
         String dir = diskManager.allocate(memTable.getEstimatedSize());
         String storagePath = getSSTableOutputPath(memTable.getFirstKey(), memTable.getLastKey(), dir, sequenceId.get());
-        try (FileOutputStream fos = new FileOutputStream(storagePath); DataOutputStream dos =
-                new DataOutputStream(fos)) {
-            SSTableWriter<StrandStorageKey, StrandStorageValue> ssTableWriter = new SSTableWriter<>(blockSize,
-                    Collections.singletonList(memTable.getIterator()));
+        try (FileOutputStream fos = new FileOutputStream(storagePath);
+             DataOutputStream dos = new DataOutputStream(fos)) {
+            SSTableWriter<StrandStorageKey, StrandStorageValue> ssTableWriter =
+                    new SSTableWriter<>(blockSize, Collections.singletonList(memTable.getIterator()));
             ssTableWriter.serialize(dos, metadata, compressor, checksumGenerator);
             dos.flush();
             fos.flush();
@@ -193,7 +209,8 @@ public class EntityStore {
         }
     }
 
-    public String getSSTableOutputPath(StrandStorageKey firstKey, StrandStorageKey lastKey, String path, int seqId) throws IOException, StorageException {
+    public String getSSTableOutputPath(StrandStorageKey firstKey, StrandStorageKey lastKey, String path, int seqId)
+            throws IOException, StorageException {
         return path + File.separator + entityId + "_" + firstKey + "_" + lastKey + "_" + seqId + ".sd";
     }
 
@@ -205,8 +222,8 @@ public class EntityStore {
      * Query the entity data for a given temporal expression
      *
      * @param temporalExpression Temporal constraint expressed as {@link Expression}
-     * @return List of matching SSTables and the corresponding time intervals - A given temporal expression
-     * can get mapped into multiple time intervals
+     * @return List of matching SSTables and the corresponding time intervals - A given temporal expression can get
+     * mapped into multiple time intervals
      * @throws QueryException Error during temporal expression evaluation
      */
     public List<MatchedSSTable> temporalQuery(Expression temporalExpression) throws QueryException {
@@ -219,17 +236,18 @@ public class EntityStore {
                 return new ArrayList<>();
             }
             Map<String, MatchedSSTable> matchingMetadata = new HashMap<>();
-            List<Interval> matchingIntervals = QueryUtil.evaluateTemporalExpression(temporalExpression,
-                    new Interval(queryableMetadata.firstKey().getStartTS(), queryableMetadata.lastKey().getEndTS()));
+            List<Interval> matchingIntervals = QueryUtil.evaluateTemporalExpression(temporalExpression, new Interval(
+                    queryableMetadata.firstKey().getStartTS(), queryableMetadata.lastKey().getEndTS()));
             if (logger.isDebugEnabled()) {
                 logger.debug("Number of matching intervals: " + matchingIntervals.size());
             }
             for (Interval interval : matchingIntervals) {
-                QueryUtil.temporalLookup(queryableMetadata, interval.getFrom(), interval.getTo(), false).values().forEach((metadata) -> {
-                    matchingMetadata.putIfAbsent(metadata.getPath(), new MatchedSSTable(metadata));
-                    MatchedSSTable matchedSSTable = matchingMetadata.get(metadata.getPath());
-                    matchedSSTable.addMatchedInterval(interval);
-                });
+                QueryUtil.temporalLookup(queryableMetadata, interval.getFrom(), interval.getTo(), false).values()
+                         .forEach((metadata) -> {
+                             matchingMetadata.putIfAbsent(metadata.getPath(), new MatchedSSTable(metadata));
+                             MatchedSSTable matchedSSTable = matchingMetadata.get(metadata.getPath());
+                             matchedSSTable.addMatchedInterval(interval);
+                         });
             }
             return new ArrayList<>(matchingMetadata.values());
         } finally {

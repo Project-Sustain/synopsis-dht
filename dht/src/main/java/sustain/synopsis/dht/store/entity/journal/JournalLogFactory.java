@@ -13,7 +13,7 @@ public class JournalLogFactory {
     public static Activity parse(byte[] serialized) throws IOException, JournalingException {
         short type = ByteBuffer.wrap(serialized, 0, Short.BYTES).getShort();
         Activity activity;
-        switch(type){
+        switch (type) {
             case StartSessionActivity.TYPE:
                 activity = new StartSessionActivity();
                 break;

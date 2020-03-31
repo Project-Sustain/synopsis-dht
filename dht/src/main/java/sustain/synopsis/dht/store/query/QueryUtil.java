@@ -18,7 +18,8 @@ public class QueryUtil {
      *
      * @param metadataMap       Map of {@link StrandStorageKey} objects arranged as a {@link NavigableMap}.
      * @param lowerBound        Lower bound of the temporal bracket, usually specified as an epoch, inclusive
-     * @param upperBound        Upper bound of the temporal bracket, usually specified as an epoch, exclusive by default
+     * @param upperBound        Upper bound of the temporal bracket, usually specified as an epoch, exclusive by
+     *                          default
      * @param includeUpperBound Whether to include any strand that has a starting ts equal to the upper bound
      * @param <T>               Value type of the map
      * @return Matching StrandStorageKeys and their associated values as a {@link NavigableMap}
@@ -46,21 +47,23 @@ public class QueryUtil {
      * Evaluate a temporal query expression against the given temporal scope
      *
      * @param expression Temporal boundary defined using {@link Expression}
-     * @param scope      Current temporal scope. During the first call, it may correspond to the scope of the
-     *                   available data. During subsequent invocations, the original scope may get reduced
-     *                   after evaluating previous predicates/expressions.
+     * @param scope      Current temporal scope. During the first call, it may correspond to the scope of the available
+     *                   data. During subsequent invocations, the original scope may get reduced after evaluating
+     *                   previous predicates/expressions.
      * @return List of matching temporal intervals
      * @throws QueryException If an unsupported combiner operation is used.
      */
-    public static List<Interval> evaluateTemporalExpression(Expression expression, Interval scope) throws QueryException {
+    public static List<Interval> evaluateTemporalExpression(Expression expression, Interval scope)
+            throws QueryException {
         List<Interval> scope1 = handleCase(expression.hasExpression1() ? expression.getExpression1() : null,
-                expression.hasPredicate1() ? expression.getPredicate1() : null, scope);
+                                           expression.hasPredicate1() ? expression.getPredicate1() : null, scope);
         List<Interval> scope2 = handleCase(expression.hasExpression2() ? expression.getExpression2() : null,
-                expression.hasPredicate2() ? expression.getPredicate2() : null, scope);
+                                           expression.hasPredicate2() ? expression.getPredicate2() : null, scope);
         return mergeResults(expression, scope1, scope2);
     }
 
-    private static List<Interval> handleCase(Expression expression, Predicate predicate, Interval scope) throws QueryException {
+    private static List<Interval> handleCase(Expression expression, Predicate predicate, Interval scope)
+            throws QueryException {
         ArrayList<Interval> results = new ArrayList<>();
         if (expression != null) {
             results.addAll(evaluateTemporalExpression(expression, scope));
@@ -73,7 +76,8 @@ public class QueryUtil {
         return results;
     }
 
-    private static List<Interval> mergeResults(Expression expression, List<Interval> scope1, List<Interval> scope2) throws QueryException {
+    private static List<Interval> mergeResults(Expression expression, List<Interval> scope1, List<Interval> scope2)
+            throws QueryException {
         // only one side of the expression has produced results. No need to run the combine operation.
         if (scope1.isEmpty() || scope2.isEmpty()) {
             scope1.addAll(scope2);
@@ -88,8 +92,8 @@ public class QueryUtil {
             case AND:
                 return mergeTemporalBracketsAsIntersect(scope1, scope2);
             default: // we may support DIFF operator in the future
-                throw new QueryException("Combine operator " + combineOp.toString() + " is not supported for " +
-                        "temporal constraints.");
+                throw new QueryException("Combine operator " + combineOp.toString() + " is not supported for "
+                                         + "temporal constraints.");
         }
     }
 
@@ -128,8 +132,8 @@ public class QueryUtil {
     }
 
     /**
-     * Calculate the union of a set of temporal brackets. If two temporal brackets are overlapping merge them into a
-     * one interval.
+     * Calculate the union of a set of temporal brackets. If two temporal brackets are overlapping merge them into a one
+     * interval.
      *
      * @param brackets List of input intervals
      * @return Input intervals after merging
@@ -143,7 +147,7 @@ public class QueryUtil {
             if (interval1.isOverlapping(interval2)) {
                 // find the union between the two regions
                 Interval merged = new Interval(Math.min(interval1.getFrom(), interval2.getFrom()),
-                        Math.max(interval1.getTo(), interval2.getTo()));
+                                               Math.max(interval1.getTo(), interval2.getTo()));
                 result.remove(i);
                 result.remove(i);
                 result.add(i, merged);
@@ -155,10 +159,9 @@ public class QueryUtil {
     }
 
     /**
-     * Given two groups of temporal brackets, calculate the list of brackets that have an intersecting region
-     * between two entries from each groups.
-     * Each temporal bracket from a group is matched against the every temporal bracket from the other group
-     * to find intersecting regions.
+     * Given two groups of temporal brackets, calculate the list of brackets that have an intersecting region between
+     * two entries from each groups. Each temporal bracket from a group is matched against the every temporal bracket
+     * from the other group to find intersecting regions.
      *
      * @param brackets1 first group of temporal brackets
      * @param brackets2 second group of temporal brackets
@@ -168,8 +171,13 @@ public class QueryUtil {
         // consolidate each temporal bracket list to improve the efficiency
         List<Interval> processedBrackets1 = mergeTemporalBracketsAsUnion(brackets1);
         List<Interval> processedBrackets2 = mergeTemporalBracketsAsUnion(brackets2);
-        List<Interval> mergedList = IntStream.range(0,
-                Math.min(processedBrackets1.size(), processedBrackets2.size())).mapToObj(i -> new Pair<>(processedBrackets1.get(i), processedBrackets2.get(i))).filter(pair -> pair.a.isOverlapping(pair.b)).map(pair -> new Interval(Math.max(pair.a.getFrom(), pair.b.getFrom()), Math.min(pair.a.getTo(), pair.b.getTo()))).collect(Collectors.toList());
+        List<Interval> mergedList = IntStream.range(0, Math.min(processedBrackets1.size(), processedBrackets2.size()))
+                                             .mapToObj(i -> new Pair<>(processedBrackets1.get(i),
+                                                                       processedBrackets2.get(i)))
+                                             .filter(pair -> pair.a.isOverlapping(pair.b))
+                                             .map(pair -> new Interval(Math.max(pair.a.getFrom(), pair.b.getFrom()),
+                                                                       Math.min(pair.a.getTo(), pair.b.getTo())))
+                                             .collect(Collectors.toList());
         // optimize the merged list to merge any overlapping intervals
         return mergeTemporalBracketsAsUnion(mergedList);
     }

@@ -19,9 +19,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class EntityStoreJournal {
-    private Logger logger = Logger.getLogger(EntityStoreJournal.class);
     private final String metadataRoot;
     private final String entityId;
+    private Logger logger = Logger.getLogger(EntityStoreJournal.class);
     private sustain.synopsis.dht.journal.Logger journal;
     private Map<Long, List<Metadata<StrandStorageKey>>> metadataMap = new HashMap<>();
     private int sequenceId = 0;
@@ -73,15 +73,16 @@ public class EntityStoreJournal {
                     SerializeSSTableActivity serializeSSTableActivity = (SerializeSSTableActivity) activity;
                     boolean valid = validateSerializeSSTableActivity(metadataMap, serializeSSTableActivity);
                     if (valid) {
-                        metadataMap.get(serializeSSTableActivity.getSessionId()).add(serializeSSTableActivity.getMetadata());
+                        metadataMap.get(serializeSSTableActivity.getSessionId())
+                                   .add(serializeSSTableActivity.getMetadata());
                         serializedSSTableCount++;
                         if (logger.isDebugEnabled()) {
                             logger.debug("Parsed Serialize SSTable Activity. " + serializeSSTableActivity);
                         }
                     } else {
                         logger.error("Invalid Serialize SStable Activity.");
-                        throw new JournalingException("Invalid Serialize SStable Activity. Aborting parsing the " +
-                                "journal");
+                        throw new JournalingException(
+                                "Invalid Serialize SStable Activity. Aborting parsing the " + "journal");
                     }
                     break;
                 case EndSessionActivity.TYPE:
@@ -89,14 +90,15 @@ public class EntityStoreJournal {
                     valid = validateEndSessionActivity(metadataMap, endSessionActivity);
                     if (valid) {
                         completeSessionCount++;
-                        metadataMap.get(endSessionActivity.getSessionId()).forEach(metadata -> metadata.setSessionComplete(true));
+                        metadataMap.get(endSessionActivity.getSessionId())
+                                   .forEach(metadata -> metadata.setSessionComplete(true));
                         if (logger.isDebugEnabled()) {
                             logger.debug("Parsed End Session Activity. " + endSessionActivity);
                         }
                     } else {
                         logger.error("Invalid End Session activity.");
-                        throw new JournalingException("Invalid End Session Activity. Aborting parsing the " +
-                                "journal");
+                        throw new JournalingException(
+                                "Invalid End Session Activity. Aborting parsing the " + "journal");
                     }
                     break;
                 case IncSeqIdActivity.TYPE:
@@ -108,8 +110,9 @@ public class EntityStoreJournal {
                     break;
             }
         }
-        logger.info("Successfully parsed the journal. Total session count: " + metadataMap.size() + ", completed " +
-                "session" + " count: " + completeSessionCount + ", Valid serialized SSTable count: " + serializedSSTableCount + ", last used sequence id: " + sequenceId);
+        logger.info("Successfully parsed the journal. Total session count: " + metadataMap.size() + ", completed "
+                    + "session" + " count: " + completeSessionCount + ", Valid serialized SSTable count: "
+                    + serializedSSTableCount + ", last used sequence id: " + sequenceId);
     }
 
     boolean validateSerializeSSTableActivity(Map<Long, List<Metadata<StrandStorageKey>>> sessions,
@@ -150,9 +153,10 @@ public class EntityStoreJournal {
         journal.append(endSessionActivity.serialize());
     }
 
-    public void addSerializedSSTable(IngestionSession session, Metadata<StrandStorageKey> metadata) throws IOException, StorageException {
-        SerializeSSTableActivity serializeSSTableActivity = new SerializeSSTableActivity(session.getSessionId(),
-                metadata);
+    public void addSerializedSSTable(IngestionSession session, Metadata<StrandStorageKey> metadata)
+            throws IOException, StorageException {
+        SerializeSSTableActivity serializeSSTableActivity =
+                new SerializeSSTableActivity(session.getSessionId(), metadata);
         journal.append(serializeSSTableActivity.serialize());
     }
 

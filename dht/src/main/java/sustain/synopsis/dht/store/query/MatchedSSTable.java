@@ -18,7 +18,7 @@ public class MatchedSSTable {
         this.matchedIntervals = new ArrayList<>();
     }
 
-    public void addMatchedInterval(Interval interval){
+    public void addMatchedInterval(Interval interval) {
         matchedIntervals.add(interval);
     }
 

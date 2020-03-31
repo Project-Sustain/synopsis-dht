@@ -28,9 +28,9 @@ import java.util.stream.Collectors;
  * Orchestrates data storage within a storage node. Keeps track of various entity stores, organized by the dataset.
  * Creation of entity stores is recorded in a commit log to withstand node crashes and restarts.
  * <p>
- * Concurrency model: Writes to each entity store is handled by a single writer. However, there can be
- * multiple concurrent write requests (using the #store()) at a NodeStore. There can be multiple reader threads
- * for a given entity store. The node initialization is handled by the main thread during the startup of the node.
+ * Concurrency model: Writes to each entity store is handled by a single writer. However, there can be multiple
+ * concurrent write requests (using the #store()) at a NodeStore. There can be multiple reader threads for a given
+ * entity store. The node initialization is handled by the main thread during the startup of the node.
  */
 public class NodeStore {
     // package level access to support unit testing
@@ -49,10 +49,10 @@ public class NodeStore {
 
     public NodeStore() {
         this(new SessionValidator(),
-                new Logger(getRootJournalFileName(Context.getInstance().getNodeConfig().getRootJournalLoc())),
-                Context.getInstance().getNodeConfig().getMemTableSize() * 1024 * 1024, // MB -> Bytes
-                Context.getInstance().getNodeConfig().getBlockSize() * 1024 * 1024, // MB -> Bytes
-                Context.getInstance().getNodeConfig().getMetadataStoreDir(), new DiskManager());
+             new Logger(getRootJournalFileName(Context.getInstance().getNodeConfig().getRootJournalLoc())),
+             Context.getInstance().getNodeConfig().getMemTableSize() * 1024 * 1024, // MB -> Bytes
+             Context.getInstance().getNodeConfig().getBlockSize() * 1024 * 1024, // MB -> Bytes
+             Context.getInstance().getNodeConfig().getMetadataStoreDir(), new DiskManager());
     }
 
     // constructor used for writing unit tests with mocks
@@ -67,10 +67,14 @@ public class NodeStore {
         this.diskManager = diskManager;
     }
 
+    static String getRootJournalFileName(String rootJournalLoc) {
+        return rootJournalLoc + File.separator + Util.getHostname() + "_root.slog";
+    }
+
     /**
-     * Initialize the node store based on the commit log. Reads log records of the
-     * all entity stores created for different data sets: initialize them and keep an index of them
-     * in an in-memory structure for subsequent data ingestion/querying purposes.
+     * Initialize the node store based on the commit log. Reads log records of the all entity stores created for
+     * different data sets: initialize them and keep an index of them in an in-memory structure for subsequent data
+     * ingestion/querying purposes.
      *
      * @throws StorageException Error when parsing the commit log
      */
@@ -95,8 +99,9 @@ public class NodeStore {
             try {
                 CreateEntityStoreActivity createEntityStore = new CreateEntityStoreActivity();
                 createEntityStore.deserialize(serialized);
-                EntityStore entityStore = new EntityStore(createEntityStore.getEntityId(), metadataStoreDir,
-                        memTableSize, blockSize, diskManager);
+                EntityStore entityStore =
+                        new EntityStore(createEntityStore.getEntityId(), metadataStoreDir, memTableSize, blockSize,
+                                        diskManager);
                 if (logger.isDebugEnabled()) {
                     logger.debug("Initializing entity store: " + createEntityStore.getEntityId());
                 }
@@ -104,8 +109,8 @@ public class NodeStore {
                 entityStore.init();
                 long entityStoreEndTS = System.currentTimeMillis();
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Completed initializing entity store: " + createEntityStore.getEntityId() + ", " +
-                            "elapsed time (s): " + (entityStoreEndTS - entityStoreStartTS) / (1000.0));
+                    logger.debug("Completed initializing entity store: " + createEntityStore.getEntityId() + ", "
+                                 + "elapsed time (s): " + (entityStoreEndTS - entityStoreStartTS) / (1000.0));
                 }
                 entityStoreMap.putIfAbsent(createEntityStore.getDataSetId(), new PatriciaTrie<>());
                 entityStoreMap.get(createEntityStore.getDataSetId()).put(createEntityStore.getEntityId(), entityStore);
@@ -116,7 +121,8 @@ public class NodeStore {
         }
         initialized = new AtomicBoolean(true);
         long nodeInitEndTS = System.currentTimeMillis();
-        logger.info("Completed node store initialization. Elapsed time (s): " + (nodeInitEndTS - nodeInitStartTS) / 1000.0);
+        logger.info(
+                "Completed node store initialization. Elapsed time (s): " + (nodeInitEndTS - nodeInitStartTS) / 1000.0);
     }
 
     public void store(String datasetId, String entityId, long sessionId, StrandStorageKey storageKey,
@@ -129,7 +135,7 @@ public class NodeStore {
         SessionValidator.SessionValidationResponse response = validateSession(datasetId, sessionId);
         if (!response.valid) {
             logger.error("Session validation failed. Aborting ingestion operation. User id: " + response.userId + ", "
-                    + "data set id: " + datasetId + ", session id: " + sessionId);
+                         + "data set id: " + datasetId + ", session id: " + sessionId);
             throw new StorageException("Session validation failed. Session id: " + sessionId);
         }
         store(response.userId, datasetId, entityId, sessionId, response.sessionStartTS, storageKey, storageValue);
@@ -185,13 +191,14 @@ public class NodeStore {
                     entityStore = new EntityStore(entityId, metadataStoreDir, memTableSize, blockSize, diskManager);
                     entityStore.init();
                     // If a new entity store is created, journal its metadata location
-                    CreateEntityStoreActivity createEntityStoreActivity = new CreateEntityStoreActivity(datasetId,
-                            entityId);
+                    CreateEntityStoreActivity createEntityStoreActivity =
+                            new CreateEntityStoreActivity(datasetId, entityId);
                     rootLogger.append(createEntityStoreActivity.serialize());
                     entityStoreMap.get(datasetId).put(entityId, entityStore);
                     if (logger.isDebugEnabled()) {
-                        logger.debug("Added and initialized a new entity store. Dataset id: " + datasetId + ", " +
-                                "entity id: " + entityId + ", total entity count: " + entityStoreMap.get(datasetId).size());
+                        logger.debug("Added and initialized a new entity store. Dataset id: " + datasetId + ", "
+                                     + "entity id: " + entityId + ", total entity count: " + entityStoreMap
+                                             .get(datasetId).size());
                     }
                 }
             } catch (StorageException e) {
@@ -208,16 +215,16 @@ public class NodeStore {
         entityStore.store(new IngestionSession(userId, sessionCreationTs, sessionId), storageKey, storageValue);
     }
 
-
     /**
      * End a session for all entity stores under purview of the current node store
-     * @param datasetId Dataset identifier. If there are data with this dataset id, a completed future
-     *                  with <code>true</code> is returned - This can happen in a multi node setup.
+     *
+     * @param datasetId Dataset identifier. If there are data with this dataset id, a completed future with
+     *                  <code>true</code> is returned - This can happen in a multi node setup.
      * @param sessionId Session id. The session id is validated before ending the session. If the session validation
      *                  fails, then a a completed future with <code>false</code> is returned.
-     * @param writers Set of writer threads used for ingesting data. Because entity stores assumes single writers,
-     *                it is important that the same thread which ingested data ends the session (there can be some data
-     *                remaining in the memTable).
+     * @param writers   Set of writer threads used for ingesting data. Because entity stores assumes single writers, it
+     *                  is important that the same thread which ingested data ends the session (there can be some data
+     *                  remaining in the memTable).
      * @return list of {@link CompletableFuture<Boolean>} with a future for each entity store
      */
     public List<CompletableFuture<Boolean>> endSession(String datasetId, long sessionId, WriterPool writers) {
@@ -234,7 +241,9 @@ public class NodeStore {
             returnValue.complete(false);
             return Collections.singletonList(returnValue);
         }
-        return entityStoreMap.get(datasetId).keySet().stream().map(entityId -> CompletableFuture.supplyAsync(() -> endEntityStoreSession(datasetId, entityId, response.userId, sessionId, response.sessionStartTS), writers.getExecutor(entityId.hashCode()))).collect(Collectors.toList());
+        return entityStoreMap.get(datasetId).keySet().stream().map(entityId -> CompletableFuture.supplyAsync(
+                () -> endEntityStoreSession(datasetId, entityId, response.userId, sessionId, response.sessionStartTS),
+                writers.getExecutor(entityId.hashCode()))).collect(Collectors.toList());
     }
 
     /**
@@ -252,18 +261,14 @@ public class NodeStore {
         try {
             // we use the IngestionSession constructor with the session id here. It is used only for
             // looking up a session.
-            return entityStoreMap.get(datasetId).get(entityId).endSession(new IngestionSession(user, sessionStartTS,
-                    sessionId));
+            return entityStoreMap.get(datasetId).get(entityId)
+                                 .endSession(new IngestionSession(user, sessionStartTS, sessionId));
         } catch (StorageException | IOException e) {
-            logger.error("Error terminating session on the entity store. Dataset Id: " + datasetId + ", session " +
-                    "id:" + sessionId + ", entity id: " + entityId);
+            logger.error(
+                    "Error terminating session on the entity store. Dataset Id: " + datasetId + ", session " + "id:"
+                    + sessionId + ", entity id: " + entityId);
             return false;
         }
-    }
-
-
-    static String getRootJournalFileName(String rootJournalLoc) {
-        return rootJournalLoc + File.separator + Util.getHostname() + "_root.slog";
     }
 
     /**

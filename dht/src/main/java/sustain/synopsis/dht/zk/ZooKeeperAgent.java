@@ -31,9 +31,9 @@ public class ZooKeeperAgent implements Watcher {
     }
 
     public static ZooKeeperAgent getInstance() throws ZKError {
-        if(instance == null) {
-            synchronized(ZooKeeperAgent.class) {
-                if(instance == null) {
+        if (instance == null) {
+            synchronized (ZooKeeperAgent.class) {
+                if (instance == null) {
                     instance = new ZooKeeperAgent();
                 }
             }
@@ -42,7 +42,7 @@ public class ZooKeeperAgent implements Watcher {
     }
 
     public void process(WatchedEvent watchedEvent) {
-        if(watchedEvent.getState() == Event.KeeperState.SyncConnected) {
+        if (watchedEvent.getState() == Event.KeeperState.SyncConnected) {
             this.connectionWatcher.countDown();
         }
 

@@ -8,8 +8,8 @@ import java.util.concurrent.Executors;
  * Implements thread pool to facilitate the single writer I/O model.
  */
 public class WriterPool {
-    private final int parallelism;
     final ExecutorService[] executors;
+    private final int parallelism;
 
     public WriterPool(int parallelism) {
         this.parallelism = parallelism;

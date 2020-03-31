@@ -21,11 +21,11 @@ import java.util.stream.StreamSupport;
 public class ReaderTask implements Runnable {
 
     private static final int DEFAULT_BATCH_SIZE = 1204 * 1024;
-    private Logger logger = Logger.getLogger(ReaderTask.class);
     private final EntityStore entityStore;
     private final TargetQueryRequest queryRequest;
     private final QueryContainer container;
     private final int batchSize;
+    private Logger logger = Logger.getLogger(ReaderTask.class);
 
     public ReaderTask(EntityStore entityStore, TargetQueryRequest queryRequest, QueryContainer container,
                       int batchSize) {
@@ -63,17 +63,20 @@ public class ReaderTask implements Runnable {
 
     void readSSTable(MatchedSSTable matchedSSTable) throws IOException {
         long t1 = System.currentTimeMillis();
-        Set<StrandStorageKey> matchingBlocks =
-                matchedSSTable.getMatchedIntervals().stream().flatMap(interval -> QueryUtil.temporalLookup(matchedSSTable.getMetadata().getBlockIndex(), interval.getFrom(), interval.getTo(), false).keySet().stream()).collect(Collectors.toSet());
-        SSTableReader<StrandStorageKey> reader = new SSTableReader<>(matchedSSTable.getMetadata(),
-                StrandStorageKey.class);
+        Set<StrandStorageKey> matchingBlocks = matchedSSTable.getMatchedIntervals().stream().flatMap(
+                interval -> QueryUtil.temporalLookup(matchedSSTable.getMetadata().getBlockIndex(), interval.getFrom(),
+                                                     interval.getTo(), false).keySet().stream())
+                                                             .collect(Collectors.toSet());
+        SSTableReader<StrandStorageKey> reader =
+                new SSTableReader<>(matchedSSTable.getMetadata(), StrandStorageKey.class);
         for (StrandStorageKey firstKey : matchingBlocks) {
             sendStrandsAsBatches(readBlock(reader, firstKey, matchedSSTable.getMatchedIntervals()));
         }
         long t2 = System.currentTimeMillis();
         if (logger.isDebugEnabled()) {
-            logger.debug("Time spent on processing the SSTable (" + matchedSSTable.getMetadata().getPath() + "): (ms)"
-                    + (t2 - t1));
+            logger.debug(
+                    "Time spent on processing the SSTable (" + matchedSSTable.getMetadata().getPath() + "): (ms)" + (t2
+                                                                                                                     - t1));
         }
     }
 
@@ -82,20 +85,20 @@ public class ReaderTask implements Runnable {
                                                                        List<Interval> intervals) throws IOException {
         // read the block data and filter individual strands again
         long t1 = System.currentTimeMillis();
-        List<TableIterator.TableEntry<StrandStorageKey, byte[]>> result =
-                StreamSupport.stream(Spliterators.spliteratorUnknownSize(reader.readBlock(firstKey),
-                        Spliterator.ORDERED), false).filter(entry -> {
-            boolean include = false;
-            Interval scope = new Interval(entry.getKey().getStartTS(), entry.getKey().getEndTS());
-            for (Interval interval : intervals) {
-                // if one interval at-least overlaps with the scope of the Strand include it in the response.
-                if (interval.isOverlapping(scope)) {
-                    include = true;
-                    break;
-                }
-            }
-            return include;
-        }).collect(Collectors.toList());
+        List<TableIterator.TableEntry<StrandStorageKey, byte[]>> result = StreamSupport
+                .stream(Spliterators.spliteratorUnknownSize(reader.readBlock(firstKey), Spliterator.ORDERED), false)
+                .filter(entry -> {
+                    boolean include = false;
+                    Interval scope = new Interval(entry.getKey().getStartTS(), entry.getKey().getEndTS());
+                    for (Interval interval : intervals) {
+                        // if one interval at-least overlaps with the scope of the Strand include it in the response.
+                        if (interval.isOverlapping(scope)) {
+                            include = true;
+                            break;
+                        }
+                    }
+                    return include;
+                }).collect(Collectors.toList());
         long t2 = System.currentTimeMillis();
         if (logger.isDebugEnabled()) {
             logger.debug("Time spent on reading a block(ms): " + (t2 - t1));
@@ -108,8 +111,10 @@ public class ReaderTask implements Runnable {
         TargetQueryResponse response = TargetQueryResponse.newBuilder().buildPartial();
         int payloadSize = 0;
         for (TableIterator.TableEntry<StrandStorageKey, byte[]> entry : entries) {
-            MatchingStrand strand =
-                    MatchingStrand.newBuilder().setSpatialScope(entityStore.getEntityId()).setFromTS(entry.getKey().getStartTS()).setToTS(entry.getKey().getEndTS()).setStrand(ByteString.copyFrom(entry.getValue())).build();
+            MatchingStrand strand = MatchingStrand.newBuilder().setSpatialScope(entityStore.getEntityId())
+                                                  .setFromTS(entry.getKey().getStartTS())
+                                                  .setToTS(entry.getKey().getEndTS())
+                                                  .setStrand(ByteString.copyFrom(entry.getValue())).build();
             response = response.toBuilder().addStrands(strand).buildPartial();
             payloadSize += response.getSerializedSize();
             if (payloadSize >= batchSize) {

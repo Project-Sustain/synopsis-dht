@@ -18,18 +18,21 @@ public class WriterPoolTest {
     @Test
     void testDeterministicTaskAssignment() throws InterruptedException, ExecutionException {
         WriterPool pool = new WriterPool(3);
-        CompletableFuture<String> future1 = CompletableFuture.supplyAsync(() -> Thread.currentThread().getName(), pool.getExecutor(0));
-        CompletableFuture<String> future2 = CompletableFuture.supplyAsync(() -> Thread.currentThread().getName(), pool.getExecutor(0));
-        CompletableFuture<String> future3 = CompletableFuture.supplyAsync(() -> Thread.currentThread().getName(), pool.getExecutor(3));
+        CompletableFuture<String> future1 =
+                CompletableFuture.supplyAsync(() -> Thread.currentThread().getName(), pool.getExecutor(0));
+        CompletableFuture<String> future2 =
+                CompletableFuture.supplyAsync(() -> Thread.currentThread().getName(), pool.getExecutor(0));
+        CompletableFuture<String> future3 =
+                CompletableFuture.supplyAsync(() -> Thread.currentThread().getName(), pool.getExecutor(3));
         Assertions.assertEquals(future1.get(), future2.get());
         Assertions.assertEquals(future1.get(), future3.get());
     }
 
     @Test
-    void testNegativeHashCodes(){
+    void testNegativeHashCodes() {
         WriterPool pool = new WriterPool(3);
-        CompletableFuture<String> future1 = CompletableFuture.supplyAsync(() -> Thread.currentThread().getName(),
-                pool.getExecutor(-1));
+        CompletableFuture<String> future1 =
+                CompletableFuture.supplyAsync(() -> Thread.currentThread().getName(), pool.getExecutor(-1));
         Assertions.assertNotNull(future1);
     }
 

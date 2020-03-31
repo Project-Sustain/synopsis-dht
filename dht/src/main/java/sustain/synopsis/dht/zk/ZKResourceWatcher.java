@@ -22,7 +22,7 @@ class ZKResourceWatcher implements Watcher {
     @Override
     public void process(WatchedEvent watchedEvent) {
         if (watchedEvent.getType() == Event.EventType.NodeChildrenChanged) {
-            if(logger.isDebugEnabled()){
+            if (logger.isDebugEnabled()) {
                 logger.debug("Cluster membership has changed for path: " + watchedEvent.getPath());
             }
             if (watchedEvent.getPath().equals(ServerConstants.ZK_NODES_ROOT)) {

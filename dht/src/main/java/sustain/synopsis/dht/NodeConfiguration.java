@@ -12,23 +12,14 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * User provided configuration for a storage node. This bean class is a direct mapping between
- * the YAML (v1.1) configuration file provided during the start up.
- * For each member variable, there should be corresponding getter/setter methods.
+ * User provided configuration for a storage node. This bean class is a direct mapping between the YAML (v1.1)
+ * configuration file provided during the start up. For each member variable, there should be corresponding
+ * getter/setter methods.
  */
 @SuppressWarnings("unused")
 public class NodeConfiguration {
 
     public static final String HOSTNAME_PLACEHOLDER = "$HOSTNAME";
-
-    static NodeConfiguration fromYamlFile(String filePath) throws IOException {
-        try (FileInputStream fis = new FileInputStream(filePath)) {
-            Yaml yaml = new Yaml(new Constructor(NodeConfiguration.class));
-            return yaml.load(fis);
-        }
-    }
-
-
     private String hostname = Util.getHostname();
     private int ingestionServicePort;
     private List<String> zkEnsemble;
@@ -39,6 +30,13 @@ public class NodeConfiguration {
     private int blockSize;
     private String metadataStoreDir;
     private int writerPoolSize;
+
+    static NodeConfiguration fromYamlFile(String filePath) throws IOException {
+        try (FileInputStream fis = new FileInputStream(filePath)) {
+            Yaml yaml = new Yaml(new Constructor(NodeConfiguration.class));
+            return yaml.load(fis);
+        }
+    }
 
     public int getIngestionServicePort() {
         return ingestionServicePort;
@@ -53,8 +51,8 @@ public class NodeConfiguration {
     }
 
     public void setStorageDirs(Map<String, Long> storageDirs) {
-        this.storageDirs =
-                Collections.unmodifiableMap(storageDirs).entrySet().stream().collect(Collectors.toMap(x -> x.getKey().replace(HOSTNAME_PLACEHOLDER, hostname), Map.Entry::getValue));
+        this.storageDirs = Collections.unmodifiableMap(storageDirs).entrySet().stream().collect(
+                Collectors.toMap(x -> x.getKey().replace(HOSTNAME_PLACEHOLDER, hostname), Map.Entry::getValue));
     }
 
     public String getStorageAllocationPolicy() {
@@ -118,16 +116,17 @@ public class NodeConfiguration {
         if (this == o) return true;
         if (!(o instanceof NodeConfiguration)) return false;
         NodeConfiguration that = (NodeConfiguration) o;
-        return getIngestionServicePort() == that.getIngestionServicePort() && getMemTableSize() == that.getMemTableSize()
-                && getBlockSize() == that.getBlockSize() && getWriterPoolSize() == that.getWriterPoolSize() &&
-                hostname.equals(that.hostname) && getStorageDirs().equals(that.getStorageDirs()) &&
-                getStorageAllocationPolicy().equals(that.getStorageAllocationPolicy()) &&
-                getRootJournalLoc().equals(that.getRootJournalLoc()) && getMetadataStoreDir().equals(that.getMetadataStoreDir());
+        return getIngestionServicePort() == that.getIngestionServicePort() && getMemTableSize() == that
+                .getMemTableSize() && getBlockSize() == that.getBlockSize() && getWriterPoolSize() == that
+                .getWriterPoolSize() && hostname.equals(that.hostname) && getStorageDirs().equals(that.getStorageDirs())
+               && getStorageAllocationPolicy().equals(that.getStorageAllocationPolicy()) && getRootJournalLoc()
+                       .equals(that.getRootJournalLoc()) && getMetadataStoreDir().equals(that.getMetadataStoreDir());
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(hostname, getIngestionServicePort(), getStorageDirs(), getStorageAllocationPolicy(),
-                getRootJournalLoc(), getMemTableSize(), getBlockSize(), getMetadataStoreDir(), getWriterPoolSize());
+                            getRootJournalLoc(), getMemTableSize(), getBlockSize(), getMetadataStoreDir(),
+                            getWriterPoolSize());
     }
 }

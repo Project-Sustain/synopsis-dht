@@ -8,12 +8,14 @@ import java.io.IOException;
 public interface Activity {
     /**
      * A unique identifier for the type of the activity
+     *
      * @return Identifier of type {@link Short}.
      */
     public short getType();
 
     /**
      * Serialize the activity
+     *
      * @return <code>byte[]</code> of the serialized data
      * @throws IOException I/O error during serialization
      */
@@ -21,6 +23,7 @@ public interface Activity {
 
     /**
      * Deserialize the activity
+     *
      * @param serializedData serialized data provided as a <code>byte[]</code>
      * @throws IOException I/O error during deserialization
      */

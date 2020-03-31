@@ -23,18 +23,19 @@ public class QueryCoordinator {
     }
 
     public CompletableFuture<Boolean> schedule(TargetQueryRequest queryRequest,
-                                               StreamObserver<TargetQueryResponse> responseObserver) throws QueryException {
+                                               StreamObserver<TargetQueryResponse> responseObserver)
+            throws QueryException {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         Set<EntityStore> matchingEntityStores = nodeStore.getMatchingEntityStores(queryRequest);
-        if(logger.isDebugEnabled()){
+        if (logger.isDebugEnabled()) {
             logger.debug("Number of matching entity stores: " + matchingEntityStores.size());
         }
         if (matchingEntityStores.isEmpty()) {
             future.complete(false);
             return future;
         }
-        QueryContainer container = new QueryContainer(new CountDownLatch(matchingEntityStores.size()), future,
-                responseObserver);
+        QueryContainer container =
+                new QueryContainer(new CountDownLatch(matchingEntityStores.size()), future, responseObserver);
         for (EntityStore entityStore : matchingEntityStores) {
             readers.submit(new ReaderTask(entityStore, queryRequest, container));
         }

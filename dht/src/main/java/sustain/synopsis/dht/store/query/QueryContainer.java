@@ -29,7 +29,7 @@ public class QueryContainer {
     public void complete() {
         latch.countDown();
         if (latch.getCount() == 0) {
-            if(logger.isDebugEnabled()){
+            if (logger.isDebugEnabled()) {
                 logger.debug("Last reader task is done. Query is complete.");
             }
             future.complete(true);

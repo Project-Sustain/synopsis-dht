@@ -6,8 +6,8 @@ import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
- * Context is a singleton object available to the DHT node runtime to access node-wide configuration.
- * This includes the startup configurations, runtime properties and objects.
+ * Context is a singleton object available to the DHT node runtime to access node-wide configuration. This includes the
+ * startup configurations, runtime properties and objects.
  */
 public class Context {
 

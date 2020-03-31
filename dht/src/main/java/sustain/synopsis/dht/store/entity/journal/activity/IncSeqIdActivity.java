@@ -12,7 +12,7 @@ public class IncSeqIdActivity extends AbstractActivity {
 
     private int sequenceId;
 
-    public IncSeqIdActivity(){
+    public IncSeqIdActivity() {
         // for deserialization
     }
 

@@ -44,8 +44,8 @@ public class EntityStoreTest {
         StrandStorageKey key2 = new StrandStorageKey(1391216400100L, 1391216400200L);
         String returned = store.getSSTableOutputPath(key1, key2, storageDir.getAbsolutePath(), 0);
         String expected =
-                storageDir.getAbsolutePath() + File.separator + "9xj_" + key1.toString() + "_" + key2.toString() +
-                        "_0.sd";
+                storageDir.getAbsolutePath() + File.separator + "9xj_" + key1.toString() + "_" + key2.toString()
+                + "_0.sd";
         assertEquals(expected, returned);
     }
 
@@ -56,11 +56,11 @@ public class EntityStoreTest {
         EntityStore entityStore = new EntityStore("9xj", metadataDir.getAbsolutePath(), 1024, 50, diskManagerMock);
         entityStore.init();
         StrandStorageKey key1 = new StrandStorageKey(1391216400000L, 1391216400100L);
-        StrandStorageValue value1 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L,
-                1391216400100L, 1.0, 2.0)));
+        StrandStorageValue value1 =
+                new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0, 2.0)));
         StrandStorageKey key2 = new StrandStorageKey(1391216400100L, 1391216400200L);
-        StrandStorageValue value2 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L,
-                1391216400100L, 1.0, 2.0)));
+        StrandStorageValue value2 =
+                new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0, 2.0)));
         IngestionSession session = new IngestionSession("bob", System.currentTimeMillis(), 0);
         entityStore.startSession(session);
         entityStore.store(session, key1, value1);
@@ -68,8 +68,9 @@ public class EntityStoreTest {
         Metadata<StrandStorageKey> metadata = new Metadata<>();
         entityStore.toSSTable(session, diskManagerMock, metadata);
 
-        File serializedSSTable =
-                new File(storageDir.getAbsolutePath() + File.separator + "9xj" + "_" + key1.toString() + "_" + key2.toString() + "_0.sd");
+        File serializedSSTable = new File(
+                storageDir.getAbsolutePath() + File.separator + "9xj" + "_" + key1.toString() + "_" + key2.toString()
+                + "_0.sd");
         assertTrue(serializedSSTable.exists());
         assertTrue(serializedSSTable.isFile());
         assertTrue(serializedSSTable.length() > 0);
@@ -97,12 +98,12 @@ public class EntityStoreTest {
 
         // size of key and value used here - 187 bytes
         StrandStorageKey key1 = new StrandStorageKey(1391216400000L, 1391216400100L);
-        StrandStorageValue value1 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L,
-                1391216400100L, 1.0, 2.0)));
+        StrandStorageValue value1 =
+                new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0, 2.0)));
         entityStore.store(session, key1, value1); // this should fill up the memTable
         StrandStorageKey key2 = new StrandStorageKey(1391216400100L, 1391216400200L);
-        StrandStorageValue value2 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L,
-                1391216400100L, 1.0, 2.0)));
+        StrandStorageValue value2 =
+                new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0, 2.0)));
         entityStore.store(session, key2, value2);
         // storing 2 strands should fill out the memTable
         Mockito.verify(diskManagerMock, Mockito.times(1)).allocate(Mockito.anyLong());
@@ -115,12 +116,12 @@ public class EntityStoreTest {
 
         // add more data
         StrandStorageKey key3 = new StrandStorageKey(1391216400200L, 1391216400300L);
-        StrandStorageValue value3 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L,
-                1391216400100L, 1.0, 2.0)));
+        StrandStorageValue value3 =
+                new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0, 2.0)));
         entityStore.store(session, key3, value3);
 
         // end session
-        entityStore.endSession(session);
+        Assertions.assertTrue(entityStore.endSession(session));
         // at this point, there should be two calls to the disk_manager#allcate method
         Mockito.verify(diskManagerMock, Mockito.times(2)).allocate(Mockito.anyLong());
         Mockito.verify(entityStoreJournalMock, Mockito.times(2)).addSerializedSSTable(Mockito.any(), Mockito.any());
@@ -128,6 +129,9 @@ public class EntityStoreTest {
         assertEquals(2, entityStore.queryableMetadata.size());
         assertEquals(0, entityStore.activeMetadata.size());
         assertEquals(0, entityStore.activeSessions.size());
+
+        // try to an invalid session
+        Assertions.assertFalse(entityStore.endSession(new IngestionSession("alice", System.currentTimeMillis(), 100)));
     }
 
     @Test
@@ -139,23 +143,23 @@ public class EntityStoreTest {
         IngestionSession session = new IngestionSession("bob", System.currentTimeMillis(), 0);
         entityStore.startSession(session);
         StrandStorageKey key1 = new StrandStorageKey(1391216400000L, 1391216400100L);
-        StrandStorageValue value1 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L,
-                1391216400100L, 1.0, 2.0)));
+        StrandStorageValue value1 =
+                new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0, 2.0)));
         entityStore.store(session, key1, value1); // this should fill up the memTable
         StrandStorageKey key2 = new StrandStorageKey(1391216400100L, 1391216400200L);
-        StrandStorageValue value2 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L,
-                1391216400100L, 1.0, 2.0)));
+        StrandStorageValue value2 =
+                new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0, 2.0)));
         entityStore.store(session, key2, value2);
         StrandStorageKey key3 = new StrandStorageKey(1391216400200L, 1391216400300L);
-        StrandStorageValue value3 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L,
-                1391216400100L, 1.0, 2.0)));
+        StrandStorageValue value3 =
+                new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0, 2.0)));
         entityStore.store(session, key3, value3);
         // end session
-        entityStore.endSession(session);
+        Assertions.assertTrue(entityStore.endSession(session));
 
         // Simulate a node restart
-        EntityStore restartedEntityStore = new EntityStore("noaa:9xj", metadataDir.getAbsolutePath(), 200, 50,
-                diskManagerMock);
+        EntityStore restartedEntityStore =
+                new EntityStore("noaa:9xj", metadataDir.getAbsolutePath(), 200, 50, diskManagerMock);
         restartedEntityStore.init();
         // there were two SSTables written before. So the sequence ID should start from 2.
         assertEquals(2, restartedEntityStore.sequenceId.get());
@@ -164,19 +168,19 @@ public class EntityStoreTest {
         // write some more data
         session = new IngestionSession("bob", System.currentTimeMillis(), 1);
         StrandStorageKey key4 = new StrandStorageKey(1391216400300L, 1391216400400L);
-        StrandStorageValue value4 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400300L,
-                1391216400400L, 1.0, 2.0)));
+        StrandStorageValue value4 =
+                new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400300L, 1391216400400L, 1.0, 2.0)));
         restartedEntityStore.store(session, key4, value4); // this should fill up the memTable
         StrandStorageKey key5 = new StrandStorageKey(1391216400400L, 1391216400500L);
-        StrandStorageValue value5 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400400L,
-                1391216400500L, 1.0, 2.0)));
+        StrandStorageValue value5 =
+                new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400400L, 1391216400500L, 1.0, 2.0)));
         restartedEntityStore.store(session, key5, value5); // this should fill up the memTable
 
         assertEquals(3, restartedEntityStore.sequenceId.get());
         assertEquals(2, restartedEntityStore.queryableMetadata.size());
         assertEquals(1, restartedEntityStore.activeSessions.size());
         assertEquals(1, restartedEntityStore.activeMetadata.size());
-        restartedEntityStore.endSession(session);
+        Assertions.assertTrue(restartedEntityStore.endSession(session));
         assertEquals(3, restartedEntityStore.queryableMetadata.size());
     }
 
@@ -195,8 +199,11 @@ public class EntityStoreTest {
         entityStore.startSession(session);
 
         // there are no queryable sessions at the moment
-        Expression exp =
-                Expression.newBuilder().setPredicate1(Predicate.newBuilder().setIntegerValue(1750).setComparisonOp(Predicate.ComparisonOperator.LESS_THAN).build()).setCombineOp(Expression.CombineOperator.OR).setPredicate2(Predicate.newBuilder().setIntegerValue(1800).setComparisonOp(Predicate.ComparisonOperator.GREATER_THAN).build()).build();
+        Expression exp = Expression.newBuilder().setPredicate1(
+                Predicate.newBuilder().setIntegerValue(1750).setComparisonOp(Predicate.ComparisonOperator.LESS_THAN)
+                         .build()).setCombineOp(Expression.CombineOperator.OR).setPredicate2(
+                Predicate.newBuilder().setIntegerValue(1800).setComparisonOp(Predicate.ComparisonOperator.GREATER_THAN)
+                         .build()).build();
         List<MatchedSSTable> results = entityStore.temporalQuery(exp);
         Assertions.assertTrue(results.isEmpty());
 
@@ -213,7 +220,7 @@ public class EntityStoreTest {
         StrandStorageValue value3 = new StrandStorageValue(serializeStrand(createStrand("9xj", 2000, 2500, 1.0, 2.0)));
         entityStore.store(session, key3, value3);
         // end session
-        entityStore.endSession(session);
+        Assertions.assertTrue(entityStore.endSession(session));
         Assertions.assertEquals(2, entityStore.queryableMetadata.size());
 
         results = entityStore.temporalQuery(exp);
@@ -227,7 +234,7 @@ public class EntityStoreTest {
 
         Assertions.assertEquals(1, results.get(1).getMatchedIntervals().size());
         Assertions.assertEquals(Collections.singletonList(new Interval(1801, 2500)),
-                results.get(1).getMatchedIntervals());
+                                results.get(1).getMatchedIntervals());
     }
 }
 

@@ -8,16 +8,16 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-public class  SerializeSSTableActivity extends AbstractActivity {
+public class SerializeSSTableActivity extends AbstractActivity {
     public static final short TYPE = 1;
     private long sessionId;
     private Metadata<StrandStorageKey> metadata;
 
-    public SerializeSSTableActivity(){
+    public SerializeSSTableActivity() {
 
     }
 
-    public SerializeSSTableActivity(long sessionId, Metadata<StrandStorageKey> metadata){
+    public SerializeSSTableActivity(long sessionId, Metadata<StrandStorageKey> metadata) {
         this.sessionId = sessionId;
         this.metadata = metadata;
     }

@@ -14,15 +14,16 @@ public class ContextTest {
 
     @Test
     @Order(1)
-    void testSingleton(){
+    void testSingleton() {
         Context ctx = Context.getInstance();
         // we do not override the equal(). Therefore, this should do an object comparison
         Assertions.assertEquals(ctx, Context.getInstance());
     }
 
     @Test
-    @Order(0) // we need to make sure this test is run first before the ctx is initialized by other test cases
-    void testThrowErrorWhenAccessedUninitializedContext(){
+    @Order(0)
+        // we need to make sure this test is run first before the ctx is initialized by other test cases
+    void testThrowErrorWhenAccessedUninitializedContext() {
         Context context = Context.getInstance();
         // accessing an uninitialized context
         Assertions.assertThrows(RuntimeException.class, context::getNodeConfig);
@@ -56,7 +57,7 @@ public class ContextTest {
 
     @Test
     @Order(4)
-    void testProperties(){
+    void testProperties() {
         Context ctx = Context.getInstance();
         Assertions.assertNull(ctx.getProperty("test_prop_key"));
         ctx.setProperty("test_prop_key", "test_prop_val");
@@ -65,7 +66,7 @@ public class ContextTest {
 
     @Test
     @Order(5)
-    void testRingAccess(){
+    void testRingAccess() {
         Context ctx = Context.getInstance();
         Assertions.assertNull(ctx.getRing());
         Ring ring = new Ring(null, null);

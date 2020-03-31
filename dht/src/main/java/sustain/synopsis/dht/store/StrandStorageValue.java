@@ -10,9 +10,8 @@ import sustain.synopsis.storage.lsmtree.StreamSerializable;
 import java.io.*;
 
 /**
- * Wrapper for Strands before storing them in the LSMTree
- * This implementation uses a lazy deserialization to reduce the serialization overhead.
- * If the Strand object is requested through the #getMethod(), deserialization is performed.
+ * Wrapper for Strands before storing them in the LSMTree This implementation uses a lazy deserialization to reduce the
+ * serialization overhead. If the Strand object is requested through the #getMethod(), deserialization is performed.
  * This implementation is not thread safe.
  */
 public class StrandStorageValue implements Mergeable<StrandStorageValue>, StreamSerializable {
@@ -39,8 +38,8 @@ public class StrandStorageValue implements Mergeable<StrandStorageValue>, Stream
         if (strand == null) { // strand is not deserialized yet. Use the serialized data
             serialized = this.serializedStrand;
         } else { // strand may have got merged with another strand - therefore serialize the object
-            try (ByteArrayOutputStream baos = new ByteArrayOutputStream(); SerializationOutputStream sos =
-                    new SerializationOutputStream(baos);) {
+            try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                 SerializationOutputStream sos = new SerializationOutputStream(baos);) {
                 strand.serialize(sos);
                 sos.flush();
                 baos.flush();
@@ -59,7 +58,8 @@ public class StrandStorageValue implements Mergeable<StrandStorageValue>, Stream
 
     public Strand getStrand() {
         if (strand == null) {   // lazy deserialization
-            try (ByteArrayInputStream bais = new ByteArrayInputStream(serializedStrand); SerializationInputStream sis = new SerializationInputStream(bais)) {
+            try (ByteArrayInputStream bais = new ByteArrayInputStream(serializedStrand);
+                 SerializationInputStream sis = new SerializationInputStream(bais)) {
                 Strand strand = new Strand(sis);
                 this.strand = strand;
             } catch (IOException | SerializationException e) {

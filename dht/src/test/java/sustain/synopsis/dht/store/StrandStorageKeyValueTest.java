@@ -15,6 +15,27 @@ public class StrandStorageKeyValueTest {
     private long from = 1391216400000L;
     private long to = from + 100;
 
+    public static Strand createStrand(String geohash, long ts, long to, double... features) {
+        Path path = new Path(features.length);
+        for (int i = 0; i < features.length; i++) {
+            path.add(new Feature("feature_" + (i + 1), features[i]));
+        }
+        RunningStatisticsND runningStats = new RunningStatisticsND(features);
+        DataContainer container = new DataContainer(runningStats);
+        path.get(path.size() - 1).setData(container);
+        return new Strand(geohash, ts, to, path);
+    }
+
+    public static byte[] serializeStrand(Strand strand) throws IOException {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             SerializationOutputStream sos = new SerializationOutputStream(baos)) {
+            strand.serialize(sos);
+            sos.flush();
+            baos.flush();
+            return baos.toByteArray();
+        }
+    }
+
     @Test
     void testStrandStorageKeyCompare() {
         StrandStorageKey key = new StrandStorageKey(from, to);
@@ -102,30 +123,9 @@ public class StrandStorageKeyValueTest {
     }
 
     @Test
-    void testStrandStorageKeyGetters(){
+    void testStrandStorageKeyGetters() {
         StrandStorageKey key = new StrandStorageKey(10, 20);
         Assertions.assertEquals(10, key.getStartTS());
         Assertions.assertEquals(20, key.getEndTS());
-    }
-
-    public static Strand createStrand(String geohash, long ts, long to, double... features) {
-        Path path = new Path(features.length);
-        for (int i = 0; i < features.length; i++) {
-            path.add(new Feature("feature_" + (i + 1), features[i]));
-        }
-        RunningStatisticsND runningStats = new RunningStatisticsND(features);
-        DataContainer container = new DataContainer(runningStats);
-        path.get(path.size() - 1).setData(container);
-        return new Strand(geohash, ts, to, path);
-    }
-
-    public static byte[] serializeStrand(Strand strand) throws IOException {
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream(); SerializationOutputStream sos =
-                new SerializationOutputStream(baos)) {
-            strand.serialize(sos);
-            sos.flush();
-            baos.flush();
-            return baos.toByteArray();
-        }
     }
 }

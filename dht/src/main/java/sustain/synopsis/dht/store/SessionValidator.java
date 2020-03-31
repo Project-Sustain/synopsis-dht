@@ -2,6 +2,13 @@ package sustain.synopsis.dht.store;
 
 public class SessionValidator {
 
+    public SessionValidationResponse validate(String dataseId, long sessionId) {
+        // TODO: we need to fix this once the metadata server is ready with another gRPC service
+        SessionValidationResponse response =
+                new SessionValidationResponse(true, "test_user", System.currentTimeMillis());
+        return response;
+    }
+
     // todo: we need to replace this with appropriate message type from the session validation gRPC service of the
     // metadata server
     public static class SessionValidationResponse {
@@ -15,11 +22,5 @@ public class SessionValidator {
             this.userId = userId;
             this.sessionStartTS = sessionStartTS;
         }
-    }
-
-    public SessionValidationResponse validate(String dataseId, long sessionId) {
-        // TODO: we need to fix this once the metadata server is ready with another gRPC service
-        SessionValidationResponse response = new SessionValidationResponse(true, "test_user",System.currentTimeMillis());
-        return response;
     }
 }

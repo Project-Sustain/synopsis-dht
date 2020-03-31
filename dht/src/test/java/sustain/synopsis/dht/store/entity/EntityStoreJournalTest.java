@@ -26,10 +26,9 @@ public class EntityStoreJournalTest {
     File tempDir;
 
     @Test
-    void testGetJournalFilePath(){
+    void testGetJournalFilePath() {
         EntityStoreJournal metaStore = new EntityStoreJournal("entity1", "/tmp");
-        Assertions.assertEquals("/tmp" + File.separator + "entity1_metadata.slog",
-                metaStore.getJournalFilePath());
+        Assertions.assertEquals("/tmp" + File.separator + "entity1_metadata.slog", metaStore.getJournalFilePath());
     }
 
     @Test

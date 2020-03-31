@@ -1,14 +1,16 @@
 package sustain.synopsis.dht;
 
 import org.apache.log4j.Logger;
-import sustain.synopsis.dht.dispersion.RingIdMapper;
 import sustain.synopsis.dht.dispersion.DataDispersionSchemeFactory;
+import sustain.synopsis.dht.dispersion.RingIdMapper;
 import sustain.synopsis.dht.zk.MembershipListener;
 import sustain.synopsis.dht.zk.MembershipTracker;
 import sustain.synopsis.dht.zk.ZKError;
 
 import java.math.BigInteger;
-import java.util.*;
+import java.util.List;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -19,60 +21,12 @@ import java.util.stream.Collectors;
  */
 public class Ring implements Runnable, MembershipListener {
 
-    private Logger logger = Logger.getLogger(Ring.class);
-
-    public static class Entity implements Comparable<Entity> {
-        private BigInteger id;
-        private String addr;
-        private int virtualId;
-
-        public Entity(BigInteger id, String addr, int virtualId) {
-            this.id = id;
-            this.addr = addr;
-            this.virtualId = virtualId;
-        }
-
-        @Override
-        public int compareTo(Entity o) {
-            return id.compareTo(o.id);
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            Entity entity = (Entity) o;
-            return id.equals(entity.id);
-        }
-
-        @Override
-        public int hashCode() {
-            return id.hashCode();
-        }
-
-        @Override
-        public String toString() {
-            return "Entity{" + "id=" + id + ", addr='" + addr + '\'' + ", virtualId=" + virtualId + '}';
-        }
-
-        BigInteger getId() {
-            return id;
-        }
-
-        String getAddr() {
-            return addr;
-        }
-
-        int getVirtualId() {
-            return virtualId;
-        }
-    }
-
     private final BlockingQueue<List<String>> updates = new LinkedBlockingDeque<>();
     private final SortedMap<BigInteger, Entity> ring = new TreeMap<>();
     private final RingIdMapper ringIdMapper;
     private final MembershipTracker membershipTracker;
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    private Logger logger = Logger.getLogger(Ring.class);
 
     // used for unit testing
     public Ring(RingIdMapper dispersionScheme, MembershipTracker membershipTracker) {
@@ -81,8 +35,8 @@ public class Ring implements Runnable, MembershipListener {
     }
 
     public Ring() throws ZKError {
-        ringIdMapper =
-                DataDispersionSchemeFactory.getInstance().getDataDispersionScheme(ServerConstants.DATA_DISPERSION_SCHEME.CONSISTENT_HASHING);
+        ringIdMapper = DataDispersionSchemeFactory.getInstance().getDataDispersionScheme(
+                ServerConstants.DATA_DISPERSION_SCHEME.CONSISTENT_HASHING);
         membershipTracker = MembershipTracker.getInstance();
     }
 
@@ -155,6 +109,53 @@ public class Ring implements Runnable, MembershipListener {
             return ring.size();
         } finally {
             lock.readLock().unlock();
+        }
+    }
+
+    public static class Entity implements Comparable<Entity> {
+        private BigInteger id;
+        private String addr;
+        private int virtualId;
+
+        public Entity(BigInteger id, String addr, int virtualId) {
+            this.id = id;
+            this.addr = addr;
+            this.virtualId = virtualId;
+        }
+
+        @Override
+        public int compareTo(Entity o) {
+            return id.compareTo(o.id);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Entity entity = (Entity) o;
+            return id.equals(entity.id);
+        }
+
+        @Override
+        public int hashCode() {
+            return id.hashCode();
+        }
+
+        @Override
+        public String toString() {
+            return "Entity{" + "id=" + id + ", addr='" + addr + '\'' + ", virtualId=" + virtualId + '}';
+        }
+
+        BigInteger getId() {
+            return id;
+        }
+
+        String getAddr() {
+            return addr;
+        }
+
+        int getVirtualId() {
+            return virtualId;
         }
     }
 }

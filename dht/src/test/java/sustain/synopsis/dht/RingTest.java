@@ -30,7 +30,7 @@ public class RingTest {
     }
 
     @Test
-    void testRingLookup(){
+    void testRingLookup() {
         MockitoAnnotations.initMocks(this);
         // simple key to id conversion scheme for unit testing.
         // All keys are string representations of integers which are parsed into BigInteger instances
@@ -63,7 +63,7 @@ public class RingTest {
     }
 
     @Test
-    void testNodeStringToEntity(){
+    void testNodeStringToEntity() {
         MockitoAnnotations.initMocks(this);
         // using a simple id mapper for comprehensibility
         RingIdMapper simpleDispersionScheme = key -> BigInteger.valueOf(Long.parseLong(key.split(":")[1]) % 1000);
@@ -94,7 +94,7 @@ public class RingTest {
         ring.handleMembershipChange(initialNodeList);
 
         // ring updates are asynchronous
-        while(ring.getSize() == 0){
+        while (ring.getSize() == 0) {
             Thread.sleep(1000);
         }
 
@@ -108,7 +108,7 @@ public class RingTest {
 
         // update the ring again
         ring.handleMembershipChange(Collections.singletonList("localhost:1000:0"));
-        while(ring.getSize() == 5){
+        while (ring.getSize() == 5) {
             Thread.sleep(1000);
         }
         // see if the update is reflected
@@ -116,7 +116,7 @@ public class RingTest {
         Assertions.assertEquals(ring.lookup(":0:"), "localhost:1000");
 
         ringUpdater.interrupt();
-        while(ringUpdater.isAlive()){
+        while (ringUpdater.isAlive()) {
             Thread.sleep(1000);
         }
     }

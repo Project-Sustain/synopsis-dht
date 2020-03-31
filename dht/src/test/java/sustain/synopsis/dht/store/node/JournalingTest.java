@@ -8,7 +8,7 @@ import java.io.IOException;
 public class JournalingTest {
     @Test
     void testCreateEntityStoreActivitySerialization() throws IOException {
-        CreateEntityStoreActivity activity = new CreateEntityStoreActivity("dataset_1","134");
+        CreateEntityStoreActivity activity = new CreateEntityStoreActivity("dataset_1", "134");
         byte[] serialized = activity.serialize();
         CreateEntityStoreActivity deserializedActivity = new CreateEntityStoreActivity();
         deserializedActivity.deserialize(serialized);

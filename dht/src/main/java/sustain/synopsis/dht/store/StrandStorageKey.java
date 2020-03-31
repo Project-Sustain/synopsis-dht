@@ -8,9 +8,8 @@ import java.io.IOException;
 import java.util.Objects;
 
 /**
- * Key used when a LSM tree is stored in the LSM tree.
- * We only use the temporal attributes to construct a key, because the data is stored
- * in the temporal order for a given entity.
+ * Key used when a LSM tree is stored in the LSM tree. We only use the temporal attributes to construct a key, because
+ * the data is stored in the temporal order for a given entity.
  */
 public class StrandStorageKey implements Comparable<StrandStorageKey>, StreamSerializable {
 
@@ -56,7 +55,7 @@ public class StrandStorageKey implements Comparable<StrandStorageKey>, StreamSer
         this.endTS = dataInputStream.readLong();
     }
 
-    public String toString(){
+    public String toString() {
         return startTS + "_" + endTS;
     }
 

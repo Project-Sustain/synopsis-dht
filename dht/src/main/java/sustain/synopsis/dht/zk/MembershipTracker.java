@@ -11,8 +11,8 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Keeps a current list of cluster members and notify the listeners about membership changes.
- * Currently it only notifies about members who had joined the cluster at a later time.
+ * Keeps a current list of cluster members and notify the listeners about membership changes. Currently it only notifies
+ * about members who had joined the cluster at a later time.
  * <p>
  * Implemented as a singleton for each Node. It is expensive to maintain zk clients for every computation.
  *
@@ -21,9 +21,8 @@ import java.util.List;
 public class MembershipTracker implements AsyncCallback.ChildrenCallback {
 
     private static MembershipTracker instance;
-
-    private Logger logger = Logger.getLogger(MembershipTracker.class);
     private final ZooKeeper zk;
+    private Logger logger = Logger.getLogger(MembershipTracker.class);
     private ZKResourceWatcher watcher;
     private List<String> members;
     private List<MembershipListener> listeners = Collections.synchronizedList(new ArrayList<>());
@@ -43,7 +42,7 @@ public class MembershipTracker implements AsyncCallback.ChildrenCallback {
         return instance;
     }
 
-    public void subscribe(MembershipListener listener){
+    public void subscribe(MembershipListener listener) {
         listeners.add(listener);
     }
 
@@ -76,8 +75,9 @@ public class MembershipTracker implements AsyncCallback.ChildrenCallback {
             // membership has changed. One or more processes have joined the cluster
             // we should find the processors who have joined the cluster
             if (logger.isDebugEnabled()) {
-                logger.debug(String.format("Membership has changed. Previous count: %d, Current count: %d",
-                        members.size(), currentChildren.size()));
+                logger.debug(
+                        String.format("Membership has changed. Previous count: %d, Current count: %d", members.size(),
+                                      currentChildren.size()));
             }
             for (String nodeAddr : currentChildren) {
                 boolean newMember = addMember(nodeAddr);
@@ -89,8 +89,8 @@ public class MembershipTracker implements AsyncCallback.ChildrenCallback {
         notifySubscribers(newMembers);
     }
 
-    private void notifySubscribers(List<String> nodes){
-        for(MembershipListener listener : listeners){
+    private void notifySubscribers(List<String> nodes) {
+        for (MembershipListener listener : listeners) {
             listener.handleMembershipChange(nodes);
         }
     }

@@ -1,6 +1,8 @@
 package sustain.synopsis.dht.store;
 
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -140,7 +142,7 @@ public class DiskManagerTest {
     @Test
     void testAllocationPolicyFactory() {
         Assertions.assertEquals(RoundRobinAllocationPolicy.class,
-                AllocationPolicyFactory.getAllocationPolicy("round" + "-robin").getClass());
+                                AllocationPolicyFactory.getAllocationPolicy("round" + "-robin").getClass());
         Assertions.assertNull(AllocationPolicyFactory.getAllocationPolicy("unknown"));
     }
 

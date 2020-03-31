@@ -22,8 +22,8 @@ public class Node {
 
     private final Logger logger = Logger.getLogger(Node.class);
     private final int port;
-    private Server server;
     private final BindableService[] services;
+    private Server server;
 
     public Node(int port, BindableService[] services) {
         this.port = port;

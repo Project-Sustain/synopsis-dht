@@ -9,7 +9,6 @@ import sustain.synopsis.dht.store.workers.WriterPool;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -18,27 +17,18 @@ public class IngestionRequestDispatcher {
     private final WriterPool writerPool;
     private final NodeStore nodeStore;
 
-    public IngestionRequestDispatcher() throws StorageException {
-        this(new NodeStore(), Context.getInstance().getNodeConfig().getWriterPoolSize());
-    }
-
-    // used for unit testing with injected mocks
-    public IngestionRequestDispatcher(NodeStore nodeStore, int writerPoolSize) throws StorageException {
+    public IngestionRequestDispatcher(NodeStore nodeStore) {
         this.nodeStore = nodeStore;
-        nodeStore.init();
-        this.writerPool = new WriterPool(writerPoolSize);
+        this.writerPool = new WriterPool(Context.getInstance().getNodeConfig().getWriterPoolSize());
     }
 
-    public CompletableFuture<NodeMapping> getNodeMappingCompletableFuture(String datasetId, long sessionId, Strand strand) {
+    public CompletableFuture<NodeMapping> getNodeMappingCompletableFuture(String datasetId, long sessionId,
+                                                                          Strand strand) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                nodeStore.store(
-                        datasetId,
-                        strand.getEntityId(),
-                        sessionId,
-                        new StrandStorageKey(strand.getFromTs(), strand.getToTs()),
-                        new StrandStorageValue(strand.getBytes().toByteArray())
-                );
+                nodeStore.store(datasetId, strand.getEntityId(), sessionId,
+                                new StrandStorageKey(strand.getFromTs(), strand.getToTs()),
+                                new StrandStorageValue(strand.getBytes().toByteArray()));
             } catch (IOException | StorageException e) {
                 e.printStackTrace();
             }
@@ -46,43 +36,38 @@ public class IngestionRequestDispatcher {
         }, writerPool.getExecutor(strand.getEntityId().hashCode()));
     }
 
-    public CompletableFuture<IngestionResponse> toCombinedCompletableFuture(String datasetId, long sessionId, List<CompletableFuture<NodeMapping>> nodeMappingCompletableFutures) {
-        CompletableFuture<List<NodeMapping>> allCompletableFuture =
-                CompletableFuture.allOf(nodeMappingCompletableFutures.toArray(new CompletableFuture[nodeMappingCompletableFutures.size()]))
-                        .thenApply(future -> {
-                            return nodeMappingCompletableFutures.stream()
-                                    .map(CompletableFuture::join)
-                                    .collect(Collectors.toList());
-        });
+    public CompletableFuture<IngestionResponse> toCombinedCompletableFuture(String datasetId, long sessionId,
+                                                                            List<CompletableFuture<NodeMapping>> nodeMappingCompletableFutures) {
+        CompletableFuture<List<NodeMapping>> allCompletableFuture = CompletableFuture
+                .allOf(nodeMappingCompletableFutures
+                               .toArray(new CompletableFuture[nodeMappingCompletableFutures.size()])).thenApply(
+                        future -> nodeMappingCompletableFutures.stream().map(CompletableFuture::join)
+                                                               .collect(Collectors.toList()));
 
-        return allCompletableFuture.thenApply(nodeMappings -> {
-            return IngestionResponse.newBuilder()
-                    .setDatasetId(datasetId)
-                    .setSessionId(sessionId)
-                    .setStatus(true)
-                    .addAllMapping(nodeMappings.stream()
-                            .filter(mapping -> mapping.getDhtNodeAddress() != null)
-                            .collect(Collectors.toList())
-                    )
-                    .build();
-        });
+        return allCompletableFuture.thenApply(
+                nodeMappings -> IngestionResponse.newBuilder().setDatasetId(datasetId).setSessionId(sessionId)
+                                                 .setStatus(true).addAllMapping(
+                                nodeMappings.stream().filter(mapping -> mapping.getDhtNodeAddress() != null)
+                                            .collect(Collectors.toList())).build());
     }
 
     public CompletableFuture<IngestionResponse> dispatch(IngestionRequest ingestionRequest) {
-        List<CompletableFuture<NodeMapping>> nodeMappingCompletableFutures = new ArrayList<>(ingestionRequest.getStrandCount());
-        for (int i = 0; i < nodeMappingCompletableFutures.size(); i++) {
-            nodeMappingCompletableFutures.set(i, getNodeMappingCompletableFuture(
-                    ingestionRequest.getDatasetId(),
-                    ingestionRequest.getSessionId(),
-                    ingestionRequest.getStrand(i))
-            );
+        List<CompletableFuture<NodeMapping>> nodeMappingCompletableFutures =
+                new ArrayList<>(ingestionRequest.getStrandCount());
+        for (int i = 0; i < ingestionRequest.getStrandCount(); i++) {
+            nodeMappingCompletableFutures.add(i, getNodeMappingCompletableFuture(ingestionRequest.getDatasetId(),
+                                                                                 ingestionRequest.getSessionId(),
+                                                                                 ingestionRequest.getStrand(i)));
         }
 
-        return toCombinedCompletableFuture(
-                ingestionRequest.getDatasetId(),
-                ingestionRequest.getSessionId(),
-                nodeMappingCompletableFutures
-        );
+        return toCombinedCompletableFuture(ingestionRequest.getDatasetId(), ingestionRequest.getSessionId(),
+                                           nodeMappingCompletableFutures);
     }
 
+    public CompletableFuture<Boolean> terminateSession(TerminateSessionRequest terminateSessionRequest) {
+        List<CompletableFuture<Boolean>> futures = nodeStore
+                .endSession(terminateSessionRequest.getDatasetId(), terminateSessionRequest.getSessionId(), writerPool);
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenApply(
+                future -> futures.stream().map(CompletableFuture::join).reduce(true, (b1, b2) -> b1 && b2));
+    }
 }

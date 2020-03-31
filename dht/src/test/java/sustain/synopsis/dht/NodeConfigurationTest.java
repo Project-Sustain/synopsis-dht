@@ -45,6 +45,7 @@ public class NodeConfigurationTest {
         fw.append("  /" + NodeConfiguration.HOSTNAME_PLACEHOLDER + "/tmp/ : 1024\n");
         fw.append("storageAllocationPolicy: 'round-robin'\n");
         fw.append("rootJournalLoc: '/" + NodeConfiguration.HOSTNAME_PLACEHOLDER + "/tmp/root-journal.slog'\n");
+        fw.append("metadataStoreDir: '/" + NodeConfiguration.HOSTNAME_PLACEHOLDER + "/tmp/metadata.slog'\n");
         fw.flush();
         fw.close();
         NodeConfiguration configuration = NodeConfiguration.fromYamlFile(nodeConfigFilePath.toAbsolutePath().toString());
@@ -53,6 +54,7 @@ public class NodeConfigurationTest {
         Assertions.assertEquals("/" + hostname + "/tmp/",
                 configuration.getStorageDirs().keySet().iterator().next());
         Assertions.assertEquals("/" + hostname + "/tmp/root-journal.slog", configuration.getRootJournalLoc());
+        Assertions.assertEquals("/" + hostname + "/tmp/metadata.slog", configuration.getMetadataStoreDir());
     }
 
     public static void serializeNodeConfig(File output) throws IOException {

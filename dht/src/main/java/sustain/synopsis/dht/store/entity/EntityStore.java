@@ -139,7 +139,7 @@ public class EntityStore {
 
     public boolean endSession(IngestionSession session) throws StorageException, IOException {
         if (!activeSessions.containsKey(session)) {
-            if(logger.isDebugEnabled()){
+            if (logger.isDebugEnabled()) {
                 logger.debug("Unable to end the session. Invalid session id: " + session.getSessionId());
             }
             return false;
@@ -147,12 +147,12 @@ public class EntityStore {
         MemTable<StrandStorageKey, StrandStorageValue> memTable = activeSessions.get(session);
         if (memTable.getEntryCount() > 0) {
             purgeMemTable(session, memTable);
-            if(logger.isDebugEnabled()){
+            if (logger.isDebugEnabled()) {
                 logger.debug("Ending session: " + session.getSessionId() + ", purged mem table.");
             }
         }
         entityStoreJournal.endSession(session);
-        if(logger.isDebugEnabled()){
+        if (logger.isDebugEnabled()) {
             logger.debug("Ending session: " + session.getSessionId() + ", updated commit log.");
         }
         // there can be multiple concurrent reader threads accessing the queryiable data
@@ -161,7 +161,7 @@ public class EntityStore {
             int beforeSize = queryableMetadata.size();
             queryableMetadata.putAll(activeMetadata.get(session).stream().collect(Collectors.toMap((metadata) -> new StrandStorageKey(metadata.getMin().getStartTS(), metadata.getMax().getEndTS()), Function.identity())));
             int afterSize = queryableMetadata.size();
-            if(logger.isDebugEnabled()){
+            if (logger.isDebugEnabled()) {
                 logger.debug("Added the SSTables into queryable metadata. Before size: " + beforeSize + ", after " +
                         "size: " + afterSize);
             }
@@ -203,6 +203,7 @@ public class EntityStore {
 
     /**
      * Query the entity data for a given temporal expression
+     *
      * @param temporalExpression Temporal constraint expressed as {@link Expression}
      * @return List of matching SSTables and the corresponding time intervals - A given temporal expression
      * can get mapped into multiple time intervals
@@ -212,15 +213,15 @@ public class EntityStore {
         try {
             lock.readLock().lock();
             if (queryableMetadata.isEmpty()) { // there are no completed SSTables yet
-                if(logger.isDebugEnabled()){
-                    logger.debug("There are queryable SSTables for the entity: "+ entityId);
+                if (logger.isDebugEnabled()) {
+                    logger.debug("There are queryable SSTables for the entity: " + entityId);
                 }
                 return new ArrayList<>();
             }
             Map<String, MatchedSSTable> matchingMetadata = new HashMap<>();
             List<Interval> matchingIntervals = QueryUtil.evaluateTemporalExpression(temporalExpression,
                     new Interval(queryableMetadata.firstKey().getStartTS(), queryableMetadata.lastKey().getEndTS()));
-            if(logger.isDebugEnabled()){
+            if (logger.isDebugEnabled()) {
                 logger.debug("Number of matching intervals: " + matchingIntervals.size());
             }
             for (Interval interval : matchingIntervals) {

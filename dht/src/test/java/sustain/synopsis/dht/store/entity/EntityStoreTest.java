@@ -128,6 +128,9 @@ public class EntityStoreTest {
         assertEquals(2, entityStore.queryableMetadata.size());
         assertEquals(0, entityStore.activeMetadata.size());
         assertEquals(0, entityStore.activeSessions.size());
+
+        // try to an invalid session
+        Assertions.assertFalse(entityStore.endSession(new IngestionSession("alice", System.currentTimeMillis(), 100)));
     }
 
     @Test

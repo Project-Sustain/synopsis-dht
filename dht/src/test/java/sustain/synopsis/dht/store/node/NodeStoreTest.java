@@ -1,5 +1,7 @@
 package sustain.synopsis.dht.store.node;
 
+import org.apache.commons.collections4.Trie;
+import org.apache.commons.collections4.trie.PatriciaTrie;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -15,10 +17,12 @@ import sustain.synopsis.dht.store.entity.EntityStore;
 import sustain.synopsis.dht.store.query.QueryException;
 import sustain.synopsis.dht.store.services.Predicate;
 import sustain.synopsis.dht.store.services.TargetQueryRequest;
+import sustain.synopsis.dht.store.workers.WriterPool;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -41,6 +45,12 @@ public class NodeStoreTest {
 
     @Mock
     DiskManager diskManagerMock;
+
+    @Mock
+    EntityStore entityStoreMock1;
+
+    @Mock
+    EntityStore entityStoreMock2;
 
     @Test
     void testFreshStart() throws StorageException, IOException {
@@ -109,9 +119,14 @@ public class NodeStoreTest {
         assertTrue(nodeStore.entityStoreMap.containsKey("dataset_2"));
 
         // test end_session
-        nodeStore.endSession("dataset_1", "entity_1", "bob", 1000L, 123456L);
-        nodeStore.endSession("dataset_1", "entity_2", "bob", 1000L, 123456L);
-        nodeStore.endSession("dataset_2", "entity_2", "bob", 1000L, 123456L);
+        WriterPool writerPool = new WriterPool(2);
+        List<CompletableFuture<Boolean>> endSessionFutures = nodeStore.endSession("dataset_1", 1000L, writerPool);
+        Assertions.assertEquals(2, endSessionFutures.size());
+        CompletableFuture.allOf(endSessionFutures.toArray(new CompletableFuture[0])).thenApply(future -> endSessionFutures.stream().map(CompletableFuture::join).reduce(true, (b1, b2) -> b1 && b2)).thenAccept(Assertions::assertTrue);
+
+        List<CompletableFuture<Boolean>> futures = nodeStore.endSession("dataset_2", 1000L, writerPool);
+        Assertions.assertEquals(1, futures.size());
+        futures.get(0).thenAccept(Assertions::assertTrue);
     }
 
     @Test
@@ -142,9 +157,9 @@ public class NodeStoreTest {
         nodeStore.store("bob", "dataset_2", "entity_2", 1001L, 123456L, new StrandStorageKey(1391216400100L,
                 1391216400200L), new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400100L,
                 1391216400200L, 1.0, 2.0))));
-        nodeStore.endSession("dataset_1", "entity_1", "bob", 1000L, 123456L);
-        nodeStore.endSession("dataset_1", "entity_2", "bob", 1000L, 123456L);
-        nodeStore.endSession("dataset_2", "entity_2", "bob", 1000L, 123456L);
+        nodeStore.endEntityStoreSession("dataset_1", "entity_1", "bob", 1000L, 123456L);
+        nodeStore.endEntityStoreSession("dataset_1", "entity_2", "bob", 1000L, 123456L);
+        nodeStore.endEntityStoreSession("dataset_2", "entity_2", "bob", 1000L, 123456L);
 
 
         // simulate a restarted node store by starting a NodeStore by pointing to the same commit log
@@ -156,6 +171,59 @@ public class NodeStoreTest {
         assertTrue(nodeStoreRestarted.entityStoreMap.get("dataset_1").containsKey("entity_2"));
         assertEquals(1, nodeStoreRestarted.entityStoreMap.get("dataset_2").size());
         assertTrue(nodeStoreRestarted.entityStoreMap.get("dataset_2").containsKey("entity_2"));
+    }
+
+    @Test
+    void testEndSession() throws StorageException, IOException {
+        MockitoAnnotations.initMocks(this);
+        NodeConfiguration nodeConfiguration = new NodeConfiguration();
+        Context.getInstance().initialize(nodeConfiguration);
+        Mockito.when(loggerMock.iterator()).thenReturn(new Iterator<byte[]>() {
+            @Override
+            public boolean hasNext() {
+                return false;
+            }
+
+            @Override
+            public byte[] next() {
+                return null;
+            }
+        });
+        Mockito.when(diskManagerMock.init(nodeConfiguration)).thenReturn(true);
+
+        NodeStore nodeStore = new NodeStore(sessionValidatorMock, loggerMock, 1024, 200,
+                metadataStoreDir.getAbsolutePath(), diskManagerMock);
+        nodeStore.init();
+        WriterPool writerPool = new WriterPool(2);
+
+        // valid session, but no such dataset
+        nodeStore.validatedSessions.clear();
+        Mockito.when(sessionValidatorMock.validate("dataset_1", 1000L)).thenReturn(new SessionValidator.SessionValidationResponse(true, "bob", 12345L));
+        List<CompletableFuture<Boolean>> futures1 = nodeStore.endSession("dataset_1", 1000L, writerPool);
+        Assertions.assertEquals(1, futures1.size());
+        CompletableFuture.allOf(futures1.toArray(new CompletableFuture[0])).thenApply(future -> futures1.stream().map(CompletableFuture::join).reduce(true, (b1, b2) -> b1 && b2)).thenAccept(Assertions::assertTrue);
+
+        // invalid session
+        Mockito.when(sessionValidatorMock.validate("dataset_1", 1000L)).thenReturn(new SessionValidator.SessionValidationResponse(false, "bob", 12345L));
+        List<CompletableFuture<Boolean>> futures2 = nodeStore.endSession("dataset_1", 1000L, writerPool);
+        Assertions.assertEquals(1, futures2.size());
+        CompletableFuture.allOf(futures2.toArray(new CompletableFuture[0])).thenApply(future -> futures2.stream().map(CompletableFuture::join).reduce(true, (b1, b2) -> b1 && b2)).thenAccept(Assertions::assertFalse);
+
+        // add mock entity stores
+        // reset the session validator validate the session as valid
+        Mockito.when(sessionValidatorMock.validate("dataset_1", 1000L)).thenReturn(new SessionValidator.SessionValidationResponse(true, "bob", 12345L));
+        IngestionSession session = new IngestionSession("bob", 12345L, 1000L);
+        Mockito.when(entityStoreMock1.endSession(session)).thenReturn(true);
+        Mockito.when(entityStoreMock2.endSession(session)).thenReturn(true);
+        Trie<String, EntityStore> entityStores = new PatriciaTrie<>();
+        entityStores.put("entity_1", entityStoreMock1);
+        entityStores.put("entity_2", entityStoreMock2);
+        nodeStore.entityStoreMap.put("dataset_1", entityStores);
+        List<CompletableFuture<Boolean>> futures3 = nodeStore.endSession("dataset_1", 1000L, writerPool);
+        Assertions.assertEquals(2, futures3.size());
+        Mockito.verify(entityStoreMock1, Mockito.times(1)).endSession(session);
+        Mockito.verify(entityStoreMock2, Mockito.times(1)).endSession(session);
+        CompletableFuture.allOf(futures2.toArray(new CompletableFuture[0])).thenApply(future -> futures3.stream().map(CompletableFuture::join).reduce(true, (b1, b2) -> b1 && b2)).thenAccept(Assertions::assertTrue);
     }
 
     @Test
@@ -306,16 +374,16 @@ public class NodeStoreTest {
         nodeStore.store("bob", "dataset_1", "8x", 1000L, 123456L, new StrandStorageKey(1391216400100L,
                 1391216400200L), new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400100L,
                 1391216400200L, 1.0, 2.0))));
-        nodeStore.endSession("dataset_1","9xi", "bob", 1000L, 123456L);
-        nodeStore.endSession("dataset_1","9xi5", "bob", 1000L, 123456L);
-        nodeStore.endSession("dataset_1","9x", "bob", 1000L, 123456L);
-        nodeStore.endSession("dataset_1","8x", "bob", 1000L, 123456L);
+        nodeStore.endEntityStoreSession("dataset_1", "9xi", "bob", 1000L, 123456L);
+        nodeStore.endEntityStoreSession("dataset_1", "9xi5", "bob", 1000L, 123456L);
+        nodeStore.endEntityStoreSession("dataset_1", "9x", "bob", 1000L, 123456L);
+        nodeStore.endEntityStoreSession("dataset_1", "8x", "bob", 1000L, 123456L);
 
         // dataset_2
         nodeStore.store("bob", "dataset_2", "8qr", 1001L, 123456L, new StrandStorageKey(1391216400000L,
                 1391216400100L), new StrandStorageValue(serializeStrand(createStrand("9xj", 1391216400000L,
                 1391216400100L, 1.0, 2.0))));
-        nodeStore.endSession("dataset_2","8qr", "bob", 1001L, 123456L);
+        nodeStore.endEntityStoreSession("dataset_2", "8qr", "bob", 1001L, 123456L);
         return nodeStore;
     }
 }

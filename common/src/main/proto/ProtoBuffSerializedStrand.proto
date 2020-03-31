@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sustain.synopsis.common";
+
+message ProtoBuffSerializedStrand {
+    string geohash = 1;
+    int64 from = 2;
+    int64 to = 3;
+    // feature values - can be discretized values or the original values as explained below
+    repeated double features = 4;
+    // Number of observations
+    int32 observationCount = 5;
+    // Serialized data container
+    // As an optimization, data container fields are set only if the observationCount > 1.
+    // The consumer should always check the observationCount before accessing the data container fields.
+    // If observationCount == 1, then features will not be discretized and data container fields can be derived from
+    // the features. In this case, the strand represents a single observation.
+    // If observationCount > 1, then features will be discretized and data container fields will be set. In this case
+    // the strand represents an aggregation of multiple observations.
+    repeated double mean = 6;
+    repeated double m2 = 7;
+    repeated double min = 8;
+    repeated double max = 9;
+    repeated double s2 = 10;
+}

@@ -14,6 +14,7 @@ import sustain.synopsis.dht.store.workers.WriterPool;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -125,18 +126,26 @@ public class NodeStore {
         // of node failure/restart.
         // It is possible that there will be multiple concurrent request to validate the same session in this code
         // which is acceptable and will not affect the accuracy of the program.
-        SessionValidator.SessionValidationResponse response;
-        if (!validatedSessions.containsKey(sessionId)) {
-            response = sessionValidator.validate(datasetId, sessionId);
-            if (!response.valid) {
-                logger.error("Session validation failed. Aborting ingestion operation. User id: " + response.userId + ", " + "data set id: " + datasetId + ", session id: " + sessionId);
-                return;
-            }
-            validatedSessions.put(sessionId, response);
-        } else {
-            response = validatedSessions.get(sessionId);
+        SessionValidator.SessionValidationResponse response = validateSession(datasetId, sessionId);
+        if (!response.valid) {
+            logger.error("Session validation failed. Aborting ingestion operation. User id: " + response.userId + ", "
+                    + "data set id: " + datasetId + ", session id: " + sessionId);
+            throw new StorageException("Session validation failed. Session id: " + sessionId);
         }
         store(response.userId, datasetId, entityId, sessionId, response.sessionStartTS, storageKey, storageValue);
+    }
+
+    private SessionValidator.SessionValidationResponse validateSession(String datasetId, long sessionId) {
+        if (validatedSessions.containsKey(sessionId)) {
+            return validatedSessions.get(sessionId);
+        }
+        // it is okay to perform duplicate lookups (which may happens a few times per session) - otherwise we will have
+        // to synchronize
+        SessionValidator.SessionValidationResponse response = sessionValidator.validate(datasetId, sessionId);
+        if (!validatedSessions.containsKey(sessionId)) {
+            validatedSessions.put(sessionId, response); // it is okay if multiple threads overwrite the same value
+        }
+        return response;
     }
 
     /**
@@ -200,30 +209,49 @@ public class NodeStore {
     }
 
 
+    /**
+     * End a session for all entity stores under purview of the current node store
+     * @param datasetId Dataset identifier. If there are data with this dataset id, a completed future
+     *                  with <code>true</code> is returned - This can happen in a multi node setup.
+     * @param sessionId Session id. The session id is validated before ending the session. If the session validation
+     *                  fails, then a a completed future with <code>false</code> is returned.
+     * @param writers Set of writer threads used for ingesting data. Because entity stores assumes single writers,
+     *                it is important that the same thread which ingested data ends the session (there can be some data
+     *                remaining in the memTable).
+     * @return list of {@link CompletableFuture<Boolean>} with a future for each entity store
+     */
     public List<CompletableFuture<Boolean>> endSession(String datasetId, long sessionId, WriterPool writers) {
-        SessionValidator.SessionValidationResponse response = validatedSessions.get(sessionId);
-        return entityStoreMap.get(datasetId).keySet().stream().map(entityId -> CompletableFuture.supplyAsync(() -> endSession(datasetId, entityId, response.userId, sessionId, response.sessionStartTS), writers.getExecutor(entityId.hashCode()))).collect(Collectors.toList());
+        // check if there is a dataset with the given id - some nodes may not have received data for the given dataset
+        if (!entityStoreMap.containsKey(datasetId)) {
+            CompletableFuture<Boolean> returnValue = new CompletableFuture<>();
+            returnValue.complete(true);
+            return Collections.singletonList(returnValue);
+        }
+        // validate session
+        SessionValidator.SessionValidationResponse response = validateSession(datasetId, sessionId);
+        if (!response.valid) {
+            CompletableFuture<Boolean> returnValue = new CompletableFuture<>();
+            returnValue.complete(false);
+            return Collections.singletonList(returnValue);
+        }
+        return entityStoreMap.get(datasetId).keySet().stream().map(entityId -> CompletableFuture.supplyAsync(() -> endEntityStoreSession(datasetId, entityId, response.userId, sessionId, response.sessionStartTS), writers.getExecutor(entityId.hashCode()))).collect(Collectors.toList());
     }
 
     /**
-     * Terminate session. Informs all entity stores of the corresponding dataset to terminate their sessions.
-     * Terminating a session makes the data ingested during that session available for the subsequent queries.
+     * Terminate an ingestion session for a given entity.
      *
-     * @param datasetId      Dataset Id
-     * @param user           User Id
+     * @param datasetId      Dataset id
+     * @param entityId       Entity id
+     * @param user           User id
      * @param sessionId      Session id
-     * @param sessionStartTS session start timestamp
+     * @param sessionStartTS Session start time
+     * @return <code>true</code> if session termination was successful, <code>false</code> otherwise
      */
-    public boolean endSession(String datasetId, String entityId, String user, long sessionId, long sessionStartTS) {
-        // Acknowledge every entity store of the dataset
-        // There may be sessions that did not receive any data for this session - this case is handled by the entity
-        // store.
+    public boolean endEntityStoreSession(String datasetId, String entityId, String user, long sessionId,
+                                         long sessionStartTS) {
         try {
             // we use the IngestionSession constructor with the session id here. It is used only for
             // looking up a session.
-            if (logger.isDebugEnabled()) {
-                logger.debug("Processing end session request. Dataset id: " + datasetId + ", entity id:" + entityId + ", session id: " + sessionId);
-            }
             return entityStoreMap.get(datasetId).get(entityId).endSession(new IngestionSession(user, sessionStartTS,
                     sessionId));
         } catch (StorageException | IOException e) {

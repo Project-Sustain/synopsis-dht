@@ -170,6 +170,13 @@ public class StrandTest {
         Assertions.assertEquals(0, protoBuffSerializedStrand.getS2List().size());
     }
 
+    @Test
+    void testSerializeAsProtoBuff(){
+        Strand strand = createStrand(new Path(2), "9xj", 1000, 2000, 1.34, 1.5, 100.5);
+        ProtoBuffSerializedStrand protoBuffSerializedStrand = strand.toProtoBuff();
+        Assertions.assertArrayEquals(protoBuffSerializedStrand.toByteArray(), strand.serializeAsProtoBuff());
+    }
+
     private Strand createStrand(Path path, String geohash, long ts, long to, double... features) {
         for (int i = 0; i < features.length; i++) {
             path.add(new Feature("feature_" + (i + 1), features[i]));

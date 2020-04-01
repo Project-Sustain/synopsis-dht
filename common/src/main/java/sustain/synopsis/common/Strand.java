@@ -151,23 +151,23 @@ public class Strand {
         return "Strand{" + "key='" + key + '\'' + '}';
     }
 
-    public ProtoBuffSerializedStrand toProtoBuff() {
+    public byte[] serializeAsProtoBuff() {
+        return toProtoBuff().toByteArray();
+    }
+
+    ProtoBuffSerializedStrand toProtoBuff() {
         ProtoBuffSerializedStrand protoBuffStrand =
                 ProtoBuffSerializedStrand.newBuilder().setGeohash(geohash).setStartTS(fromTimeStamp).buildPartial();
         ProtoBuffSerializedStrand.Builder builder = protoBuffStrand.toBuilder();
-        for (Vertex v : path) {
-            builder.addFeatures(v.getLabel().getDouble());
-            if (v.hasData()) {
-                RunningStatisticsND statistics = v.getData().statistics;
-                builder.setObservationCount(statistics.count());
-                if (statistics.count() > 1) {
-                    builder.addAllMean(Arrays.stream(statistics.means()).boxed().collect(Collectors.toList()));
-                    builder.addAllM2(Arrays.stream(statistics.m2()).boxed().collect(Collectors.toList()));
-                    builder.addAllMax(Arrays.stream(statistics.maxes()).boxed().collect(Collectors.toList()));
-                    builder.addAllMin(Arrays.stream(statistics.mins()).boxed().collect(Collectors.toList()));
-                    builder.addAllS2(Arrays.stream(statistics.ss()).boxed().collect(Collectors.toList()));
-                }
-            }
+        builder.addAllFeatures(path.stream().map(v -> v.getLabel().getDouble()).collect(Collectors.toList()));
+        RunningStatisticsND statistics = path.get(path.size() - 1).getData().statistics;
+        builder.setObservationCount(statistics.count());
+        if (statistics.count() > 1) {
+            builder.addAllMean(Arrays.stream(statistics.means()).boxed().collect(Collectors.toList()));
+            builder.addAllM2(Arrays.stream(statistics.m2()).boxed().collect(Collectors.toList()));
+            builder.addAllMax(Arrays.stream(statistics.maxes()).boxed().collect(Collectors.toList()));
+            builder.addAllMin(Arrays.stream(statistics.mins()).boxed().collect(Collectors.toList()));
+            builder.addAllS2(Arrays.stream(statistics.ss()).boxed().collect(Collectors.toList()));
         }
         return builder.build();
     }

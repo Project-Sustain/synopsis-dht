@@ -1,10 +1,10 @@
 package sustain.synopsis.dht.store.query;
 
-import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.log4j.Logger;
+import sustain.synopsis.common.ProtoBuffSerializedStrand;
 import sustain.synopsis.dht.store.StrandStorageKey;
 import sustain.synopsis.dht.store.entity.EntityStore;
-import sustain.synopsis.dht.store.services.MatchingStrand;
 import sustain.synopsis.dht.store.services.TargetQueryRequest;
 import sustain.synopsis.dht.store.services.TargetQueryResponse;
 import sustain.synopsis.storage.lsmtree.SSTableReader;
@@ -106,17 +106,16 @@ public class ReaderTask implements Runnable {
         return result;
     }
 
-    void sendStrandsAsBatches(List<TableIterator.TableEntry<StrandStorageKey, byte[]>> entries) {
+    void sendStrandsAsBatches(List<TableIterator.TableEntry<StrandStorageKey, byte[]>> entries)
+            throws InvalidProtocolBufferException {
         long t1 = System.currentTimeMillis();
         TargetQueryResponse response = TargetQueryResponse.newBuilder().buildPartial();
         int payloadSize = 0;
         for (TableIterator.TableEntry<StrandStorageKey, byte[]> entry : entries) {
-            MatchingStrand strand = MatchingStrand.newBuilder().setSpatialScope(entityStore.getEntityId())
-                                                  .setFromTS(entry.getKey().getStartTS())
-                                                  .setToTS(entry.getKey().getEndTS())
-                                                  .setStrand(ByteString.copyFrom(entry.getValue())).build();
+            ProtoBuffSerializedStrand strand =
+                    ProtoBuffSerializedStrand.newBuilder().mergeFrom(entry.getValue()).build();
             response = response.toBuilder().addStrands(strand).buildPartial();
-            payloadSize += response.getSerializedSize();
+            payloadSize += entry.getValue().length;
             if (payloadSize >= batchSize) {
                 container.write(response.toBuilder().build());
                 response = TargetQueryResponse.newBuilder().buildPartial();

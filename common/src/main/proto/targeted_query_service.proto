@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "ProtoBuffSerializedStrand.proto";
+
 option java_multiple_files = true;
 option java_package = "sustain.synopsis.dht.store.services";
 
@@ -18,15 +20,7 @@ message TargetQueryRequest {
 
 // a single response message may pack zero or more strands
 message TargetQueryResponse {
-    repeated MatchingStrand strands = 1;
-}
-
-// a matching strand for a given query
-message MatchingStrand {
-    string spatialScope = 1;
-    int64 fromTS = 2;
-    int64 toTS = 3;
-    bytes strand = 4;
+    repeated ProtoBuffSerializedStrand strands = 1;
 }
 
 // predicates are combined using combine operators to form expressions

@@ -6,10 +6,13 @@ import sustain.synopsis.sketch.graph.Vertex;
 import sustain.synopsis.sketch.serialization.SerializationException;
 import sustain.synopsis.sketch.serialization.SerializationInputStream;
 import sustain.synopsis.sketch.serialization.SerializationOutputStream;
+import sustain.synopsis.sketch.stat.RunningStatisticsND;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 public class Strand {
     private final String geohash;
@@ -146,5 +149,26 @@ public class Strand {
     @Override
     public String toString() {
         return "Strand{" + "key='" + key + '\'' + '}';
+    }
+
+    public ProtoBuffSerializedStrand toProtoBuff() {
+        ProtoBuffSerializedStrand protoBuffStrand =
+                ProtoBuffSerializedStrand.newBuilder().setGeohash(geohash).setStartTS(fromTimeStamp).buildPartial();
+        ProtoBuffSerializedStrand.Builder builder = protoBuffStrand.toBuilder();
+        for (Vertex v : path) {
+            builder.addFeatures(v.getLabel().getDouble());
+            if (v.hasData()) {
+                RunningStatisticsND statistics = v.getData().statistics;
+                builder.setObservationCount(statistics.count());
+                if (statistics.count() > 1) {
+                    builder.addAllMean(Arrays.stream(statistics.means()).boxed().collect(Collectors.toList()));
+                    builder.addAllM2(Arrays.stream(statistics.m2()).boxed().collect(Collectors.toList()));
+                    builder.addAllMax(Arrays.stream(statistics.maxes()).boxed().collect(Collectors.toList()));
+                    builder.addAllMin(Arrays.stream(statistics.mins()).boxed().collect(Collectors.toList()));
+                    builder.addAllS2(Arrays.stream(statistics.ss()).boxed().collect(Collectors.toList()));
+                }
+            }
+        }
+        return builder.build();
     }
 }

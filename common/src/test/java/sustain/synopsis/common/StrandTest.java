@@ -171,10 +171,10 @@ public class StrandTest {
     }
 
     @Test
-    void testSerializeAsProtoBuff(){
-        Strand strand = createStrand(new Path(2), "9xj", 1000, 2000, 1.34, 1.5, 100.5);
+    void testSerializeAsProtoBuff() {
+        Strand strand = createStrand(new Path(3), "9xj", 1000, 2000, 1.34, 1.5, 100.5);
         ProtoBuffSerializedStrand protoBuffSerializedStrand = strand.toProtoBuff();
-        Assertions.assertArrayEquals(protoBuffSerializedStrand.toByteArray(), strand.serializeAsProtoBuff());
+        Assertions.assertEquals(protoBuffSerializedStrand.toByteString(), strand.serializeAsProtoBuff());
     }
 
     private Strand createStrand(Path path, String geohash, long ts, long to, double... features) {

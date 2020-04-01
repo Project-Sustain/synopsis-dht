@@ -3,10 +3,8 @@ package sustain.synopsis.ingestion.client.core;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.protobuf.ByteString;
 import io.grpc.Channel;
 import io.grpc.ManagedChannelBuilder;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 import sustain.synopsis.common.Strand;
 import sustain.synopsis.dht.store.services.IngestionRequest;
 import sustain.synopsis.dht.store.services.IngestionResponse;
@@ -15,9 +13,12 @@ import sustain.synopsis.dht.store.services.IngestionServiceGrpc.IngestionService
 import sustain.synopsis.dht.store.services.NodeMapping;
 import sustain.synopsis.sketch.serialization.SerializationOutputStream;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 
 public class DHTStrandPublisher implements StrandPublisher {
 
@@ -42,8 +43,8 @@ public class DHTStrandPublisher implements StrandPublisher {
 
     // https://stackoverflow.com/a/30968827
     static byte[] serializeToBytes(Strand s) throws IOException {
-        try (ByteArrayOutputStream bos = new ByteArrayOutputStream(); SerializationOutputStream sos =
-                new SerializationOutputStream(bos)) {
+        try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
+             SerializationOutputStream sos = new SerializationOutputStream(bos)) {
             s.serialize(sos);
             sos.flush();
             bos.flush();
@@ -55,9 +56,7 @@ public class DHTStrandPublisher implements StrandPublisher {
         String host = address.split(":")[0];
         int port = Integer.parseInt(address.split(":")[1]);
 
-        Channel channel = ManagedChannelBuilder.forAddress(host,port)
-                .usePlaintext()
-                .build();
+        Channel channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
 
         return IngestionServiceGrpc.newFutureStub(channel);
     }
@@ -74,17 +73,10 @@ public class DHTStrandPublisher implements StrandPublisher {
     }
 
     static sustain.synopsis.dht.store.services.Strand convertStrand(Strand strand) {
-        try {
-            return sustain.synopsis.dht.store.services.Strand.newBuilder()
-                    .setEntityId(strand.getGeohash())
-                    .setToTs(strand.getToTimestamp())
-                    .setFromTs(strand.getFromTimeStamp())
-                    .setBytes(ByteString.copyFrom(serializeToBytes(strand)))
-                    .build();
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
+        return sustain.synopsis.dht.store.services.Strand.newBuilder().setEntityId(strand.getGeohash())
+                                                         .setToTs(strand.getToTimestamp())
+                                                         .setFromTs(strand.getFromTimeStamp())
+                                                         .setBytes(strand.serializeAsProtoBuff()).build();
     }
 
     void processNodeMapping(NodeMapping mapping) {
@@ -105,19 +97,16 @@ public class DHTStrandPublisher implements StrandPublisher {
             List<sustain.synopsis.dht.store.services.Strand> convertedStrandList = new ArrayList<>(strands.size());
             strands.stream().forEach(s -> convertedStrandList.add(convertStrand(s)));
 
-            IngestionRequest req = IngestionRequest.newBuilder()
-                    .setDatasetId(datasetId)
-                    .setSessionId(sessionId)
-                    .addAllStrand(convertedStrandList)
-                    .build();
+            IngestionRequest req = IngestionRequest.newBuilder().setDatasetId(datasetId).setSessionId(sessionId)
+                                                   .addAllStrand(convertedStrandList).build();
             ListenableFuture<IngestionResponse> ingestFuture = stub.ingest(req);
 
             Futures.addCallback(ingestFuture, new FutureCallback<IngestionResponse>() {
                 @Override
                 public void onSuccess(IngestionResponse result) {
-                   for (int i = 0; i < result.getMappingCount(); i++) {
-                       processNodeMapping(result.getMapping(i));
-                   }
+                    for (int i = 0; i < result.getMappingCount(); i++) {
+                        processNodeMapping(result.getMapping(i));
+                    }
                 }
 
                 @Override

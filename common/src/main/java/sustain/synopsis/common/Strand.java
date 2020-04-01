@@ -1,5 +1,6 @@
 package sustain.synopsis.common;
 
+import com.google.protobuf.ByteString;
 import sustain.synopsis.sketch.dataset.feature.Feature;
 import sustain.synopsis.sketch.graph.Path;
 import sustain.synopsis.sketch.graph.Vertex;
@@ -151,8 +152,8 @@ public class Strand {
         return "Strand{" + "key='" + key + '\'' + '}';
     }
 
-    public byte[] serializeAsProtoBuff() {
-        return toProtoBuff().toByteArray();
+    public ByteString serializeAsProtoBuff() {
+        return toProtoBuff().toByteString();
     }
 
     ProtoBuffSerializedStrand toProtoBuff() {

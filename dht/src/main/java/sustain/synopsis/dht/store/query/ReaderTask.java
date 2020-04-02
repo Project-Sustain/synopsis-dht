@@ -67,16 +67,22 @@ public class ReaderTask implements Runnable {
                 interval -> QueryUtil.temporalLookup(matchedSSTable.getMetadata().getBlockIndex(), interval.getFrom(),
                                                      interval.getTo(), false).keySet().stream())
                                                              .collect(Collectors.toSet());
-        SSTableReader<StrandStorageKey> reader =
-                new SSTableReader<>(matchedSSTable.getMetadata(), StrandStorageKey.class);
-        for (StrandStorageKey firstKey : matchingBlocks) {
-            sendStrandsAsBatches(readBlock(reader, firstKey, matchedSSTable.getMatchedIntervals()));
-        }
-        long t2 = System.currentTimeMillis();
-        if (logger.isDebugEnabled()) {
-            logger.debug(
-                    "Time spent on processing the SSTable (" + matchedSSTable.getMetadata().getPath() + "): (ms)" + (t2
-                                                                                                                     - t1));
+        SSTableReader<StrandStorageKey> reader = null;
+        try {
+            reader = new SSTableReader<>(matchedSSTable.getMetadata(), StrandStorageKey.class);
+            for (StrandStorageKey firstKey : matchingBlocks) {
+                sendStrandsAsBatches(readBlock(reader, firstKey, matchedSSTable.getMatchedIntervals()));
+            }
+            long t2 = System.currentTimeMillis();
+            if (logger.isDebugEnabled()) {
+                logger.debug(
+                        "Time spent on processing the SSTable (" + matchedSSTable.getMetadata().getPath() + "): (ms)"
+                        + (t2 - t1));
+            }
+        } finally {
+            if (reader != null) {
+                reader.close();
+            }
         }
     }
 

@@ -108,4 +108,8 @@ public class SSTableReader<K extends Comparable<K> & StreamSerializable> {
         readFully(channel, buffer);
         return isCompressed ? compressor.decompress(uncompressedLength, buffer.array()) : buffer.array();
     }
+
+    public void close() throws IOException {
+        channel.close();
+    }
 }

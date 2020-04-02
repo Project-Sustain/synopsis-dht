@@ -19,7 +19,6 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.List;
 import java.util.Set;
 
 public class NoaaIngester {
@@ -108,7 +107,7 @@ public class NoaaIngester {
             return;
         }
         try {
-            logger.info("Completed " + index + "/" + inputFiles.length);
+            logger.info("Starting " + (index + 1) + "/" + inputFiles.length);
             File currentFile = inputFiles[index++];
             FileInputStream fIn = new FileInputStream(currentFile);
             BufferedInputStream bIn = new BufferedInputStream(fIn);

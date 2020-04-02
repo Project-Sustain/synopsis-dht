@@ -26,7 +26,9 @@ public class NoaaClient {
         String binConfig = args[3];
 
         File baseDir = new File(args[4]);
-        File[] inputFiles = baseDir.listFiles(pathname -> pathname.getName().startsWith("namanl_218_201501") && pathname.getName().endsWith("001.grb" + ".mblob"));
+        File[] inputFiles = baseDir.listFiles(
+                pathname -> pathname.getName().startsWith("namanl_218_201501") && pathname.getName().endsWith(
+                        "001.grb" + ".mblob"));
 
         if (inputFiles == null) {
             System.err.println("No matching files.");
@@ -55,8 +57,9 @@ public class NoaaClient {
             inputFiles[i-4] = new File(args[i]);
         }*/
 
-        for (int i = 0; i < 2; i++) {   // ingest data over two sessions
-            SessionSchema sessionSchema = new SessionSchema(Util.quantizerMapFromFile(binConfig), GEOHASH_LENGTH, TEMPORAL_BRACKET_LENGTH);
+        for (int i = 0; i < Math.min(2, inputFiles.length); i++) {   // ingest data over two sessions
+            SessionSchema sessionSchema =
+                    new SessionSchema(Util.quantizerMapFromFile(binConfig), GEOHASH_LENGTH, TEMPORAL_BRACKET_LENGTH);
 
             StrandPublisher strandPublisher = new SimpleStrandPublisher(dhtNodeAddress, datasetId, sessionId + i);
 //        StrandPublisher strandPublisher = new DHTStrandPublisher(dhtNodeAddress, datasetId, sessionId);
@@ -64,7 +67,9 @@ public class NoaaClient {
 
             StrandRegistry strandRegistry = new StrandRegistry(strandPublisher, 10000, 100);
 
-            NoaaIngester noaaIngester = new NoaaIngester(Arrays.copyOfRange(inputFiles, inputFiles.length / 2 * i, inputFiles.length / 2 * (i + 1)), sessionSchema);
+            NoaaIngester noaaIngester = new NoaaIngester(
+                    Arrays.copyOfRange(inputFiles, (int) Math.ceil(inputFiles.length / 2d) * i,
+                                       (int) Math.ceil(inputFiles.length / 2d) * (i + 1)), sessionSchema);
 
             long timeStart = Instant.now().toEpochMilli();
             while (noaaIngester.hasNext()) {

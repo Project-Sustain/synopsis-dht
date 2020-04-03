@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sustain.synopsis.common";
+
+message ProtoBuffSerializedStrand {
+    string geohash = 1;
+    // start timestamp as an epoch - endTS can be derived by referring to the schema
+    int64 startTS = 2;
+    // discretized feature values
+    repeated double features = 3;
+    // Number of observations
+    int64 observationCount = 4;
+    // Serialized data container
+    // If the observation count == 1, this field contains the non-discretized feature values which will be used
+    // for deriving the rest of the data container.
+    // If the observation count > 1, then it will contain the mean values for individual features
+    repeated double mean = 5;
+    // As an optimization, rest of the data container fields are set only if the observationCount > 1.
+    // The consumer should always check the observationCount before accessing the data container fields.
+    // If observationCount == 1, data container fields will not be set and they can be derived from the mean values.
+    // If observationCount > 1, then the data container variables will be set.
+    repeated double m2 = 6;
+    repeated double min = 7;
+    repeated double max = 8;
+    repeated double s2 = 9;
+}

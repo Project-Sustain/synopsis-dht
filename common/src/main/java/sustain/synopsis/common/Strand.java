@@ -1,5 +1,6 @@
 package sustain.synopsis.common;
 
+import com.google.protobuf.ByteString;
 import sustain.synopsis.sketch.dataset.feature.Feature;
 import sustain.synopsis.sketch.graph.Path;
 import sustain.synopsis.sketch.graph.Vertex;
@@ -44,7 +45,7 @@ public class Strand {
         this.fromTimeStamp = fromTimeStamp;
         this.path = path;
         this.metadata = new Properties();
-        this.key = generateKey(geohash, fromTimeStamp, toTimestamp, path);
+        this.key = generateKey(geohash, fromTimeStamp, path);
     }
 
     public Strand(SerializationInputStream sis) throws IOException, SerializationException {
@@ -62,7 +63,7 @@ public class Strand {
         for (int i = 0; i < metadataSize; i++) {
             metadata.setProperty(sis.readUTF(), sis.readUTF());
         }
-        this.key = generateKey(this.geohash, this.fromTimeStamp, this.toTimestamp, this.path);
+        this.key = generateKey(this.geohash, this.fromTimeStamp, this.path);
     }
 
     public void merge(Strand other) {
@@ -131,14 +132,14 @@ public class Strand {
         return Objects.hash(key, metadata);
     }
 
-    private static String generateKey(String geohash, long fromTimeStamp, long toTimestamp, Path path) {
+    private static String generateKey(String geohash, long fromTimeStamp, Path path) {
+        // we do not need the feature names or the toTimeStamp because we compare and merge Strands from
+        // the same session which share the same schema.
         StringBuilder stringBuilder = new StringBuilder();
-        // when generating the key, we append the toTimestamp before the fromTimeStamp to do prefix search
-        // to publish the completed strands.
-        stringBuilder.append(geohash).append(",").append(toTimestamp).append(",").append(fromTimeStamp);
+        stringBuilder.append(geohash).append(",").append(fromTimeStamp);
         for (Vertex v : path) {
             Feature feature = v.getLabel();
-            stringBuilder.append(",").append(feature.getName()).append("=").append(feature.getDouble());
+            stringBuilder.append(",").append(feature.getDouble());
         }
         return stringBuilder.toString();
     }
@@ -146,5 +147,9 @@ public class Strand {
     @Override
     public String toString() {
         return "Strand{" + "key='" + key + '\'' + '}';
+    }
+
+    public ByteString serializeAsProtoBuff() {
+        return StrandSerializationUtil.toProtoBuff(this).toByteString();
     }
 }

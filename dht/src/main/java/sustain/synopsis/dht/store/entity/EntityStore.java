@@ -7,10 +7,7 @@ import sustain.synopsis.dht.store.query.MatchedSSTable;
 import sustain.synopsis.dht.store.query.QueryException;
 import sustain.synopsis.dht.store.query.QueryUtil;
 import sustain.synopsis.dht.store.services.Expression;
-import sustain.synopsis.storage.lsmtree.ChecksumGenerator;
-import sustain.synopsis.storage.lsmtree.MemTable;
-import sustain.synopsis.storage.lsmtree.Metadata;
-import sustain.synopsis.storage.lsmtree.SSTableWriter;
+import sustain.synopsis.storage.lsmtree.*;
 import sustain.synopsis.storage.lsmtree.compress.BlockCompressor;
 import sustain.synopsis.storage.lsmtree.compress.LZ4BlockCompressor;
 
@@ -125,7 +122,7 @@ public class EntityStore {
             if (isMemTableFull) {
                 purgeMemTable(session, memTable);
             }
-        } catch (IOException | StorageException e) {
+        } catch (IOException | StorageException | MergeError e) {
             logger.error("Error storing the strand.", e);
             return false;
         }

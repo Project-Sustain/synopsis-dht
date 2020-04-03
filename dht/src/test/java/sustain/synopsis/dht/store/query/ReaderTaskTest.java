@@ -1,15 +1,21 @@
 package sustain.synopsis.dht.store.query;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import sustain.synopsis.common.ProtoBuffSerializedStrand;
 import sustain.synopsis.dht.store.StrandStorageKey;
+import sustain.synopsis.dht.store.StrandStorageKeyValueTest;
 import sustain.synopsis.dht.store.entity.EntityStore;
-import sustain.synopsis.dht.store.services.*;
+import sustain.synopsis.dht.store.services.Expression;
+import sustain.synopsis.dht.store.services.Predicate;
+import sustain.synopsis.dht.store.services.TargetQueryRequest;
+import sustain.synopsis.dht.store.services.TargetQueryResponse;
 import sustain.synopsis.storage.lsmtree.Metadata;
 import sustain.synopsis.storage.lsmtree.SSTableReader;
 import sustain.synopsis.storage.lsmtree.TableIterator;
@@ -35,29 +41,41 @@ public class ReaderTaskTest {
     File tempDir;
 
     @Test
-    void testSendStrandsAsBatchesConversionToMatchingStrand() {
+    void testSendStrandsAsBatchesConversionToMatchingStrand() throws InvalidProtocolBufferException {
         MockitoAnnotations.initMocks(this);
         Mockito.when(entityStoreMock.getEntityId()).thenReturn("test_entity");
         ReaderTask task = new ReaderTask(entityStoreMock, null, containerMock, 1024 * 1024);
 
-        MatchingStrand matchingStrand =
-                MatchingStrand.newBuilder().setFromTS(1).setToTS(2).setSpatialScope("test_entity")
-                              .setStrand(ByteString.copyFrom(new byte[100])).build();
-        TargetQueryResponse targetQueryResponse = TargetQueryResponse.newBuilder().addStrands(matchingStrand).build();
-        task.sendStrandsAsBatches(
-                Collections.singletonList(new TableIterator.TableEntry<>(new StrandStorageKey(1, 2), new byte[100])));
+        ByteString serializedStrand =
+                StrandStorageKeyValueTest.createStrand("9xj", 1000, 2000, 100.0, 122.0, 513.4).serializeAsProtoBuff();
+        ProtoBuffSerializedStrand strand = ProtoBuffSerializedStrand.newBuilder().mergeFrom(serializedStrand).build();
+        TargetQueryResponse targetQueryResponse = TargetQueryResponse.newBuilder().addStrands(strand).build();
+        task.sendStrandsAsBatches(Collections.singletonList(
+                new TableIterator.TableEntry<>(new StrandStorageKey(1, 2), serializedStrand.toByteArray())));
         Mockito.verify(containerMock, Mockito.times(1)).write(targetQueryResponse);
     }
 
     @Test
-    void testSendStrandsAsBatchesMultipleBatches() {
+    void testSendStrandsAsBatchesMultipleBatches() throws InvalidProtocolBufferException {
         MockitoAnnotations.initMocks(this);
         Mockito.when(entityStoreMock.getEntityId()).thenReturn("test_entity");
-        ReaderTask task = new ReaderTask(entityStoreMock, null, containerMock, 1024 * 1024);
-        // with 1 MB batch size, there will be 2 strands per response msg.
-        List<TableIterator.TableEntry<StrandStorageKey, byte[]>> matchingStrands = IntStream.range(0, 3).mapToObj(
-                i -> new TableIterator.TableEntry<>(new StrandStorageKey(i, i + 1), new byte[512 * 1024])).collect(
-                Collectors.toList());
+        int batchSizeInBytes = 1024 * 1024;
+        ReaderTask task = new ReaderTask(entityStoreMock, null, containerMock, batchSizeInBytes);
+
+        byte[] serializedStrand =
+                StrandStorageKeyValueTest.createStrand("9xj", 1000, 2000, 100.0, 122.0, 513.4).serializeAsProtoBuff()
+                                         .toByteArray();
+        // calculate the messages for two batches - 1 full batch and 1 partially filled batch
+        int messageCount = (int) Math.ceil(batchSizeInBytes * 1.5 / serializedStrand.length);
+        List<TableIterator.TableEntry<StrandStorageKey, byte[]>> matchingStrands = IntStream.range(0, messageCount)
+                                                                                            .mapToObj(
+                                                                                                    i -> new TableIterator.TableEntry<>(
+                                                                                                            new StrandStorageKey(
+                                                                                                                    i, i
+                                                                                                                       + 1),
+                                                                                                            serializedStrand))
+                                                                                            .collect(Collectors
+                                                                                                             .toList());
         task.sendStrandsAsBatches(matchingStrands);
         // We will have 1 full response, and 1 partially filled response
         Mockito.verify(containerMock, Mockito.times(2)).write(Mockito.any());
@@ -192,7 +210,9 @@ public class ReaderTaskTest {
         File f = new File(tempDir + File.separator + "temp.file");
         metadata.setPath(f.getAbsolutePath());
 
-        byte[] payload = new byte[100];
+        byte[] payload =
+                StrandStorageKeyValueTest.createStrand("9xj", 1000, 2000, 100.0, 122.0, 513.4).serializeAsProtoBuff()
+                                         .toByteArray();
         BlockCompressor compressor = new LZ4BlockCompressor();
         FileOutputStream fos = new FileOutputStream(f);
         DataOutputStream dos = new DataOutputStream(fos);

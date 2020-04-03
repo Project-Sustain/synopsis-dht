@@ -12,6 +12,8 @@ message Strand {
     string entityId = 1;
     int64 fromTs = 2;
     int64 toTs = 3;
+    // Instead of using ProtoBuffSerializedStrand, we use serialized bytes here to avoid a deserialization/serialization
+    // cycle at the storage end. This byte[] gets directly stored on the disk.
     bytes bytes = 4;
 }
 

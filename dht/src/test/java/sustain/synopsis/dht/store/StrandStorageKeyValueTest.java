@@ -3,11 +3,12 @@ package sustain.synopsis.dht.store;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import sustain.synopsis.common.Strand;
+import sustain.synopsis.common.StrandSerializationUtil;
 import sustain.synopsis.sketch.dataset.feature.Feature;
 import sustain.synopsis.sketch.graph.DataContainer;
 import sustain.synopsis.sketch.graph.Path;
-import sustain.synopsis.sketch.serialization.SerializationOutputStream;
 import sustain.synopsis.sketch.stat.RunningStatisticsND;
+import sustain.synopsis.storage.lsmtree.MergeError;
 
 import java.io.*;
 
@@ -27,13 +28,7 @@ public class StrandStorageKeyValueTest {
     }
 
     public static byte[] serializeStrand(Strand strand) throws IOException {
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
-             SerializationOutputStream sos = new SerializationOutputStream(baos)) {
-            strand.serialize(sos);
-            sos.flush();
-            baos.flush();
-            return baos.toByteArray();
-        }
+        return StrandSerializationUtil.toProtoBuff(strand).toByteArray();
     }
 
     @Test
@@ -50,7 +45,7 @@ public class StrandStorageKeyValueTest {
     }
 
     @Test
-    void testStrandStorageSerialization() throws IOException {
+    void testStrandStorageKeySerialization() throws IOException {
         StrandStorageKey key = new StrandStorageKey(from, to);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream(baos);
@@ -78,7 +73,7 @@ public class StrandStorageKeyValueTest {
     }
 
     @Test
-    void testStrandStorageValueMerge() throws IOException {
+    void testStrandStorageValueMerge() throws IOException, MergeError {
         Strand strand1 = createStrand("9xa", from, to, 1.0, 2.0, 3.0);
         Strand strand2 = createStrand("9xa", from, to, 1.0, 2.0, 3.0);
         StrandStorageValue value1 = new StrandStorageValue(serializeStrand(strand1));
@@ -89,7 +84,7 @@ public class StrandStorageKeyValueTest {
     }
 
     @Test
-    void testStrandSerialization() throws IOException {
+    void testStrandStorageValueSerialization() throws IOException {
         Strand strand = createStrand("9xa", from, to, 1.0, 2.0, 3.0);
         StrandStorageValue val = new StrandStorageValue(serializeStrand(strand));
         ByteArrayOutputStream baos = new ByteArrayOutputStream();

@@ -7,7 +7,7 @@ def protocVersion = protobufVersion
 
 dependencies {
     compileOnly "javax.annotation:javax.annotation-api:1.2"
-    api 'sustain.synopsis:sketch:1.0.1'
+    api 'sustain.synopsis:sketch:1.0.2'
     api "io.grpc:grpc-protobuf:${grpcVersion}"
     api "io.grpc:grpc-stub:${grpcVersion}"
     runtimeOnly "io.grpc:grpc-netty-shaded:${grpcVersion}"

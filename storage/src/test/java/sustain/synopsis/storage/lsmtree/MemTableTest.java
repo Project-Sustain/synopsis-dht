@@ -10,7 +10,7 @@ import static org.mockito.Mockito.*;
 class MemTableTest {
 
     @Test
-    void testAdd() {
+    void testAdd() throws MergeError {
         MemTable<LSMTestKey, LSMTestValue> memTable = new MemTable<>(1024); // 1 KB
         Assertions.assertFalse(memTable.add(new LSMTestKey(1), new LSMTestValue(256)));
 
@@ -27,7 +27,7 @@ class MemTableTest {
     }
 
     @Test
-    void testIsFullIfEntrySizeIsNotAvailable() {
+    void testIsFullIfEntrySizeIsNotAvailable() throws MergeError {
         // check if the size of the memTable is bound by the number of entries if the serialized size of an entry
         // cannot be derived.
         LSMTestValue mockedValue = mock(LSMTestValue.class);
@@ -44,7 +44,7 @@ class MemTableTest {
     }
 
     @Test
-    void testIterator() {
+    void testIterator() throws MergeError {
         MemTable<LSMTestKey, LSMTestValue> memTable = new MemTable<>(1024, 200);
         LSMTestValue[] values = new LSMTestValue[5];
         for (int i = 5; i > 0; i--) {
@@ -65,7 +65,7 @@ class MemTableTest {
     }
 
     @Test
-    void testGetEstimatedSize(){
+    void testGetEstimatedSize() throws MergeError {
         MemTable<LSMTestKey, LSMTestValue> memTable = new MemTable<>(1024); // 1 KB
         Assertions.assertEquals(0L, memTable.getEstimatedSize());
         memTable.add(new LSMTestKey(1), new LSMTestValue(32));
@@ -73,7 +73,7 @@ class MemTableTest {
     }
 
     @Test
-    void testFirstAndLastKeys(){
+    void testFirstAndLastKeys() throws MergeError {
         MemTable<LSMTestKey, LSMTestValue> memTable = new MemTable<>(1024);
         Assertions.assertNull(memTable.getFirstKey());
         Assertions.assertNull(memTable.getLastKey());
@@ -85,7 +85,7 @@ class MemTableTest {
     }
 
     @Test
-    void testEntryCount(){
+    void testEntryCount() throws MergeError {
         MemTable<LSMTestKey, LSMTestValue> memTable = new MemTable<>(1024);
         Assertions.assertEquals(0, memTable.getEntryCount());
         for(int i = 0; i < 5; i++){
@@ -95,7 +95,7 @@ class MemTableTest {
     }
 
     @Test
-    void testClear(){
+    void testClear() throws MergeError {
         MemTable<LSMTestKey, LSMTestValue> memTable = new MemTable<>(1024);
         for(int i = 0; i < 5; i++){
             memTable.add(new LSMTestKey(i), new LSMTestValue(32));

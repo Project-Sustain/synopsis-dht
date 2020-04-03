@@ -99,7 +99,7 @@ public class NodeStoreTest {
 
         // add more data for the same entity store
         Strand strand = createStrand("9xj", 1391216400100L, 1391216400200L, 1.0, 2.0);
-        nodeStore.store("bob", "dataset_1", "entity_1", 1000L, 123456L,
+        nodeStore.store("dataset_1", "entity_1", new IngestionSession("bob", 123456L, 1000L),
                         new StrandStorageKey(strand.getFromTimeStamp(), strand.getToTimestamp()),
                         new StrandStorageValue(serializeStrand(strand)));
         assertEquals(1, nodeStore.entityStoreMap.size());
@@ -107,7 +107,7 @@ public class NodeStoreTest {
 
         // add data to a different entity store
         strand = createStrand("9xj", 1391216400100L, 1391216400200L, 1.0, 2.0);
-        nodeStore.store("bob", "dataset_1", "entity_2", 1000L, 123456L,
+        nodeStore.store("dataset_1", "entity_2", new IngestionSession("bob", 123456L, 1000L),
                         new StrandStorageKey(strand.getFromTimeStamp(), strand.getToTimestamp()),
                         new StrandStorageValue(serializeStrand(strand)));
         assertEquals(1, nodeStore.entityStoreMap.size());
@@ -116,7 +116,7 @@ public class NodeStoreTest {
 
         // add data to a different dataset
         strand = createStrand("9xj", 1391216400100L, 1391216400200L, 1.0, 2.0);
-        nodeStore.store("bob", "dataset_2", "entity_2", 1000L, 123456L,
+        nodeStore.store("dataset_2", "entity_2", new IngestionSession("bob", 123456L, 1000L),
                         new StrandStorageKey(strand.getFromTimeStamp(), strand.getToTimestamp()),
                         new StrandStorageValue(serializeStrand(strand)));
         assertEquals(2, nodeStore.entityStoreMap.size());
@@ -156,18 +156,18 @@ public class NodeStoreTest {
 
         NodeStore nodeStore = new NodeStore();
         nodeStore.init();
-        nodeStore.store("bob", "dataset_1", "entity_1", 1000L, 123456L,
+        nodeStore.store("dataset_1", "entity_1", new IngestionSession("bob", 123456L, 1000L),
                         new StrandStorageKey(1391216400000L, 1391216400100L), new StrandStorageValue(
                         serializeStrand(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0, 2.0))));
-        nodeStore.store("bob", "dataset_1", "entity_2", 1000L, 123456L,
+        nodeStore.store("dataset_1", "entity_2", new IngestionSession("bob", 123456L, 1000L),
                         new StrandStorageKey(1391216400100L, 1391216400200L), new StrandStorageValue(
                         serializeStrand(createStrand("9xj", 1391216400100L, 1391216400200L, 1.0, 2.0))));
-        nodeStore.store("bob", "dataset_2", "entity_2", 1001L, 123456L,
+        nodeStore.store("dataset_2", "entity_2", new IngestionSession("bob", 123456L, 1001L),
                         new StrandStorageKey(1391216400100L, 1391216400200L), new StrandStorageValue(
                         serializeStrand(createStrand("9xj", 1391216400100L, 1391216400200L, 1.0, 2.0))));
-        nodeStore.endEntityStoreSession("dataset_1", "entity_1", "bob", 1000L, 123456L);
-        nodeStore.endEntityStoreSession("dataset_1", "entity_2", "bob", 1000L, 123456L);
-        nodeStore.endEntityStoreSession("dataset_2", "entity_2", "bob", 1000L, 123456L);
+        Assertions.assertTrue(nodeStore.endEntityStoreSession("dataset_1", "entity_1", "bob", 1000L, 123456L));
+        Assertions.assertTrue(nodeStore.endEntityStoreSession("dataset_1", "entity_2", "bob", 1000L, 123456L));
+        Assertions.assertTrue(nodeStore.endEntityStoreSession("dataset_2", "entity_2", "bob", 1001L, 123456L));
 
 
         // simulate a restarted node store by starting a NodeStore by pointing to the same commit log
@@ -294,9 +294,7 @@ public class NodeStoreTest {
         Predicate predicate = Predicate.newBuilder().setStringValue("8qr").build();
         TargetQueryRequest finalReq =
                 TargetQueryRequest.newBuilder().setDataset("non_existing_dataset").addSpatialScope(predicate).build();
-        Assertions.assertThrows(QueryException.class, () -> {
-            nodeStore.getMatchingEntityStores(finalReq);
-        });
+        Assertions.assertThrows(QueryException.class, () -> nodeStore.getMatchingEntityStores(finalReq));
     }
 
     @Test
@@ -388,28 +386,27 @@ public class NodeStoreTest {
                               diskManagerMock);
         nodeStore.init();
         // dataset_1
-        nodeStore.store("bob", "dataset_1", "9xi", 1000L, 123456L, new StrandStorageKey(1391216400000L, 1391216400100L),
-                        new StrandStorageValue(
-                                serializeStrand(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0, 2.0))));
-        nodeStore
-                .store("bob", "dataset_1", "9xi5", 1000L, 123456L, new StrandStorageKey(1391216400100L, 1391216400200L),
-                       new StrandStorageValue(
-                               serializeStrand(createStrand("9xj", 1391216400100L, 1391216400200L, 1.0, 2.0))));
-        nodeStore.store("bob", "dataset_1", "9x", 1000L, 123456L, new StrandStorageKey(1391216400100L, 1391216400200L),
-                        new StrandStorageValue(
-                                serializeStrand(createStrand("9xj", 1391216400100L, 1391216400200L, 1.0, 2.0))));
-        nodeStore.store("bob", "dataset_1", "8x", 1000L, 123456L, new StrandStorageKey(1391216400100L, 1391216400200L),
-                        new StrandStorageValue(
-                                serializeStrand(createStrand("9xj", 1391216400100L, 1391216400200L, 1.0, 2.0))));
+        nodeStore.store("dataset_1", "9xi", new IngestionSession("bob", 123456L, 1000L),
+                        new StrandStorageKey(1391216400000L, 1391216400100L), new StrandStorageValue(
+                        serializeStrand(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0, 2.0))));
+        nodeStore.store("dataset_1", "9xi5", new IngestionSession("bob", 123456L, 1000L),
+                        new StrandStorageKey(1391216400100L, 1391216400200L), new StrandStorageValue(
+                        serializeStrand(createStrand("9xj", 1391216400100L, 1391216400200L, 1.0, 2.0))));
+        nodeStore.store("dataset_1", "9x", new IngestionSession("bob", 123456L, 1000L),
+                        new StrandStorageKey(1391216400100L, 1391216400200L), new StrandStorageValue(
+                        serializeStrand(createStrand("9xj", 1391216400100L, 1391216400200L, 1.0, 2.0))));
+        nodeStore.store("dataset_1", "8x", new IngestionSession("bob", 123456L, 1000L),
+                        new StrandStorageKey(1391216400100L, 1391216400200L), new StrandStorageValue(
+                        serializeStrand(createStrand("9xj", 1391216400100L, 1391216400200L, 1.0, 2.0))));
         nodeStore.endEntityStoreSession("dataset_1", "9xi", "bob", 1000L, 123456L);
         nodeStore.endEntityStoreSession("dataset_1", "9xi5", "bob", 1000L, 123456L);
         nodeStore.endEntityStoreSession("dataset_1", "9x", "bob", 1000L, 123456L);
         nodeStore.endEntityStoreSession("dataset_1", "8x", "bob", 1000L, 123456L);
 
         // dataset_2
-        nodeStore.store("bob", "dataset_2", "8qr", 1001L, 123456L, new StrandStorageKey(1391216400000L, 1391216400100L),
-                        new StrandStorageValue(
-                                serializeStrand(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0, 2.0))));
+        nodeStore.store("dataset_2", "8qr", new IngestionSession("bob", 123456L, 1001L),
+                        new StrandStorageKey(1391216400000L, 1391216400100L), new StrandStorageValue(
+                        serializeStrand(createStrand("9xj", 1391216400000L, 1391216400100L, 1.0, 2.0))));
         nodeStore.endEntityStoreSession("dataset_2", "8qr", "bob", 1001L, 123456L);
         return nodeStore;
     }

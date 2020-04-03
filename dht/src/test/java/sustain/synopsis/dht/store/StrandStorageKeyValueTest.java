@@ -7,7 +7,6 @@ import sustain.synopsis.common.StrandSerializationUtil;
 import sustain.synopsis.sketch.dataset.feature.Feature;
 import sustain.synopsis.sketch.graph.DataContainer;
 import sustain.synopsis.sketch.graph.Path;
-import sustain.synopsis.sketch.serialization.SerializationOutputStream;
 import sustain.synopsis.sketch.stat.RunningStatisticsND;
 import sustain.synopsis.storage.lsmtree.MergeError;
 
@@ -29,13 +28,7 @@ public class StrandStorageKeyValueTest {
     }
 
     public static byte[] serializeStrand(Strand strand) throws IOException {
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
-             SerializationOutputStream sos = new SerializationOutputStream(baos)) {
-            strand.serialize(sos);
-            sos.flush();
-            baos.flush();
-            return baos.toByteArray();
-        }
+        return StrandSerializationUtil.toProtoBuff(strand).toByteArray();
     }
 
     @Test
@@ -83,8 +76,8 @@ public class StrandStorageKeyValueTest {
     void testStrandStorageValueMerge() throws IOException, MergeError {
         Strand strand1 = createStrand("9xa", from, to, 1.0, 2.0, 3.0);
         Strand strand2 = createStrand("9xa", from, to, 1.0, 2.0, 3.0);
-        StrandStorageValue value1 = new StrandStorageValue(StrandSerializationUtil.toProtoBuff(strand1).toByteArray());
-        StrandStorageValue value2 = new StrandStorageValue(StrandSerializationUtil.toProtoBuff(strand2).toByteArray());
+        StrandStorageValue value1 = new StrandStorageValue(serializeStrand(strand1));
+        StrandStorageValue value2 = new StrandStorageValue(serializeStrand(strand2));
         value1.merge(value2);
         strand1.merge(strand2);
         Assertions.assertEquals(value1.getStrand(), strand1);
@@ -93,7 +86,7 @@ public class StrandStorageKeyValueTest {
     @Test
     void testStrandStorageValueSerialization() throws IOException {
         Strand strand = createStrand("9xa", from, to, 1.0, 2.0, 3.0);
-        StrandStorageValue val = new StrandStorageValue(StrandSerializationUtil.toProtoBuff(strand).toByteArray());
+        StrandStorageValue val = new StrandStorageValue(serializeStrand(strand));
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream(baos);
         byte[] serializedData;

@@ -84,7 +84,7 @@ public class EntityStoreTest {
         Mockito.when(entityStoreJournalMock.init()).thenReturn(true);
         Mockito.when(entityStoreJournalMock.getSequenceId()).thenReturn(0);
         Mockito.when(entityStoreJournalMock.getMetadata()).thenReturn(new ArrayList<>());
-        EntityStore entityStore = new EntityStore("noaa:9xj", entityStoreJournalMock, 200, 50, diskManagerMock);
+        EntityStore entityStore = new EntityStore("noaa:9xj", entityStoreJournalMock, 80, 20, diskManagerMock);
         entityStore.init();
         Mockito.verify(entityStoreJournalMock, Mockito.times(1)).init();
 
@@ -138,7 +138,7 @@ public class EntityStoreTest {
     void testNodeRestart() throws IOException, StorageException {
         MockitoAnnotations.initMocks(this);
         Mockito.when(diskManagerMock.allocate(Mockito.anyLong())).thenReturn(storageDir.getAbsolutePath());
-        EntityStore entityStore = new EntityStore("noaa:9xj", metadataDir.getAbsolutePath(), 200, 50, diskManagerMock);
+        EntityStore entityStore = new EntityStore("noaa:9xj", metadataDir.getAbsolutePath(), 80, 20, diskManagerMock);
         entityStore.init();
         IngestionSession session = new IngestionSession("bob", System.currentTimeMillis(), 0);
         entityStore.startSession(session);
@@ -159,7 +159,7 @@ public class EntityStoreTest {
 
         // Simulate a node restart
         EntityStore restartedEntityStore =
-                new EntityStore("noaa:9xj", metadataDir.getAbsolutePath(), 200, 50, diskManagerMock);
+                new EntityStore("noaa:9xj", metadataDir.getAbsolutePath(), 80, 20, diskManagerMock);
         restartedEntityStore.init();
         // there were two SSTables written before. So the sequence ID should start from 2.
         assertEquals(2, restartedEntityStore.sequenceId.get());
@@ -191,7 +191,7 @@ public class EntityStoreTest {
         Mockito.when(entityStoreJournalMock.init()).thenReturn(true);
         Mockito.when(entityStoreJournalMock.getSequenceId()).thenReturn(0);
         Mockito.when(entityStoreJournalMock.getMetadata()).thenReturn(new ArrayList<>());
-        EntityStore entityStore = new EntityStore("noaa:9xj", entityStoreJournalMock, 200, 50, diskManagerMock);
+        EntityStore entityStore = new EntityStore("noaa:9xj", entityStoreJournalMock, 80, 20, diskManagerMock);
         entityStore.init();
 
         // start a new session
@@ -207,7 +207,7 @@ public class EntityStoreTest {
         List<MatchedSSTable> results = entityStore.temporalQuery(exp);
         Assertions.assertTrue(results.isEmpty());
 
-        // size of key and value used here - 187 bytes
+        // size of key and value used here - (52 + 16) bytes
         // storing 2 strands should fill out the memTable
         StrandStorageKey key1 = new StrandStorageKey(1000, 1500);
         StrandStorageValue value1 = new StrandStorageValue(serializeStrand(createStrand("9xj", 1000, 1500, 1.0, 2.0)));

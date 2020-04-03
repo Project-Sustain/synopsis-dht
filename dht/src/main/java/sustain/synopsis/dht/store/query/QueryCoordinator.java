@@ -13,7 +13,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 
 public class QueryCoordinator {
-    private final Logger logger = Logger.getLogger(QueryContainer.class);
+    private final Logger logger = Logger.getLogger(QueryCoordinator.class);
     private final NodeStore nodeStore;
     private final ExecutorService readers;
 

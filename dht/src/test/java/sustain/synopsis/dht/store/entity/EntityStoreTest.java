@@ -38,14 +38,14 @@ public class EntityStoreTest {
 
     @Test
     void testSerializedFilePath() throws StorageException, IOException {
-        EntityStore store = new EntityStore("9xj", metadataDir.getAbsolutePath(), 1024, 50, diskManagerMock);
+        EntityStore store =
+                new EntityStore("dataset1", "9xj", metadataDir.getAbsolutePath(), 1024, 50, diskManagerMock);
         store.init();
         StrandStorageKey key1 = new StrandStorageKey(1391216400000L, 1391216400100L);
         StrandStorageKey key2 = new StrandStorageKey(1391216400100L, 1391216400200L);
         String returned = store.getSSTableOutputPath(key1, key2, storageDir.getAbsolutePath(), 0);
-        String expected =
-                storageDir.getAbsolutePath() + File.separator + "9xj_" + key1.toString() + "_" + key2.toString()
-                + "_0.sd";
+        String expected = storageDir.getAbsolutePath() + File.separator + "dataset1_9xj_" + key1.toString() + "_" + key2
+                .toString() + "_0.sd";
         assertEquals(expected, returned);
     }
 
@@ -53,7 +53,8 @@ public class EntityStoreTest {
     void testToSSTable() throws StorageException, IOException {
         MockitoAnnotations.initMocks(this);
         Mockito.when(diskManagerMock.allocate(Mockito.anyLong())).thenReturn(storageDir.getAbsolutePath());
-        EntityStore entityStore = new EntityStore("9xj", metadataDir.getAbsolutePath(), 1024, 50, diskManagerMock);
+        EntityStore entityStore =
+                new EntityStore("dataset1", "9xj", metadataDir.getAbsolutePath(), 1024, 50, diskManagerMock);
         entityStore.init();
         StrandStorageKey key1 = new StrandStorageKey(1391216400000L, 1391216400100L);
         StrandStorageValue value1 =
@@ -69,8 +70,8 @@ public class EntityStoreTest {
         entityStore.toSSTable(session, diskManagerMock, metadata);
 
         File serializedSSTable = new File(
-                storageDir.getAbsolutePath() + File.separator + "9xj" + "_" + key1.toString() + "_" + key2.toString()
-                + "_0.sd");
+                storageDir.getAbsolutePath() + File.separator + "dataset1_9xj" + "_" + key1.toString() + "_" + key2
+                        .toString() + "_0.sd");
         assertTrue(serializedSSTable.exists());
         assertTrue(serializedSSTable.isFile());
         assertTrue(serializedSSTable.length() > 0);
@@ -84,7 +85,7 @@ public class EntityStoreTest {
         Mockito.when(entityStoreJournalMock.init()).thenReturn(true);
         Mockito.when(entityStoreJournalMock.getSequenceId()).thenReturn(0);
         Mockito.when(entityStoreJournalMock.getMetadata()).thenReturn(new ArrayList<>());
-        EntityStore entityStore = new EntityStore("noaa:9xj", entityStoreJournalMock, 80, 20, diskManagerMock);
+        EntityStore entityStore = new EntityStore("dataset_1", "9xj", entityStoreJournalMock, 80, 20, diskManagerMock);
         entityStore.init();
         Mockito.verify(entityStoreJournalMock, Mockito.times(1)).init();
 
@@ -138,7 +139,8 @@ public class EntityStoreTest {
     void testNodeRestart() throws IOException, StorageException {
         MockitoAnnotations.initMocks(this);
         Mockito.when(diskManagerMock.allocate(Mockito.anyLong())).thenReturn(storageDir.getAbsolutePath());
-        EntityStore entityStore = new EntityStore("noaa:9xj", metadataDir.getAbsolutePath(), 80, 20, diskManagerMock);
+        EntityStore entityStore =
+                new EntityStore("dataset1", "9xj", metadataDir.getAbsolutePath(), 80, 20, diskManagerMock);
         entityStore.init();
         IngestionSession session = new IngestionSession("bob", System.currentTimeMillis(), 0);
         entityStore.startSession(session);
@@ -159,7 +161,7 @@ public class EntityStoreTest {
 
         // Simulate a node restart
         EntityStore restartedEntityStore =
-                new EntityStore("noaa:9xj", metadataDir.getAbsolutePath(), 80, 20, diskManagerMock);
+                new EntityStore("dataset1", "9xj", metadataDir.getAbsolutePath(), 80, 20, diskManagerMock);
         restartedEntityStore.init();
         // there were two SSTables written before. So the sequence ID should start from 2.
         assertEquals(2, restartedEntityStore.sequenceId.get());
@@ -191,7 +193,7 @@ public class EntityStoreTest {
         Mockito.when(entityStoreJournalMock.init()).thenReturn(true);
         Mockito.when(entityStoreJournalMock.getSequenceId()).thenReturn(0);
         Mockito.when(entityStoreJournalMock.getMetadata()).thenReturn(new ArrayList<>());
-        EntityStore entityStore = new EntityStore("noaa:9xj", entityStoreJournalMock, 80, 20, diskManagerMock);
+        EntityStore entityStore = new EntityStore("dataset1", "9xj", entityStoreJournalMock, 80, 20, diskManagerMock);
         entityStore.init();
 
         // start a new session

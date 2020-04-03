@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 public class EntityStore {
     public final long blockSize;
     private final Logger logger = Logger.getLogger(EntityStore.class);
+    private final String datasetId;
     private final String entityId;
     /**
      * There can be multiple active ingestion sessions at a given time for a single entity.
@@ -40,21 +41,21 @@ public class EntityStore {
      */
     TreeMap<StrandStorageKey, Metadata<StrandStorageKey>> queryableMetadata;
     private DiskManager diskManager;
-    // todo: these should be read from the config
     private BlockCompressor compressor;
     private ChecksumGenerator checksumGenerator;
     private EntityStoreJournal entityStoreJournal;
     private long memTableSize;
     private ReentrantReadWriteLock lock;
 
-    public EntityStore(String entityId, String metadataDir, long memTableSize, long blockSize,
+    public EntityStore(String datasetId, String entityId, String metadataDir, long memTableSize, long blockSize,
                        DiskManager diskManager) {
-        this(entityId, new EntityStoreJournal(entityId, metadataDir), memTableSize, blockSize, diskManager);
+        this(datasetId, entityId, new EntityStoreJournal(entityId, metadataDir), memTableSize, blockSize, diskManager);
     }
 
     // used for unit testing by injecting entity store journal
-    public EntityStore(String entityId, EntityStoreJournal entityStoreJournal, long memTableSize, long blockSize,
-                       DiskManager diskManager) {
+    public EntityStore(String datasetId, String entityId, EntityStoreJournal entityStoreJournal, long memTableSize,
+                       long blockSize, DiskManager diskManager) {
+        this.datasetId = datasetId;
         this.entityId = entityId;
         this.blockSize = blockSize;
         this.activeSessions = new HashMap<>();
@@ -206,9 +207,9 @@ public class EntityStore {
         }
     }
 
-    public String getSSTableOutputPath(StrandStorageKey firstKey, StrandStorageKey lastKey, String path, int seqId)
-            throws IOException, StorageException {
-        return path + File.separator + entityId + "_" + firstKey + "_" + lastKey + "_" + seqId + ".sd";
+    public String getSSTableOutputPath(StrandStorageKey firstKey, StrandStorageKey lastKey, String path, int seqId) {
+        return path + File.separator + datasetId + "_" + entityId + "_" + firstKey + "_" + lastKey + "_" + seqId
+               + ".sd";
     }
 
     public String getEntityId() {

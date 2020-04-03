@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 public class EntityStore {
     public final long blockSize;
     private final Logger logger = Logger.getLogger(EntityStore.class);
+    private final String datasetId;
     private final String entityId;
     /**
      * There can be multiple active ingestion sessions at a given time for a single entity.
@@ -40,21 +41,21 @@ public class EntityStore {
      */
     TreeMap<StrandStorageKey, Metadata<StrandStorageKey>> queryableMetadata;
     private DiskManager diskManager;
-    // todo: these should be read from the config
     private BlockCompressor compressor;
     private ChecksumGenerator checksumGenerator;
     private EntityStoreJournal entityStoreJournal;
     private long memTableSize;
     private ReentrantReadWriteLock lock;
 
-    public EntityStore(String entityId, String metadataDir, long memTableSize, long blockSize,
+    public EntityStore(String datasetId, String entityId, String metadataDir, long memTableSize, long blockSize,
                        DiskManager diskManager) {
-        this(entityId, new EntityStoreJournal(entityId, metadataDir), memTableSize, blockSize, diskManager);
+        this(datasetId, entityId, new EntityStoreJournal(entityId, metadataDir), memTableSize, blockSize, diskManager);
     }
 
     // used for unit testing by injecting entity store journal
-    public EntityStore(String entityId, EntityStoreJournal entityStoreJournal, long memTableSize, long blockSize,
-                       DiskManager diskManager) {
+    public EntityStore(String datasetId, String entityId, EntityStoreJournal entityStoreJournal, long memTableSize,
+                       long blockSize, DiskManager diskManager) {
+        this.datasetId = datasetId;
         this.entityId = entityId;
         this.blockSize = blockSize;
         this.activeSessions = new HashMap<>();
@@ -111,7 +112,15 @@ public class EntityStore {
         }
     }
 
-    public boolean store(IngestionSession session, StrandStorageKey key, StrandStorageValue value) {
+    /**
+     * Store the data in the MemTable first. If the MemTable is full, the purge it to disk.
+     * @param session {@link IngestionSession} session corresponding to the data
+     * @param key Key
+     * @param value Actual value to be stored
+     * @throws StorageException Error during serialization or commit log update
+     */
+    public void store(IngestionSession session, StrandStorageKey key, StrandStorageValue value)
+            throws StorageException {
         // todo: data should be first written to a WAL
         try {
             if (!activeSessions.containsKey(session)) {
@@ -124,9 +133,8 @@ public class EntityStore {
             }
         } catch (IOException | StorageException | MergeError e) {
             logger.error("Error storing the strand.", e);
-            return false;
+            throw new StorageException(e.getMessage(), e);
         }
-        return true;
     }
 
     private void purgeMemTable(IngestionSession session, MemTable<StrandStorageKey, StrandStorageValue> memTable)
@@ -206,9 +214,9 @@ public class EntityStore {
         }
     }
 
-    public String getSSTableOutputPath(StrandStorageKey firstKey, StrandStorageKey lastKey, String path, int seqId)
-            throws IOException, StorageException {
-        return path + File.separator + entityId + "_" + firstKey + "_" + lastKey + "_" + seqId + ".sd";
+    public String getSSTableOutputPath(StrandStorageKey firstKey, StrandStorageKey lastKey, String path, int seqId) {
+        return path + File.separator + datasetId + "_" + entityId + "_" + firstKey + "_" + lastKey + "_" + seqId
+               + ".sd";
     }
 
     public String getEntityId() {

@@ -96,35 +96,49 @@ public class NodeStore {
             if (serialized == null) {
                 continue;
             }
-            try {
-                CreateEntityStoreActivity createEntityStore = new CreateEntityStoreActivity();
-                createEntityStore.deserialize(serialized);
-                EntityStore entityStore =
-                        new EntityStore(createEntityStore.getEntityId(), metadataStoreDir, memTableSize, blockSize,
-                                        diskManager);
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Initializing entity store: " + createEntityStore.getEntityId());
-                }
-                long entityStoreStartTS = System.currentTimeMillis();
-                entityStore.init();
-                long entityStoreEndTS = System.currentTimeMillis();
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Completed initializing entity store: " + createEntityStore.getEntityId() + ", "
-                                 + "elapsed time (s): " + (entityStoreEndTS - entityStoreStartTS) / (1000.0));
-                }
-                entityStoreMap.putIfAbsent(createEntityStore.getDataSetId(), new PatriciaTrie<>());
-                entityStoreMap.get(createEntityStore.getDataSetId()).put(createEntityStore.getEntityId(), entityStore);
-            } catch (IOException | StorageException e) {
-                logger.error(e);
-                throw new StorageException("Error initializing node store.", e);
-            }
+            processCommitLogEntry(serialized);
         }
         initialized = new AtomicBoolean(true);
         long nodeInitEndTS = System.currentTimeMillis();
-        logger.info(
-                "Completed node store initialization. Elapsed time (s): " + (nodeInitEndTS - nodeInitStartTS) / 1000.0);
+        logger.info("Completed node store initialization. Elapsed time (ms): " + (nodeInitEndTS - nodeInitStartTS));
     }
 
+    private void processCommitLogEntry(byte[] serialized) throws StorageException {
+        try {
+            CreateEntityStoreActivity createEntityStore = new CreateEntityStoreActivity();
+            createEntityStore.deserialize(serialized);
+            EntityStore entityStore =
+                    new EntityStore(createEntityStore.getDataSetId(), createEntityStore.getEntityId(), metadataStoreDir,
+                                    memTableSize, blockSize, diskManager);
+            if (logger.isDebugEnabled()) {
+                logger.debug("Initializing entity store: " + createEntityStore.getEntityId());
+            }
+            long entityStoreStartTS = System.currentTimeMillis();
+            entityStore.init();
+            long entityStoreEndTS = System.currentTimeMillis();
+            if (logger.isDebugEnabled()) {
+                logger.debug("Completed initializing entity store: " + createEntityStore.getEntityId() + ", "
+                             + "elapsed time (s): " + (entityStoreEndTS - entityStoreStartTS) / (1000.0));
+            }
+            entityStoreMap.putIfAbsent(createEntityStore.getDataSetId(), new PatriciaTrie<>());
+            entityStoreMap.get(createEntityStore.getDataSetId()).put(createEntityStore.getEntityId(), entityStore);
+        } catch (IOException | StorageException e) {
+            logger.error(e);
+            throw new StorageException("Error initializing node store.", e);
+        }
+    }
+
+    /**
+     * Store the given key and value in the appropriate entity store. Session is validated before performing
+     * the storage operation.
+     * @param datasetId Dataset identifier
+     * @param entityId Entity identifier
+     * @param sessionId Session Id
+     * @param storageKey Key for the storage object
+     * @param storageValue Value for the storage object
+     * @throws IOException Error when storing strands on disk
+     * @throws StorageException Error during serialization
+     */
     public void store(String datasetId, String entityId, long sessionId, StrandStorageKey storageKey,
                       StrandStorageValue storageValue) throws IOException, StorageException {
         // check if the session is new. If it's a new session validate.
@@ -138,7 +152,8 @@ public class NodeStore {
                          + "data set id: " + datasetId + ", session id: " + sessionId);
             throw new StorageException("Session validation failed. Session id: " + sessionId);
         }
-        store(response.userId, datasetId, entityId, sessionId, response.sessionStartTS, storageKey, storageValue);
+        store(datasetId, entityId, new IngestionSession(response.userId, response.sessionStartTS, sessionId),
+              storageKey, storageValue);
     }
 
     private SessionValidator.SessionValidationResponse validateSession(String datasetId, long sessionId) {
@@ -154,23 +169,9 @@ public class NodeStore {
         return response;
     }
 
-    /**
-     * Store an individual strand in the corresponding entity store
-     *
-     * @param userId            Identifier of the user performing the ingestion operation
-     * @param datasetId         Dataset identifier
-     * @param entityId          Entity identifier (spatial scope)
-     * @param sessionId         Current session id
-     * @param sessionCreationTs Session creation timestamp returned by the metadata server
-     * @param storageKey        Strand storage key
-     * @param storageValue      Strand storage value
-     * @throws StorageException Error when storing strands on disk
-     * @throws IOException      Error during serialization
-     */
-    void store(String userId, String datasetId, String entityId, long sessionId, long sessionCreationTs,
-               StrandStorageKey storageKey, StrandStorageValue storageValue) throws StorageException, IOException {
-        // retrieve entity store
-        if (!entityStoreMap.containsKey(datasetId)) {
+    void store(String datasetId, String entityId, IngestionSession session, StrandStorageKey storageKey,
+               StrandStorageValue storageValue) throws StorageException, IOException {
+        if (!entityStoreMap.containsKey(datasetId)) { // check if the dataset is new
             try {
                 lock.writeLock().lock();
                 entityStoreMap.putIfAbsent(datasetId, new PatriciaTrie<>());
@@ -181,38 +182,32 @@ public class NodeStore {
                 lock.writeLock().unlock();
             }
         }
-        EntityStore entityStore;
-        if (!entityStoreMap.get(datasetId).containsKey(entityId)) {
+        if (!entityStoreMap.get(datasetId).containsKey(entityId)) { // check if entity store is new
             try {
                 lock.writeLock().lock();
-                // we need to check again if a previous invocation using a different thread have successfully
-                // initialized the entity store
                 if (!entityStoreMap.get(datasetId).containsKey(entityId)) {
-                    entityStore = new EntityStore(entityId, metadataStoreDir, memTableSize, blockSize, diskManager);
-                    entityStore.init();
-                    // If a new entity store is created, journal its metadata location
-                    CreateEntityStoreActivity createEntityStoreActivity =
-                            new CreateEntityStoreActivity(datasetId, entityId);
-                    rootLogger.append(createEntityStoreActivity.serialize());
-                    entityStoreMap.get(datasetId).put(entityId, entityStore);
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Added and initialized a new entity store. Dataset id: " + datasetId + ", "
-                                     + "entity id: " + entityId + ", total entity count: " + entityStoreMap
-                                             .get(datasetId).size());
-                    }
+                    createEntityStore(datasetId, entityId);
                 }
-            } catch (StorageException e) {
-                logger.error("Error initializing a new entity store.", e);
-                throw e;
             } finally {
                 lock.writeLock().unlock();
             }
         }
-        entityStore = entityStoreMap.get(datasetId).get(entityId);
-        // Store the strand - check the status of the storage
-        // we create a new instance of IngestionSession because each entity store uses separate IngestionSession
-        // objects. Two IngestionSession objects are considered the same if they have the same session id.
-        entityStore.store(new IngestionSession(userId, sessionCreationTs, sessionId), storageKey, storageValue);
+        EntityStore entityStore = entityStoreMap.get(datasetId).get(entityId);
+        entityStore.store(session, storageKey, storageValue);
+    }
+
+    private void createEntityStore(String datasetId, String entityId) throws StorageException, IOException {
+        EntityStore store =
+                new EntityStore(datasetId, entityId, metadataStoreDir, memTableSize, blockSize, diskManager);
+        store.init();
+        // If a new entity store is created, journal its metadata location
+        CreateEntityStoreActivity createEntityStoreActivity = new CreateEntityStoreActivity(datasetId, entityId);
+        rootLogger.append(createEntityStoreActivity.serialize());
+        entityStoreMap.get(datasetId).put(entityId, store);
+        if (logger.isDebugEnabled()) {
+            logger.debug("Added and initialized a new entity store. Dataset id: " + datasetId + ", " + "entity id: "
+                         + entityId + ", total entity count: " + entityStoreMap.get(datasetId).size());
+        }
     }
 
     /**

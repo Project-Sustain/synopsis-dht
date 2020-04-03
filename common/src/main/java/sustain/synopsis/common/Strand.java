@@ -7,13 +7,10 @@ import sustain.synopsis.sketch.graph.Vertex;
 import sustain.synopsis.sketch.serialization.SerializationException;
 import sustain.synopsis.sketch.serialization.SerializationInputStream;
 import sustain.synopsis.sketch.serialization.SerializationOutputStream;
-import sustain.synopsis.sketch.stat.RunningStatisticsND;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.Properties;
-import java.util.stream.Collectors;
 
 public class Strand {
     private final String geohash;
@@ -48,7 +45,7 @@ public class Strand {
         this.fromTimeStamp = fromTimeStamp;
         this.path = path;
         this.metadata = new Properties();
-        this.key = generateKey(geohash, fromTimeStamp, toTimestamp, path);
+        this.key = generateKey(geohash, fromTimeStamp, path);
     }
 
     public Strand(SerializationInputStream sis) throws IOException, SerializationException {
@@ -66,7 +63,7 @@ public class Strand {
         for (int i = 0; i < metadataSize; i++) {
             metadata.setProperty(sis.readUTF(), sis.readUTF());
         }
-        this.key = generateKey(this.geohash, this.fromTimeStamp, this.toTimestamp, this.path);
+        this.key = generateKey(this.geohash, this.fromTimeStamp, this.path);
     }
 
     public void merge(Strand other) {
@@ -135,14 +132,14 @@ public class Strand {
         return Objects.hash(key, metadata);
     }
 
-    private static String generateKey(String geohash, long fromTimeStamp, long toTimestamp, Path path) {
+    private static String generateKey(String geohash, long fromTimeStamp, Path path) {
+        // we do not need the feature names or the toTimeStamp because we compare and merge Strands from
+        // the same session which share the same schema.
         StringBuilder stringBuilder = new StringBuilder();
-        // when generating the key, we append the toTimestamp before the fromTimeStamp to do prefix search
-        // to publish the completed strands.
-        stringBuilder.append(geohash).append(",").append(toTimestamp).append(",").append(fromTimeStamp);
+        stringBuilder.append(geohash).append(",").append(fromTimeStamp);
         for (Vertex v : path) {
             Feature feature = v.getLabel();
-            stringBuilder.append(",").append(feature.getName()).append("=").append(feature.getDouble());
+            stringBuilder.append(",").append(feature.getDouble());
         }
         return stringBuilder.toString();
     }
@@ -153,23 +150,6 @@ public class Strand {
     }
 
     public ByteString serializeAsProtoBuff() {
-        return toProtoBuff().toByteString();
-    }
-
-    ProtoBuffSerializedStrand toProtoBuff() {
-        ProtoBuffSerializedStrand protoBuffStrand =
-                ProtoBuffSerializedStrand.newBuilder().setGeohash(geohash).setStartTS(fromTimeStamp).buildPartial();
-        ProtoBuffSerializedStrand.Builder builder = protoBuffStrand.toBuilder();
-        builder.addAllFeatures(path.stream().map(v -> v.getLabel().getDouble()).collect(Collectors.toList()));
-        RunningStatisticsND statistics = path.get(path.size() - 1).getData().statistics;
-        builder.setObservationCount(statistics.count());
-        if (statistics.count() > 1) {
-            builder.addAllMean(Arrays.stream(statistics.means()).boxed().collect(Collectors.toList()));
-            builder.addAllM2(Arrays.stream(statistics.m2()).boxed().collect(Collectors.toList()));
-            builder.addAllMax(Arrays.stream(statistics.maxes()).boxed().collect(Collectors.toList()));
-            builder.addAllMin(Arrays.stream(statistics.mins()).boxed().collect(Collectors.toList()));
-            builder.addAllS2(Arrays.stream(statistics.ss()).boxed().collect(Collectors.toList()));
-        }
-        return builder.build();
+        return StrandSerializationUtil.toProtoBuff(this).toByteString();
     }
 }

@@ -74,13 +74,9 @@ public class StrandTest {
         Strand strand4 = new Strand("9xj", (1391216300000L - 3600 * 1000), 1391216400000L, path);
         Assertions.assertNotEquals(strand, strand4);
 
-        // different to timestamp
-        Strand strand5 = new Strand("9xj", (1391216400000L - 3600 * 1000), 1391216500000L, path);
-        Assertions.assertNotEquals(strand, strand5);
-
         // different path
         Path path2 = new Path(3);
-        Strand strand6 = createStrand(path, "9xj", (1391216400000L - 3600 * 1000), 1391216400000L, 1.34, 1.5, 4.6);
+        Strand strand6 = createStrand(path2, "9xj", (1391216400000L - 3600 * 1000), 1391216400000L, 1.34, 1.5, 4.6);
         Assertions.assertNotEquals(strand, strand6);
 
         // different metadata
@@ -111,25 +107,21 @@ public class StrandTest {
         // different path lengths
         Path path2 = new Path(1);
         final Strand strand2 = createStrand(path2, "9xj", (1391216400000L - 3600 * 1000), 1391216400000L, 1.34);
-        Assertions.assertThrows(IllegalArgumentException.class, () -> {
-            strand1.merge(strand2);
-        });
+        Assertions.assertThrows(IllegalArgumentException.class, () -> strand1.merge(strand2));
 
         // different paths
         path2 = new Path(2);
         final Strand strand3 = createStrand(path2, "9xj", (1391216400000L - 3600 * 1000), 1391216400000L, 1.34, 1.6);
-        Assertions.assertThrows(IllegalArgumentException.class, () -> {
-            strand1.merge(strand3);
-        });
+        Assertions.assertThrows(IllegalArgumentException.class, () -> strand1.merge(strand3));
     }
 
     @Test
-    void testToProtoBuffWithDataContainer() {
+    void testToProtoBuffWithMultipleObservation() {
         Strand strand1 = createStrand(new Path(3), "9xj", 1000, 2000, 1.34, 1.5, 100.5);
         Strand strand2 = createStrand(new Path(3), "9xj", 1000, 2000, 1.34, 1.5, 100.5);
         strand1.merge(strand2);
 
-        ProtoBuffSerializedStrand protoBuffSerializedStrand = strand1.toProtoBuff();
+        ProtoBuffSerializedStrand protoBuffSerializedStrand = StrandSerializationUtil.toProtoBuff(strand1);
         Assertions.assertEquals("9xj", protoBuffSerializedStrand.getGeohash());
         Assertions.assertEquals(1000, protoBuffSerializedStrand.getStartTS());
         Assertions.assertEquals(
@@ -152,9 +144,9 @@ public class StrandTest {
     }
 
     @Test
-    void testToProtoBuffWithoutDataContainer() {
+    void testToProtoBuffWithOneObservation() {
         Strand strand = createStrand(new Path(2), "9xj", 1000, 2000, 1.34, 1.5, 100.5);
-        ProtoBuffSerializedStrand protoBuffSerializedStrand = strand.toProtoBuff();
+        ProtoBuffSerializedStrand protoBuffSerializedStrand = StrandSerializationUtil.toProtoBuff(strand);
         Assertions.assertEquals("9xj", protoBuffSerializedStrand.getGeohash());
         Assertions.assertEquals(1000, protoBuffSerializedStrand.getStartTS());
         Assertions
@@ -162,19 +154,39 @@ public class StrandTest {
                               protoBuffSerializedStrand.getFeaturesList());
         RunningStatisticsND stats = strand.getPath().get(strand.getPath().size() - 1).getData().statistics;
         Assertions.assertEquals(stats.count(), protoBuffSerializedStrand.getObservationCount());
+        Assertions.assertEquals(Arrays.stream(stats.means()).boxed().collect(Collectors.toList()),
+                                protoBuffSerializedStrand.getMeanList());
         // rest of the data container should be empty
         Assertions.assertEquals(0, protoBuffSerializedStrand.getMaxList().size());
         Assertions.assertEquals(0, protoBuffSerializedStrand.getMinList().size());
         Assertions.assertEquals(0, protoBuffSerializedStrand.getM2List().size());
-        Assertions.assertEquals(0, protoBuffSerializedStrand.getMeanList().size());
         Assertions.assertEquals(0, protoBuffSerializedStrand.getS2List().size());
     }
 
     @Test
     void testSerializeAsProtoBuff() {
         Strand strand = createStrand(new Path(3), "9xj", 1000, 2000, 1.34, 1.5, 100.5);
-        ProtoBuffSerializedStrand protoBuffSerializedStrand = strand.toProtoBuff();
+        ProtoBuffSerializedStrand protoBuffSerializedStrand = StrandSerializationUtil.toProtoBuff(strand);
         Assertions.assertEquals(protoBuffSerializedStrand.toByteString(), strand.serializeAsProtoBuff());
+    }
+
+    @Test
+    void testFromProtoBuffToStrandWithOneObservation() {
+        // strands with a single observation
+        Strand originalStrand = createStrand(new Path(3), "9xj", 1000, 2000, 1.34, 1.5, 100.5);
+        ProtoBuffSerializedStrand protoBuffSerializedStrand = StrandSerializationUtil.toProtoBuff(originalStrand);
+        Strand convertedStrand = StrandSerializationUtil.fromProtoBuff(protoBuffSerializedStrand);
+        compareStrands(originalStrand, convertedStrand);
+    }
+
+    @Test
+    void testFromProtoBuffToStrandWithMultipleObservation() {
+        Strand strand1 = createStrand(new Path(3), "9xj", 1000, 2000, 1.34, 1.5, 100.5);
+        Strand strand2 = createStrand(new Path(3), "9xj", 1000, 2000, 1.34, 1.5, 100.5);
+        strand1.merge(strand2);
+        ProtoBuffSerializedStrand protoBuffSerializedStrand = StrandSerializationUtil.toProtoBuff(strand1);
+        Strand convertedStrand = StrandSerializationUtil.fromProtoBuff(protoBuffSerializedStrand);
+        compareStrands(strand1, convertedStrand);
     }
 
     private Strand createStrand(Path path, String geohash, long ts, long to, double... features) {
@@ -185,5 +197,23 @@ public class StrandTest {
         DataContainer container = new DataContainer(runningStats);
         path.get(path.size() - 1).setData(container);
         return new Strand(geohash, ts, to, path);
+    }
+
+    private void compareStrands(Strand originalStrand, Strand convertedStrand) {
+        Assertions.assertEquals(originalStrand.getGeohash(), convertedStrand.getGeohash());
+        Assertions.assertEquals(originalStrand.getFromTimeStamp(), convertedStrand.getFromTimeStamp());
+        Assertions.assertEquals(
+                originalStrand.getPath().stream().map(f -> f.getLabel().getDouble()).collect(Collectors.toList()),
+                convertedStrand.getPath().stream().map(f -> f.getLabel().getDouble()).collect(Collectors.toList()));
+        RunningStatisticsND originalStats =
+                originalStrand.getPath().get(originalStrand.getPath().size()-1).getData().statistics;
+        RunningStatisticsND convertedStats =
+                convertedStrand.getPath().get(originalStrand.getPath().size()-1).getData().statistics;
+        Assertions.assertEquals(originalStats.count(), convertedStats.count());
+        Assertions.assertArrayEquals(originalStats.means(), convertedStats.means());
+        Assertions.assertArrayEquals(originalStats.maxes(), convertedStats.maxes());
+        Assertions.assertArrayEquals(originalStats.mins(), convertedStats.mins());
+        Assertions.assertArrayEquals(originalStats.m2(), convertedStats.m2());
+        Assertions.assertArrayEquals(originalStats.ss(), convertedStats.ss());
     }
 }

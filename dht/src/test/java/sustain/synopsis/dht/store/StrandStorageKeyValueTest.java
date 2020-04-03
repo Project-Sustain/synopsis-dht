@@ -3,11 +3,13 @@ package sustain.synopsis.dht.store;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import sustain.synopsis.common.Strand;
+import sustain.synopsis.common.StrandSerializationUtil;
 import sustain.synopsis.sketch.dataset.feature.Feature;
 import sustain.synopsis.sketch.graph.DataContainer;
 import sustain.synopsis.sketch.graph.Path;
 import sustain.synopsis.sketch.serialization.SerializationOutputStream;
 import sustain.synopsis.sketch.stat.RunningStatisticsND;
+import sustain.synopsis.storage.lsmtree.MergeError;
 
 import java.io.*;
 
@@ -50,7 +52,7 @@ public class StrandStorageKeyValueTest {
     }
 
     @Test
-    void testStrandStorageSerialization() throws IOException {
+    void testStrandStorageKeySerialization() throws IOException {
         StrandStorageKey key = new StrandStorageKey(from, to);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream(baos);
@@ -78,20 +80,20 @@ public class StrandStorageKeyValueTest {
     }
 
     @Test
-    void testStrandStorageValueMerge() throws IOException {
+    void testStrandStorageValueMerge() throws IOException, MergeError {
         Strand strand1 = createStrand("9xa", from, to, 1.0, 2.0, 3.0);
         Strand strand2 = createStrand("9xa", from, to, 1.0, 2.0, 3.0);
-        StrandStorageValue value1 = new StrandStorageValue(serializeStrand(strand1));
-        StrandStorageValue value2 = new StrandStorageValue(serializeStrand(strand2));
+        StrandStorageValue value1 = new StrandStorageValue(StrandSerializationUtil.toProtoBuff(strand1).toByteArray());
+        StrandStorageValue value2 = new StrandStorageValue(StrandSerializationUtil.toProtoBuff(strand2).toByteArray());
         value1.merge(value2);
         strand1.merge(strand2);
         Assertions.assertEquals(value1.getStrand(), strand1);
     }
 
     @Test
-    void testStrandSerialization() throws IOException {
+    void testStrandStorageValueSerialization() throws IOException {
         Strand strand = createStrand("9xa", from, to, 1.0, 2.0, 3.0);
-        StrandStorageValue val = new StrandStorageValue(serializeStrand(strand));
+        StrandStorageValue val = new StrandStorageValue(StrandSerializationUtil.toProtoBuff(strand).toByteArray());
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream(baos);
         byte[] serializedData;

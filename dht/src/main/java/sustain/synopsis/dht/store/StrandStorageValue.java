@@ -1,22 +1,24 @@
 package sustain.synopsis.dht.store;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+import sustain.synopsis.common.ProtoBuffSerializedStrand;
 import sustain.synopsis.common.Strand;
-import sustain.synopsis.sketch.serialization.SerializationException;
-import sustain.synopsis.sketch.serialization.SerializationInputStream;
-import sustain.synopsis.sketch.serialization.SerializationOutputStream;
+import sustain.synopsis.common.StrandSerializationUtil;
+import sustain.synopsis.storage.lsmtree.MergeError;
 import sustain.synopsis.storage.lsmtree.Mergeable;
 import sustain.synopsis.storage.lsmtree.StreamSerializable;
 
-import java.io.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 
 /**
- * Wrapper for Strands before storing them in the LSMTree This implementation uses a lazy deserialization to reduce the
- * serialization overhead. If the Strand object is requested through the #getMethod(), deserialization is performed.
- * This implementation is not thread safe.
+ * Wrapper for Strands (serialized with Protocol Buffers) before storing them in the LSMTree. This implementation uses a
+ * lazy deserialization to reduce the serialization overhead. If the Strand object is requested through the
+ * #getMethod(), deserialization is performed. This implementation is not thread safe.
  */
 public class StrandStorageValue implements Mergeable<StrandStorageValue>, StreamSerializable {
 
-    private Strand strand;
     private byte[] serializedStrand;
 
     public StrandStorageValue(byte[] serializedStrand) {
@@ -28,26 +30,18 @@ public class StrandStorageValue implements Mergeable<StrandStorageValue>, Stream
     }
 
     @Override
-    public void merge(StrandStorageValue strandStorageValue) {
-        this.getStrand().merge(strandStorageValue.getStrand());
+    public void merge(StrandStorageValue strandStorageValue) throws MergeError {
+        try {
+            this.getStrand().merge(strandStorageValue.getStrand());
+        } catch (InvalidProtocolBufferException e) {
+            throw new MergeError(e.getMessage(), e);
+        }
     }
 
     @Override
     public void serialize(DataOutputStream dataOutputStream) throws IOException {
-        byte[] serialized;
-        if (strand == null) { // strand is not deserialized yet. Use the serialized data
-            serialized = this.serializedStrand;
-        } else { // strand may have got merged with another strand - therefore serialize the object
-            try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                 SerializationOutputStream sos = new SerializationOutputStream(baos);) {
-                strand.serialize(sos);
-                sos.flush();
-                baos.flush();
-                serialized = baos.toByteArray();
-            }
-        }
-        dataOutputStream.writeInt(serialized.length);
-        dataOutputStream.write(serialized);
+        dataOutputStream.writeInt(serializedStrand.length);
+        dataOutputStream.write(serializedStrand);
     }
 
     @Override
@@ -56,16 +50,8 @@ public class StrandStorageValue implements Mergeable<StrandStorageValue>, Stream
         dataInputStream.readFully(this.serializedStrand);
     }
 
-    public Strand getStrand() {
-        if (strand == null) {   // lazy deserialization
-            try (ByteArrayInputStream bais = new ByteArrayInputStream(serializedStrand);
-                 SerializationInputStream sis = new SerializationInputStream(bais)) {
-                Strand strand = new Strand(sis);
-                this.strand = strand;
-            } catch (IOException | SerializationException e) {
-                e.printStackTrace();
-            }
-        }
-        return strand;
+    public Strand getStrand() throws InvalidProtocolBufferException {
+        ProtoBuffSerializedStrand strand = ProtoBuffSerializedStrand.newBuilder().mergeFrom(serializedStrand).build();
+        return StrandSerializationUtil.fromProtoBuff(strand);
     }
 }

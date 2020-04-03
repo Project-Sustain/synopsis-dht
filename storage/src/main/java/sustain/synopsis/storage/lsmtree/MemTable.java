@@ -35,7 +35,7 @@ public class MemTable<K extends Comparable<K> & StreamSerializable, V extends St
         this.maxEntryCount = maxEntryCount;
     }
 
-    public boolean add(K key, V value) {
+    public boolean add(K key, V value) throws MergeError {
         try {
             lock.writeLock().lock();
             if (elements.containsKey(key)) {

@@ -168,7 +168,7 @@ public class NodeStore {
         }
         return response;
     }
-    
+
     void store(String datasetId, String entityId, IngestionSession session, StrandStorageKey storageKey,
                StrandStorageValue storageValue) throws StorageException, IOException {
         if (!entityStoreMap.containsKey(datasetId)) { // check if the dataset is new

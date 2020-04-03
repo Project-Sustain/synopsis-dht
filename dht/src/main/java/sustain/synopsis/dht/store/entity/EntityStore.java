@@ -112,7 +112,15 @@ public class EntityStore {
         }
     }
 
-    public boolean store(IngestionSession session, StrandStorageKey key, StrandStorageValue value) {
+    /**
+     * Store the data in the MemTable first. If the MemTable is full, the purge it to disk.
+     * @param session {@link IngestionSession} session corresponding to the data
+     * @param key Key
+     * @param value Actual value to be stored
+     * @throws StorageException Error during serialization or commit log update
+     */
+    public void store(IngestionSession session, StrandStorageKey key, StrandStorageValue value)
+            throws StorageException {
         // todo: data should be first written to a WAL
         try {
             if (!activeSessions.containsKey(session)) {
@@ -125,9 +133,8 @@ public class EntityStore {
             }
         } catch (IOException | StorageException | MergeError e) {
             logger.error("Error storing the strand.", e);
-            return false;
+            throw new StorageException(e.getMessage(), e);
         }
-        return true;
     }
 
     private void purgeMemTable(IngestionSession session, MemTable<StrandStorageKey, StrandStorageValue> memTable)

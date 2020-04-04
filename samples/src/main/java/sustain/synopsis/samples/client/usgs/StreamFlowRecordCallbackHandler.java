@@ -14,6 +14,8 @@ public class StreamFlowRecordCallbackHandler implements RecordCallbackHandler {
     final SessionSchema sessionSchema;
     final TemporalQuantizer temporalQuantizer;
 
+    long totalRecordsHandled = 0;
+
     public StreamFlowRecordCallbackHandler(StrandRegistry strandRegistry, SessionSchema sessionSchema, TemporalQuantizer temporalQuantizer) {
         this.strandRegistry = strandRegistry;
         this.sessionSchema = sessionSchema;
@@ -24,6 +26,7 @@ public class StreamFlowRecordCallbackHandler implements RecordCallbackHandler {
     public boolean onRecordAvailability(Record record) {
         Strand s = constructStrand(record.getGeohash(), record.getTimestamp(), record.getFeatures().get(StreamFlowClient.DISCHARGE_FEATURE));
         strandRegistry.add(s);
+        totalRecordsHandled++;
         return true;
     }
 

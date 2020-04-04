@@ -76,7 +76,6 @@ public class StreamFlowClient {
     // 2020_01_01
 
     public static void main(String[] args) throws IOException, CsvValidationException, ParseException {
-
         if (args.length < 7) {
             System.out.println("Usage: dhtNodeAddress datasetId sessionId binConfigFile stationLocationFile baseDir beginDate endDate");
             System.out.println("Dates in format yyyy_MM_dd");
@@ -102,22 +101,27 @@ public class StreamFlowClient {
         System.out.println("Num stations in stationLocationFile: " + stationMap.size());
         SessionSchema sessionSchema = new SessionSchema(Util.quantizerMapFromFile(binConfigPath), GEOHASH_LENGTH, TEMPORAL_BRACKET_LENGTH);
 
-        StrandPublisher strandPublisher = new SimpleStrandPublisher(dhtNodeAddress, datasetId, sessionId);
-//        StrandPublisher strandPublisher = new DHTStrandPublisher(dhtNodeAddress, datasetId, sessionId);
-        StrandRegistry strandRegistry = new StrandRegistry(strandPublisher, 10000, 100);
+        SimpleStrandPublisher publisher = new SimpleStrandPublisher(dhtNodeAddress, datasetId, sessionId);
+        StrandRegistry strandRegistry = new StrandRegistry(publisher, 10000, 100);
 
         TemporalQuantizer temporalQuantizer = new TemporalQuantizer(TEMPORAL_BRACKET_LENGTH);
-        RecordCallbackHandler recordCallbackHandler = new StreamFlowRecordCallbackHandler(strandRegistry, sessionSchema, temporalQuantizer);
+        StreamFlowRecordCallbackHandler handler = new StreamFlowRecordCallbackHandler(strandRegistry, sessionSchema, temporalQuantizer);
 
         StreamFlowFileParser streamFlowFileParser = new StreamFlowFileParser(stationMap);
-        streamFlowFileParser.initWithSchemaAndHandler(sessionSchema, recordCallbackHandler);
+        streamFlowFileParser.initWithSchemaAndHandler(sessionSchema, handler);
 
         for (File f : inputFiles) {
             streamFlowFileParser.parse(f);
         }
 
-        recordCallbackHandler.onTermination();
+        strandRegistry.terminateSession();
+        handler.onTermination();
+        publisher.terminateSession();
 
+        System.out.println("Total records: "+handler.totalRecordsHandled);
+        System.out.println("Total strands: "+publisher.getTotalStrandsPublished());
+        System.out.printf("Average records per strand: %.2f\n",(double)handler.totalRecordsHandled / publisher.getTotalStrandsPublished());
+        System.out.println("Stations missing location data count: " + streamFlowFileParser.missingStationIds.size());
     }
 
 }

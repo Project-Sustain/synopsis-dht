@@ -5,11 +5,8 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
-import sustain.synopsis.dht.store.services.IngestionRequest;
-import sustain.synopsis.dht.store.services.IngestionResponse;
-import sustain.synopsis.dht.store.services.IngestionServiceGrpc;
+import sustain.synopsis.dht.store.services.*;
 import sustain.synopsis.dht.store.services.IngestionServiceGrpc.IngestionServiceFutureStub;
-import sustain.synopsis.dht.store.services.Strand;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -49,6 +46,14 @@ public class NoaaReceiverTestClient {
             responseObserver.onCompleted();
         }
 
+        @Override
+        public void terminateSession(TerminateSessionRequest request, StreamObserver<TerminateSessionResponse> responseObserver) {
+            TerminateSessionResponse response = TerminateSessionResponse.newBuilder()
+                    .setStatus(true)
+                    .build();
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+        }
     }
 
 

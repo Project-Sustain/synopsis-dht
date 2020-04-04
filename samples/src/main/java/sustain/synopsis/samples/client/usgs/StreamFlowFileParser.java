@@ -7,6 +7,7 @@ import sustain.synopsis.ingestion.client.geohash.GeoHash;
 
 import java.io.*;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
@@ -15,9 +16,6 @@ public class StreamFlowFileParser implements FileParser {
     private SessionSchema schema;
     RecordCallbackHandler recordCallbackHandler;
     final Map<String, StationParser.Location> stationMap;
-
-
-
 
     public StreamFlowFileParser(Map<String, StationParser.Location> stationMap) {
         this.stationMap = stationMap;
@@ -61,6 +59,8 @@ public class StreamFlowFileParser implements FileParser {
         reader.readLine();
     }
 
+    final HashSet<String> missingStationIds = new HashSet<>();
+
     private boolean parseSite(BufferedReader reader) throws IOException {
         String line = reader.readLine();
         if (line == null) {
@@ -68,7 +68,14 @@ public class StreamFlowFileParser implements FileParser {
         }
 
         String stationId = line.substring("# Data provided for site ".length());
+        String geohash = null;
         StationParser.Location location = stationMap.get(stationId);
+        if (location == null) {
+            missingStationIds.add(stationId);
+        } else {
+            geohash = GeoHash.encode(location.latitude, location.longitude, schema.getGeohashLength());
+        }
+
         reader.readLine();
 
         String dataCode = null;
@@ -86,11 +93,6 @@ public class StreamFlowFileParser implements FileParser {
         }
         reader.readLine();
 
-
-        String geohash = null;
-        if (location != null) {
-            geohash = GeoHash.encode(location.latitude, location.longitude, schema.getGeohashLength());
-        }
 
         StreamFlowSiteDataParser siteDataParser = new StreamFlowSiteDataParser(headerMap, geohash, dataCode, recordCallbackHandler);
         return siteDataParser.parseSiteData(reader);

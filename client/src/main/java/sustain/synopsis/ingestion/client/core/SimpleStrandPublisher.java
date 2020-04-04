@@ -16,6 +16,7 @@ public class SimpleStrandPublisher implements StrandPublisher {
     private final long sessionId;
 
     IngestionServiceBlockingStub stub;
+    long totalStrandsPublished = 0;
 
     public SimpleStrandPublisher(String address, String datasetId, long sessionId) {
         stub = getStubForAddress(address);
@@ -43,12 +44,19 @@ public class SimpleStrandPublisher implements StrandPublisher {
         return convertedStrands;
     }
 
+    public long getTotalStrandsPublished() {
+        return totalStrandsPublished;
+    }
+
     @Override
     public void publish(Collection<Strand> strands) {
+        List<sustain.synopsis.dht.store.services.Strand> convertedStrandList = getConvertedStrandList(strands);
+        totalStrandsPublished += convertedStrandList.size();
+
         IngestionRequest request = IngestionRequest.newBuilder()
                 .setDatasetId(datasetId)
                 .setSessionId(sessionId)
-                .addAllStrand(getConvertedStrandList(strands))
+                .addAllStrand(convertedStrandList)
                 .build();
 
         IngestionResponse response = stub.ingest(request);

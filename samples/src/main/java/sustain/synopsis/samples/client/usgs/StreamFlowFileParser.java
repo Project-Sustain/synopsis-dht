@@ -61,8 +61,6 @@ public class StreamFlowFileParser implements FileParser {
         reader.readLine();
     }
 
-
-
     private boolean parseSite(BufferedReader reader) throws IOException {
         String line = reader.readLine();
         if (line == null) {
@@ -79,9 +77,6 @@ public class StreamFlowFileParser implements FileParser {
                 String[] splits = line.split("\\s+");
                 dataCode = splits[1] + "_" + splits[2];
             }
-        }
-        if (dataCode == null) {
-            int x = 0;
         }
 
         String[] headerSplits = line.split("\t");

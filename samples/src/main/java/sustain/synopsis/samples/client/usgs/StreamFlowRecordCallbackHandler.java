@@ -1,10 +1,7 @@
 package sustain.synopsis.samples.client.usgs;
 
 import sustain.synopsis.common.Strand;
-import sustain.synopsis.ingestion.client.core.Record;
-import sustain.synopsis.ingestion.client.core.RecordCallbackHandler;
-import sustain.synopsis.ingestion.client.core.SessionSchema;
-import sustain.synopsis.ingestion.client.core.StrandRegistry;
+import sustain.synopsis.ingestion.client.core.*;
 import sustain.synopsis.sketch.dataset.Quantizer;
 import sustain.synopsis.sketch.dataset.feature.Feature;
 import sustain.synopsis.sketch.graph.DataContainer;
@@ -15,12 +12,12 @@ public class StreamFlowRecordCallbackHandler implements RecordCallbackHandler {
 
     final StrandRegistry strandRegistry;
     final SessionSchema sessionSchema;
-    final long temporalBracketLengthSeconds;
+    final TemporalQuantizer temporalQuantizer;
 
-    public StreamFlowRecordCallbackHandler(StrandRegistry strandRegistry, SessionSchema sessionSchema) {
+    public StreamFlowRecordCallbackHandler(StrandRegistry strandRegistry, SessionSchema sessionSchema, TemporalQuantizer temporalQuantizer) {
         this.strandRegistry = strandRegistry;
         this.sessionSchema = sessionSchema;
-        this.temporalBracketLengthSeconds = sessionSchema.getTemporalBracketLength().toMinutes()*60;
+        this.temporalQuantizer = temporalQuantizer;
     }
 
     @Override
@@ -38,7 +35,7 @@ public class StreamFlowRecordCallbackHandler implements RecordCallbackHandler {
     private Strand constructStrand(String geohash, long ts, float data) {
         Path path = new Path(1);
         double[] values = new double[1]; // skip time and location
-        long[] temporalBracket = new long[]{ts, ts+temporalBracketLengthSeconds};
+        long[] temporalBracket = temporalQuantizer.getTemporalBoundaries(ts);
         int i = 0;
 
         Quantizer quantizer = sessionSchema.getQuantizer(StreamFlowClient.DISCHARGE_FEATURE);
@@ -51,7 +48,7 @@ public class StreamFlowRecordCallbackHandler implements RecordCallbackHandler {
         RunningStatisticsND rsnd = new RunningStatisticsND(values);
         DataContainer container = new DataContainer(rsnd);
         path.get(path.size() - 1).setData(container);
-        return new sustain.synopsis.common.Strand(geohash, temporalBracket[0], temporalBracket[1], path);
+        return new Strand(geohash, temporalBracket[0], temporalBracket[1], path);
     }
 
 }

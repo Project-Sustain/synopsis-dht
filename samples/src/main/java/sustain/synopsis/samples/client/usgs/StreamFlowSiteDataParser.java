@@ -47,7 +47,7 @@ public class StreamFlowSiteDataParser {
             LocalDateTime localDateTime = LocalDateTime.parse(datetime, dateTimeFormatter);
             ZonedDateTime zonedDateTime = ZonedDateTime.of(localDateTime, timeZoneMap.get(timezone));
 
-            long timestamp = zonedDateTime.toEpochSecond();
+            long timestamp = zonedDateTime.toEpochSecond()*1000;
             float value = Float.parseFloat(splits[headerMap.get(dataCode)]);
 
             Record record = new Record();

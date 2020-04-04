@@ -23,23 +23,21 @@ public class StreamFlowBinCalculator {
         File stationsFile = new File(args[1]);
         Date beginDate = StreamFlowClient.dateFormat.parse(args[2]);
         Date endDate = StreamFlowClient.dateFormat.parse(args[3]);
+        int beginYear = Integer.parseInt(args[2].substring(0,4));
+        int endYear =  Integer.parseInt(args[3].substring(0,4));
         // fraction of files to be read is 1/fractionDenominator
         int fractionDenominator = Integer.parseInt(args[4]);
 
-        File[] inputFiles = baseDir.listFiles(pathname ->
-                pathname.getName().startsWith("stream_flow_co")
-                && pathname.getName().endsWith(".gz")
-                && StreamFlowClient.isFileInDateRange(pathname.getName(), beginDate, endDate));
-
-        System.out.println("Total matching file count: " + inputFiles.length);
-        Arrays.sort(inputFiles, Comparator.comparing(File::getName));
+        List<File> inputFiles = StreamFlowClient.getMatchingFiles(baseDir.listFiles(), beginDate, endDate, beginYear, endYear);
+        inputFiles.sort(Comparator.comparing(File::getName));
+        System.out.println("Total matching file count: " + inputFiles.size());
 
         ListRecordCallbackHandler handler = new ListRecordCallbackHandler();
         StreamFlowFileParser fileParser = new StreamFlowFileParser(StationParser.parseFile(stationsFile));
         fileParser.initWithSchemaAndHandler(new SessionSchema(null, GEOHASH_LENGTH, TEMPORAL_BUCKET_LENGTH), handler);
 
-        for (int i  = 0; i < inputFiles.length; i += fractionDenominator) {
-            fileParser.parse(inputFiles[i]);
+        for (int i  = 0; i < inputFiles.size(); i += fractionDenominator) {
+            fileParser.parse(inputFiles.get(i));
         }
 
         ArrayList<Record> records = handler.getRecords();

@@ -38,8 +38,36 @@ public class StreamFlowClient {
         }
     }
 
+    static boolean dateRangeContainsYear(int year, int beginYear, int endYear) {
+        boolean outOfRange = beginYear > year || endYear < year;
+        return !outOfRange;
+    }
+
+
+    // TODO make cleaner solution to filtering directories based on year
+    static ArrayList<File> getMatchingFiles(File[] files, Date beginDate, Date endDate, int beginYear, int endYear) {
+        ArrayList<File> fileList = new ArrayList<>();
+        for (File f : files) {
+            if (f.isDirectory()) {
+                int year = Integer.parseInt(f.getName());
+                if (dateRangeContainsYear(year, beginYear, endYear)) {
+                    fileList.addAll(getMatchingFiles(f.listFiles(), beginDate, endDate, beginYear, endYear));
+                }
+            } else {
+                boolean fileMatches = f.getName().startsWith("stream_flow")
+                        && f.getName().endsWith(".gz")
+                        && isFileInDateRange(f.getName(), beginDate, endDate);
+                if (fileMatches) {
+                    fileList.add(f);
+                }
+            }
+        }
+        return fileList;
+    }
+
 
     public static void main(String[] args) throws IOException, CsvValidationException, ParseException {
+
         if (args.length < 7) {
             System.out.println("Usage: dhtNodeAddress datasetId sessionId binConfigFile stationLocationFile baseDir beginDate endDate");
             System.out.println("Dates in format yyyy_MM_dd");
@@ -54,15 +82,12 @@ public class StreamFlowClient {
         File baseDir = new File(args[5]);
         Date beginDate = dateFormat.parse(args[6]);
         Date endDate = dateFormat.parse(args[7]);
+        int beginYear = Integer.parseInt(args[6].substring(0,4));
+        int endYear =  Integer.parseInt(args[7].substring(0,4));
 
-
-        File[] inputFiles = baseDir.listFiles(
-                pathname -> pathname.getName().startsWith("stream_flow_co")
-                && pathname.getName().endsWith(".gz")
-                && isFileInDateRange(pathname.getName(), beginDate, endDate)
-        );
-        System.out.println("Total matching file count: " + inputFiles.length);
-        Arrays.sort(inputFiles, Comparator.comparing(File::getName));
+        List<File> inputFiles = getMatchingFiles(baseDir.listFiles(), beginDate, endDate, beginYear, endYear);
+        inputFiles.sort(Comparator.comparing(File::getName));
+        System.out.println("Total matching file count: " + inputFiles.size());
 
         Map<String, StationParser.Location> stationMap = StationParser.parseFile(stationLocationFile);
         System.out.println("Num stations in stationLocationFile: " + stationMap.size());

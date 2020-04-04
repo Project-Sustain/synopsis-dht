@@ -13,7 +13,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
-public class SiteDataParser {
+public class StreamFlowSiteDataParser {
 
     final static DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     final static Map<String, ZoneId> timeZoneMap = new HashMap<>();
@@ -27,7 +27,7 @@ public class SiteDataParser {
     final String dataCode;
     final RecordCallbackHandler callbackHandler;
 
-    public SiteDataParser(Map<String, Integer> headerMap, String geohash, String dataCode, RecordCallbackHandler callbackHandler) {
+    public StreamFlowSiteDataParser(Map<String, Integer> headerMap, String geohash, String dataCode, RecordCallbackHandler callbackHandler) {
         this.headerMap = headerMap;
         this.geohash = geohash;
         this.dataCode = dataCode;
@@ -37,7 +37,7 @@ public class SiteDataParser {
     public void parseLine(String line) {
         String[] splits = line.split("\t");
 
-        if (splits.length > headerMap.size()) {
+        if (splits.length > headerMap.size() || headerMap.get(dataCode) == null) {
             return;
         }
 
@@ -53,7 +53,7 @@ public class SiteDataParser {
             Record record = new Record();
             record.setGeohash(geohash);
             record.setTimestamp(timestamp);
-            record.addFeatureValue("Discharge, cubic feet per second", value);
+            record.addFeatureValue(StreamFlowClient.DISCHARGE_FEATURE, value);
             callbackHandler.onRecordAvailability(record);
 
         } catch (Exception e) {
@@ -67,7 +67,7 @@ public class SiteDataParser {
             if (line.startsWith("#")) {
                 return true;
             }
-            if (geohash == null) {
+            if (geohash == null || dataCode == null) {
                 continue;
             }
             parseLine(line);

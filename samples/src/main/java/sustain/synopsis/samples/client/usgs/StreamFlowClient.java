@@ -7,69 +7,73 @@ import sustain.synopsis.samples.client.noaa.NoaaIngester;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class StreamFlowClient {
 
+    public static final String DISCHARGE_FEATURE = "discharge_cubic_feet_per_second";
     public static final int GEOHASH_LENGTH = 5;
     public static final Duration TEMPORAL_BRACKET_LENGTH = Duration.ofHours(6);
 
-    public static void main(String[] args) throws IOException, CsvValidationException {
-//        if (args.length < 5) {
-//            System.out.println("Usage: dhtNodeAddress datasetId sessionId binConfigPath inputDir");
-//            return;
-//        }
-//
-//        String dhtNodeAddress = args[0];
-//        String datasetId = args[1];
-//        long sessionId = Long.parseLong(args[2]);
-//        String binConfig = args[3];
-//
-//        File baseDir = new File(args[4]);
-//        File[] inputFiles = baseDir.listFiles(pathname -> pathname.getName().startsWith("stream_flow_co") && pathname.getName().endsWith(".gz"));
-//
-//        if (inputFiles == null) {
-//            System.err.println("No matching files.");
-//            return;
-//        }
-//
-//        System.out.println("Total matching file count: " + inputFiles.length);
-//        Arrays.sort(inputFiles, (o1, o2) -> o1.getName().compareTo(o2.getName()));
+    static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd");
+    static Pattern datePattern = Pattern.compile("\\d\\d\\d\\d_\\d\\d_\\d\\d");
+    public static boolean isFileInDateRange(String fileName, Date beginDate, Date endDate) {
+        Matcher matcher = datePattern.matcher(fileName);
+        try {
+            if (!matcher.find()) {
+                return false;
+            }
+            Date date1 = dateFormat.parse(matcher.group());
+            if (!matcher.find()) {
+                return false;
+            }
+            Date date2 = dateFormat.parse(matcher.group());
+            return date1.compareTo(beginDate) >= 0 && date2.compareTo(endDate) <= 0;
 
-        Map<String, StationParser.Location> stationMap = StationParser.parseFile(new File("/Users/keegan/Downloads/station.csv"));
-        System.out.println(stationMap.size());
+        } catch (ParseException e) {
+            return false;
+        }
+    }
 
-//        SessionSchema sessionSchema = new SessionSchema(Util.quantizerMapFromString(binConfig), GEOHASH_LENGTH, TEMPORAL_BRACKET_LENGTH);
-        SessionSchema sessionSchema = new SessionSchema(null, GEOHASH_LENGTH, TEMPORAL_BRACKET_LENGTH);
+
+    public static void main(String[] args) throws IOException, CsvValidationException, ParseException {
+        if (args.length < 7) {
+            System.out.println("Usage: dhtNodeAddress datasetId sessionId binConfigFile stationLocationFile baseDir beginDate endDate");
+            System.out.println("Dates in format yyyy_MM_dd");
+            return;
+        }
+
+        String dhtNodeAddress = args[0];
+        String datasetId = args[1];
+        long sessionId = Long.parseLong(args[2]);
+        String binConfigPath = args[3];
+        File stationLocationFile = new File(args[4]);
+        File baseDir = new File(args[5]);
+        Date beginDate = dateFormat.parse(args[6]);
+        Date endDate = dateFormat.parse(args[7]);
+
+
+        File[] inputFiles = baseDir.listFiles(pathname -> pathname.getName().startsWith("stream_flow_co") && pathname.getName().endsWith(".gz"));
+        System.out.println("Total matching file count: " + inputFiles.length);
+        Arrays.sort(inputFiles, Comparator.comparing(File::getName));
+
+        Map<String, StationParser.Location> stationMap = StationParser.parseFile(stationLocationFile);
+        System.out.println("Num stations in stationLocationFile: " + stationMap.size());
+        SessionSchema sessionSchema = new SessionSchema(Util.quantizerMapFromFile(binConfigPath), GEOHASH_LENGTH, TEMPORAL_BRACKET_LENGTH);
+
+        StrandPublisher strandPublisher = new SimpleStrandPublisher(dhtNodeAddress, datasetId, sessionId);
+//        StrandPublisher strandPublisher = new DHTStrandPublisher(dhtNodeAddress, datasetId, sessionId);
+        StrandRegistry strandRegistry = new StrandRegistry(strandPublisher, 10000, 100);
+
+        RecordCallbackHandler recordCallbackHandler = new StreamFlowRecordCallbackHandler(strandRegistry, sessionSchema);
 
         StreamFlowFileParser streamFlowFileParser = new StreamFlowFileParser(stationMap);
-
-        RecordCallbackHandler recordCallbackHandler = new RecordCallbackHandler() {
-
-            Map<String, Integer> recordCount = new HashMap<>();
-
-            @Override
-            public boolean onRecordAvailability(Record record) {
-                recordCount.merge(record.getGeohash(), 1, Integer::sum);
-                return true;
-            }
-
-            @Override
-            public void onTermination() {
-                int total = 0;
-                for (String geohash : recordCount.keySet()) {
-                    int localCount = recordCount.get(geohash);
-                    total += localCount;
-                    System.out.printf("%s %d\n", geohash, localCount);
-                }
-                System.out.println(total);
-            }
-        };
-
         streamFlowFileParser.initWithSchemaAndHandler(sessionSchema, recordCallbackHandler);
 
 //        streamFlowFileParser.parse(new File("/Users/keegan/Sustain/usgs-stream-flow-downloader/stream_flow_co_2020_02_01_2020_02_02"));
@@ -79,14 +83,6 @@ public class StreamFlowClient {
 
         recordCallbackHandler.onTermination();
 
-
-//        StrandPublisher strandPublisher = new SimpleStrandPublisher(dhtNodeAddress, datasetId, sessionId);
-//        StrandPublisher strandPublisher = new DHTStrandPublisher(dhtNodeAddress, datasetId, sessionId);
-//        StrandPublisher strandPublisher = new ConsoleStrandPublisher();
-
-//        StrandRegistry strandRegistry = new StrandRegistry(strandPublisher, 10000, 100);
-//
-//        NoaaIngester noaaIngester = new NoaaIngester(Arrays.copyOfRange(inputFiles, inputFiles.length / 2 * i, inputFiles.length / 2 * (i + 1)), sessionSchema);
 //
 //        long timeStart = Instant.now().toEpochMilli();
 //        while (noaaIngester.hasNext()) {
@@ -105,6 +101,26 @@ public class StreamFlowClient {
 //        System.out.printf("Strands per second: %.1f", strandsPerSec);
 
     }
+
+    //        RecordCallbackHandler recordCallbackHandler = new RecordCallbackHandler() {
+//            Map<String, Integer> recordCount = new HashMap<>();
+//            @Override
+//            public boolean onRecordAvailability(Record record) {
+//                recordCount.merge(record.getGeohash(), 1, Integer::sum);
+//                return true;
+//            }
+//
+//            @Override
+//            public void onTermination() {
+//                int total = 0;
+//                for (String geohash : recordCount.keySet()) {
+//                    int localCount = recordCount.get(geohash);
+//                    total += localCount;
+//                    System.out.printf("%s %d\n", geohash, localCount);
+//                }
+//                System.out.println(total);
+//            }
+//        };
 
 
 }

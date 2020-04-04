@@ -12,9 +12,9 @@ public class SessionSchema {
     private final int geohashLength;
     private final Duration temporalBracketLength;
 
-    public SessionSchema(Map<String, Quantizer> quantizers, int temporalBracketLength, Duration temporalGranularity) {
+    public SessionSchema(Map<String, Quantizer> quantizers, int geohashLength, Duration temporalGranularity) {
         this.quantizers = quantizers;
-        this.geohashLength = temporalBracketLength;
+        this.geohashLength = geohashLength;
         this.temporalBracketLength = temporalGranularity;
     }
 

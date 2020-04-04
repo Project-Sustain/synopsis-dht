@@ -64,24 +64,24 @@ public class StreamFlowFileParser implements FileParser {
 
 
     private boolean parseSite(BufferedReader reader) throws IOException {
-        StationParser.Location location = null;
-        Integer streamFlowIdx;
-        String dataCode = null;
-
         String line = reader.readLine();
         if (line == null) {
             return false;
         }
 
         String stationId = line.substring("# Data provided for site ".length());
-        location = stationMap.get(stationId);
+        StationParser.Location location = stationMap.get(stationId);
         reader.readLine();
 
+        String dataCode = null;
         while ((line = reader.readLine()).startsWith("#")) {
             if (line.endsWith("Discharge, cubic feet per second")) {
                 String[] splits = line.split("\\s+");
                 dataCode = splits[1] + "_" + splits[2];
             }
+        }
+        if (dataCode == null) {
+            int x = 0;
         }
 
         String[] headerSplits = line.split("\t");
@@ -89,7 +89,6 @@ public class StreamFlowFileParser implements FileParser {
         for (int i = 0; i < headerSplits.length; i++) {
             headerMap.put(headerSplits[i], i);
         }
-        streamFlowIdx = headerMap.get(dataCode);
         reader.readLine();
 
 
@@ -98,7 +97,7 @@ public class StreamFlowFileParser implements FileParser {
             geohash = GeoHash.encode(location.latitude, location.longitude, schema.getGeohashLength());
         }
 
-        SiteDataParser siteDataParser = new SiteDataParser(headerMap, geohash, dataCode, recordCallbackHandler);
+        StreamFlowSiteDataParser siteDataParser = new StreamFlowSiteDataParser(headerMap, geohash, dataCode, recordCallbackHandler);
         return siteDataParser.parseSiteData(reader);
     }
 

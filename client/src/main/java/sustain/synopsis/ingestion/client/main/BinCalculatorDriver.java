@@ -1,9 +1,6 @@
 package sustain.synopsis.ingestion.client.main;
 import sustain.synopsis.ingestion.client.connectors.file.FileParser;
-import sustain.synopsis.ingestion.client.core.BinCalculator;
-import sustain.synopsis.ingestion.client.core.Record;
-import sustain.synopsis.ingestion.client.core.RecordCallbackHandler;
-import sustain.synopsis.ingestion.client.core.Util;
+import sustain.synopsis.ingestion.client.core.*;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -20,30 +17,15 @@ public class BinCalculatorDriver {
         FileParser fileParser = (FileParser) Class.forName(fileParserClassName).newInstance();
         File[] files = Util.getFilesFromStrings(1, args);
 
-        MyRecordCallbackHandler handler = new MyRecordCallbackHandler();
+        ListRecordCallbackHandler handler = new ListRecordCallbackHandler();
         fileParser.initWithSchemaAndHandler(null, handler);
         for (File file : files) {
             fileParser.parse(file);
         }
 
-        String binConfiguration = new BinCalculator().getBinConfiguration(handler.records);
+        String binConfiguration = new BinCalculator().getBinConfiguration(handler.getRecords());
 
         System.out.println(binConfiguration);
-    }
-
-    private static class MyRecordCallbackHandler implements RecordCallbackHandler {
-        ArrayList<Record> records = new ArrayList<>();
-
-        @Override
-        public boolean onRecordAvailability(Record record) {
-            records.add(record);
-            return true;
-        }
-
-        @Override
-        public void onTermination() {
-
-        }
     }
 
 }

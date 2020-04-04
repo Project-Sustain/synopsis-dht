@@ -65,6 +65,15 @@ public class StreamFlowClient {
         return fileList;
     }
 
+    // example command line args:
+    // localhost:9099
+    // stream-flow-dataset
+    // 1
+    // /s/lattice-1/b/nobackup/galileo/stream-flow-data/stream_flow_bin_configuration.csv
+    // /s/lattice-1/b/nobackup/galileo/stream-flow-data/stream_flow_co_stations.csv
+    // /s/lattice-1/b/nobackup/galileo/stream-flow-data/co
+    // 2016_01_01
+    // 2020_01_01
 
     public static void main(String[] args) throws IOException, CsvValidationException, ParseException {
 

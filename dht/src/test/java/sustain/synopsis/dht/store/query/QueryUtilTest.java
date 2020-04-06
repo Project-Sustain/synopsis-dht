@@ -88,6 +88,19 @@ public class QueryUtilTest {
     }
 
     @Test
+    void testTemporalLookupWithOneBlock() {
+        TreeMap<StrandStorageKey, Metadata<StrandStorageKey>> metadata = new TreeMap<>();
+        Metadata<StrandStorageKey> emptyMetadata = new Metadata<>();
+        metadata.put(new StrandStorageKey(100L, 500L), emptyMetadata);
+        Map<StrandStorageKey, Metadata<StrandStorageKey>> results =
+                QueryUtil.temporalLookup(metadata, 800L, 1600L, false);
+        Assertions.assertFalse(results.isEmpty());
+
+        results = QueryUtil.temporalLookup(metadata, 10L, 50L, false);
+        Assertions.assertTrue(results.isEmpty());
+    }
+
+    @Test
     void IntervalBasicTest() {
         Interval interval1 = new Interval(10, 20);
         Interval interval2 = new Interval(10, 20);

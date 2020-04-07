@@ -14,6 +14,7 @@ import java.util.regex.Pattern;
 
 public class StreamFlowClient {
 
+    public static final String TEMPERATURE_FEATURE = "temperature_water_degrees_celsius";
     public static final String DISCHARGE_FEATURE = "discharge_cubic_feet_per_second";
     public static final int GEOHASH_LENGTH = 5;
     public static final Duration TEMPORAL_BRACKET_LENGTH = Duration.ofHours(6);

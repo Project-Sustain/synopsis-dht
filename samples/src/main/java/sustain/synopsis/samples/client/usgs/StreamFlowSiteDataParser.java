@@ -11,6 +11,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class StreamFlowSiteDataParser {
@@ -24,36 +25,45 @@ public class StreamFlowSiteDataParser {
 
     final Map<String, Integer> headerMap;
     final String geohash;
-    final String dataCode;
+    final List<String> dataCodes;
     final RecordCallbackHandler callbackHandler;
+    long exceptionLineCount = 0;
 
-    public StreamFlowSiteDataParser(Map<String, Integer> headerMap, String geohash, String dataCode, RecordCallbackHandler callbackHandler) {
+    public StreamFlowSiteDataParser(Map<String, Integer> headerMap, String geohash, List<String> dataCodes, RecordCallbackHandler callbackHandler) {
         this.headerMap = headerMap;
         this.geohash = geohash;
-        this.dataCode = dataCode;
+        this.dataCodes = dataCodes;
         this.callbackHandler = callbackHandler;
     }
 
     public void parseLine(String line) {
         String[] splits = line.split("\t");
-
-        if (splits.length > headerMap.size() || headerMap.get(dataCode) == null) {
+        if (splits.length > headerMap.size()) {
             return;
         }
 
         try {
+            Record record = new Record();
+            for (String dataCode : dataCodes) {
+                if (dataCode.contains("00060")) {
+                    float flow = Float.parseFloat(splits[headerMap.get(dataCode)]);
+                    record.addFeatureValue(StreamFlowClient.TEMPERATURE_FEATURE, flow);
+
+                } else if (dataCode.contains("00010")) {
+                    float temperature = Float.parseFloat(splits[headerMap.get(dataCode)]);
+                    record.addFeatureValue(StreamFlowClient.TEMPERATURE_FEATURE, temperature);
+
+                }
+            }
+
             String datetime = splits[headerMap.get("datetime")];
             String timezone = splits[headerMap.get("tz_cd")];
             LocalDateTime localDateTime = LocalDateTime.parse(datetime, dateTimeFormatter);
             ZonedDateTime zonedDateTime = ZonedDateTime.of(localDateTime, timeZoneMap.get(timezone));
-
             long timestamp = zonedDateTime.toEpochSecond()*1000;
-            float value = Float.parseFloat(splits[headerMap.get(dataCode)]);
 
-            Record record = new Record();
             record.setGeohash(geohash);
             record.setTimestamp(timestamp);
-            record.addFeatureValue(StreamFlowClient.DISCHARGE_FEATURE, value);
             callbackHandler.onRecordAvailability(record);
 
         } catch (Exception e) {
@@ -67,7 +77,7 @@ public class StreamFlowSiteDataParser {
             if (line.startsWith("#")) {
                 return true;
             }
-            if (geohash == null || dataCode == null) {
+            if (geohash == null) {
                 continue;
             }
             parseLine(line);

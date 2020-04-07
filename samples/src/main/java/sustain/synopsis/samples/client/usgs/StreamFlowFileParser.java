@@ -6,9 +6,7 @@ import sustain.synopsis.ingestion.client.core.SessionSchema;
 import sustain.synopsis.ingestion.client.geohash.GeoHash;
 
 import java.io.*;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.*;
 import java.util.zip.GZIPInputStream;
 
 public class StreamFlowFileParser implements FileParser {
@@ -78,11 +76,11 @@ public class StreamFlowFileParser implements FileParser {
 
         reader.readLine();
 
-        String dataCode = null;
+        List<String> dataCodes = new ArrayList<>();
         while ((line = reader.readLine()).startsWith("#")) {
-            if (line.endsWith("Discharge, cubic feet per second")) {
+            if (line.endsWith("Discharge, cubic feet per second") || line.endsWith("Temperature, water, degrees Celsius")) {
                 String[] splits = line.split("\\s+");
-                dataCode = splits[1] + "_" + splits[2];
+                dataCodes.add(splits[1] + "_" + splits[2]);
             }
         }
 
@@ -94,7 +92,7 @@ public class StreamFlowFileParser implements FileParser {
         reader.readLine();
 
 
-        StreamFlowSiteDataParser siteDataParser = new StreamFlowSiteDataParser(headerMap, geohash, dataCode, recordCallbackHandler);
+        StreamFlowSiteDataParser siteDataParser = new StreamFlowSiteDataParser(headerMap, geohash, dataCodes, recordCallbackHandler);
         return siteDataParser.parseSiteData(reader);
     }
 

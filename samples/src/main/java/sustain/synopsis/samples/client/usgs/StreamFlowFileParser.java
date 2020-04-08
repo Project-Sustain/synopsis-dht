@@ -38,7 +38,13 @@ public class StreamFlowFileParser implements FileParser {
 
             parseHeader(br);
 
-            while(parseSite(br));
+
+            StreamFlowSiteDataParser siteDataParser;
+            while((siteDataParser = getSiteParser(br)) != null) {
+                if (!siteDataParser.parseSiteData(br)) {
+                    break;
+                }
+            }
 
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -59,28 +65,36 @@ public class StreamFlowFileParser implements FileParser {
 
     final HashSet<String> missingStationIds = new HashSet<>();
 
-    private boolean parseSite(BufferedReader reader) throws IOException {
+    private StreamFlowSiteDataParser getSiteParser(BufferedReader reader) throws IOException {
         String line = reader.readLine();
         if (line == null) {
-            return false;
+            return null;
         }
 
         String stationId = line.substring("# Data provided for site ".length());
-        String geohash = null;
         StationParser.Location location = stationMap.get(stationId);
         if (location == null) {
             missingStationIds.add(stationId);
-        } else {
-            geohash = GeoHash.encode(location.latitude, location.longitude, schema.getGeohashLength());
+            return StreamFlowSiteDataParser.NO_OP_PARSER;
         }
-
         reader.readLine();
 
-        List<String> dataCodes = new ArrayList<>();
+        Map<String, String>  dataCodesMap = new HashMap<>();
         while ((line = reader.readLine()).startsWith("#")) {
-            if (line.endsWith("Discharge, cubic feet per second") || line.endsWith("Temperature, water, degrees Celsius")) {
-                String[] splits = line.split("\\s+");
-                dataCodes.add(splits[1] + "_" + splits[2]);
+            String[] splits = line.split("\\s+");
+            if (line.endsWith("Discharge, cubic feet per second")) {
+                dataCodesMap.put(StreamFlowClient.DISCHARGE_FEATURE, splits[1] + "_" + splits[2]);
+            } else if (line.endsWith("Temperature, water, degrees Celsius")) {
+                dataCodesMap.put(StreamFlowClient.TEMPERATURE_FEATURE, splits[1] + "_" + splits[2]);
+            } else if (line.endsWith("Gage height, feet")) {
+                dataCodesMap.put(StreamFlowClient.GAGE_HEIGHT_FEATURE, splits[1] + "_" + splits[2]);
+            } else if (line.endsWith("Specific conductance, water, unfiltered, microsiemens per centimeter at 25 degrees Celsius")) {
+                dataCodesMap.put(StreamFlowClient.SPECIFIC_CONDUCTANCE_FEATURE, splits[1] + "_" + splits[2]);
+            }
+        }
+        for (String s : schema.getFeatures()) {
+            if (!dataCodesMap.containsKey(s)) {
+                return StreamFlowSiteDataParser.NO_OP_PARSER;
             }
         }
 
@@ -91,9 +105,12 @@ public class StreamFlowFileParser implements FileParser {
         }
         reader.readLine();
 
-
-        StreamFlowSiteDataParser siteDataParser = new StreamFlowSiteDataParser(headerMap, geohash, dataCodes, recordCallbackHandler);
-        return siteDataParser.parseSiteData(reader);
+        return new StreamFlowSiteDataParser(
+                headerMap,
+                GeoHash.encode(location.latitude, location.longitude, schema.getGeohashLength()),
+                dataCodesMap.values(),
+                recordCallbackHandler
+        );
     }
 
 }

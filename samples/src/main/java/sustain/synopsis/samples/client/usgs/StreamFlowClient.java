@@ -16,6 +16,9 @@ public class StreamFlowClient {
 
     public static final String TEMPERATURE_FEATURE = "temperature_water_degrees_celsius";
     public static final String DISCHARGE_FEATURE = "discharge_cubic_feet_per_second";
+    public static final String GAGE_HEIGHT_FEATURE = "gage_height_feet";
+    public static final String SPECIFIC_CONDUCTANCE_FEATURE = "specific_conductance_water_unfiltered_microsiemens_per_centimeter_at_25_degrees_celsius";
+
     public static final int GEOHASH_LENGTH = 5;
     public static final Duration TEMPORAL_BRACKET_LENGTH = Duration.ofHours(6);
 

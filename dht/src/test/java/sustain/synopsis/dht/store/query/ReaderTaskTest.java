@@ -9,6 +9,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import sustain.synopsis.common.ProtoBuffSerializedStrand;
+import sustain.synopsis.common.StrandSerializationUtil;
 import sustain.synopsis.dht.store.StrandStorageKey;
 import sustain.synopsis.dht.store.StrandStorageKeyValueTest;
 import sustain.synopsis.dht.store.entity.EntityStore;
@@ -35,38 +36,84 @@ public class ReaderTaskTest {
     QueryContainer containerMock;
 
     @Mock
-    EntityStore entityStoreMock;
+    EntityStore entityStoreMock1;
+
+    @Mock
+    EntityStore entityStoreMock2;
 
     @TempDir
     File tempDir;
 
     @Test
+    void testTargetQueryResponseWrapper() {
+        MockitoAnnotations.initMocks(this);
+        ReaderTask task = new ReaderTask(TargetQueryRequest.newBuilder().build(), containerMock);
+        int batchSizeLimit = 1024;
+        ReaderTask.TargetQueryResponseWrapper wrapper = task.new TargetQueryResponseWrapper(batchSizeLimit);
+        // without any data
+        wrapper.close();
+        Mockito.verify(containerMock, Mockito.times(0)).write(Mockito.any());
+
+        Mockito.reset(containerMock);
+        // with one strand - one strand is 62 bytes
+        ProtoBuffSerializedStrand strand = StrandSerializationUtil
+                .toProtoBuff(StrandStorageKeyValueTest.createStrand("9xj", 1000, 2000, 100.0, 122.0, 513.4));
+        wrapper.addProtoBuffSerializedStrand(strand);
+        Mockito.verify(containerMock, Mockito.times(0)).write(Mockito.any());
+
+        Mockito.reset(containerMock);
+        wrapper.close();
+        Mockito.verify(containerMock, Mockito.times(1))
+               .write(TargetQueryResponse.newBuilder().addStrands(strand).build());
+
+        // check if the responses are published when the message size reaches the limit
+        long serializedSize = strand.getSerializedSize(); // 62 bytes
+        int batchSize = (int) Math.ceil(batchSizeLimit / (serializedSize * 1.0));
+        for (int batchId = 0; batchId < 3; batchId++) {
+            TargetQueryResponse.Builder builder = TargetQueryResponse.newBuilder();
+            Mockito.reset(containerMock);
+            for (int i = 0; i < batchSize; i++) {
+                long fromTS = 1000 * batchId + i;
+                strand = StrandSerializationUtil.toProtoBuff(
+                        StrandStorageKeyValueTest.createStrand("9xj", fromTS, fromTS + 100, 100.0, 122.0, 513.4));
+                wrapper.addProtoBuffSerializedStrand(strand);
+                builder.addStrands(strand);
+            }
+            Mockito.verify(containerMock, Mockito.times(1)).write(builder.build());
+        }
+        Mockito.reset(containerMock);
+        wrapper.close();
+        Mockito.verify(containerMock, Mockito.times(0)).write(Mockito.any());
+    }
+
+    @Test
     void testSendStrandsAsBatchesConversionToMatchingStrand() throws InvalidProtocolBufferException {
         MockitoAnnotations.initMocks(this);
-        Mockito.when(entityStoreMock.getEntityId()).thenReturn("test_entity");
-        ReaderTask task = new ReaderTask(entityStoreMock, null, containerMock, 1024 * 1024);
+        Mockito.when(entityStoreMock1.getEntityId()).thenReturn("test_entity");
+        // use a small batch size to make sure that the response gets published to the container
+        ReaderTask task = new ReaderTask(TargetQueryRequest.newBuilder().build(), containerMock, 1);
 
         ByteString serializedStrand =
                 StrandStorageKeyValueTest.createStrand("9xj", 1000, 2000, 100.0, 122.0, 513.4).serializeAsProtoBuff();
         ProtoBuffSerializedStrand strand = ProtoBuffSerializedStrand.newBuilder().mergeFrom(serializedStrand).build();
         TargetQueryResponse targetQueryResponse = TargetQueryResponse.newBuilder().addStrands(strand).build();
-        task.sendStrandsAsBatches(Collections.singletonList(
-                new TableIterator.TableEntry<>(new StrandStorageKey(1, 2), serializedStrand.toByteArray())));
+        task.appendToResponse(Collections.singletonList(
+                new TableIterator.TableEntry<>(new StrandStorageKey(1000, 2000), serializedStrand.toByteArray())));
         Mockito.verify(containerMock, Mockito.times(1)).write(targetQueryResponse);
     }
 
     @Test
     void testSendStrandsAsBatchesMultipleBatches() throws InvalidProtocolBufferException {
         MockitoAnnotations.initMocks(this);
-        Mockito.when(entityStoreMock.getEntityId()).thenReturn("test_entity");
+        Mockito.when(entityStoreMock1.getEntityId()).thenReturn("test_entity");
         int batchSizeInBytes = 1024 * 1024;
-        ReaderTask task = new ReaderTask(entityStoreMock, null, containerMock, batchSizeInBytes);
+        ReaderTask task = new ReaderTask(TargetQueryRequest.newBuilder().build(), containerMock, batchSizeInBytes);
 
         byte[] serializedStrand =
                 StrandStorageKeyValueTest.createStrand("9xj", 1000, 2000, 100.0, 122.0, 513.4).serializeAsProtoBuff()
                                          .toByteArray();
-        // calculate the messages for two batches - 1 full batch and 1 partially filled batch
-        int messageCount = (int) Math.ceil(batchSizeInBytes * 1.5 / serializedStrand.length);
+        // send enough data for two batches
+        int messageCount = (int) Math.ceil(batchSizeInBytes * 2.0 / serializedStrand.length);
         List<TableIterator.TableEntry<StrandStorageKey, byte[]>> matchingStrands = IntStream.range(0, messageCount)
                                                                                             .mapToObj(
                                                                                                     i -> new TableIterator.TableEntry<>(
@@ -76,20 +123,19 @@ public class ReaderTaskTest {
                                                                                                             serializedStrand))
                                                                                             .collect(Collectors
                                                                                                              .toList());
-        task.sendStrandsAsBatches(matchingStrands);
-        // We will have 1 full response, and 1 partially filled response
+        task.appendToResponse(matchingStrands);
         Mockito.verify(containerMock, Mockito.times(2)).write(Mockito.any());
     }
 
     @Test
     void testReadBlock() throws IOException {
         MockitoAnnotations.initMocks(this);
-        Mockito.when(entityStoreMock.getEntityId()).thenReturn("test_entity");
+        Mockito.when(entityStoreMock1.getEntityId()).thenReturn("test_entity");
 
         Metadata<StrandStorageKey> metadata = new Metadata<>();
         prepareSSTable(10, 2, metadata);
 
-        ReaderTask task = new ReaderTask(entityStoreMock, null, containerMock, 1024 * 1024);
+        ReaderTask task = new ReaderTask(TargetQueryRequest.newBuilder().build(), containerMock, 1024 * 1024);
         SSTableReader<StrandStorageKey> reader = new SSTableReader<>(metadata, StrandStorageKey.class);
         List<TableIterator.TableEntry<StrandStorageKey, byte[]>> strands =
                 task.readBlock(reader, new StrandStorageKey(0, 1), Collections.singletonList(new Interval(0, 20)));
@@ -126,11 +172,13 @@ public class ReaderTaskTest {
     @Test
     void testReadSSTable() throws IOException {
         MockitoAnnotations.initMocks(this);
-        Mockito.when(entityStoreMock.getEntityId()).thenReturn("test_entity");
+        Mockito.when(entityStoreMock1.getEntityId()).thenReturn("test_entity");
 
         Metadata<StrandStorageKey> metadata = new Metadata<>();
         prepareSSTable(1, 5, metadata); // each block will have a single strand
-        ReaderTask task = new ReaderTask(entityStoreMock, null, containerMock, 1024 * 1024);
+        // we use a smallest possible batchSize threshold to ensure that every strand gets published right away
+        // from to the container
+        ReaderTask task = new ReaderTask(TargetQueryRequest.newBuilder().build(), containerMock, 1);
 
         // all 5 blocks should be included
         MatchedSSTable matchedSSTable = new MatchedSSTable(metadata);
@@ -163,9 +211,10 @@ public class ReaderTaskTest {
     }
 
     @Test
-    void testRun() throws QueryException, IOException {
+    void testRunWithOneEntityStore() throws QueryException, IOException {
         MockitoAnnotations.initMocks(this);
-        Mockito.when(entityStoreMock.getEntityId()).thenReturn("test_entity");
+        Mockito.when(entityStoreMock1.getEntityId()).thenReturn("test_entity");
+        Mockito.when(containerMock.getNextTask()).thenReturn(entityStoreMock1).thenReturn(null);
         Predicate temporalPredicate =
                 Predicate.newBuilder().setComparisonOp(Predicate.ComparisonOperator.GREATER_THAN).setIntegerValue(0)
                          .build();
@@ -175,34 +224,76 @@ public class ReaderTaskTest {
                 TargetQueryRequest.newBuilder().setTemporalScope(exp).addSpatialScope(spatialPredicate).build();
 
         // no matching results
-        Mockito.when(entityStoreMock.temporalQuery(exp)).thenReturn(new ArrayList<>());
-        ReaderTask task = new ReaderTask(entityStoreMock, targetQueryRequest, containerMock, 1024 * 1024);
+        Mockito.when(entityStoreMock1.temporalQuery(exp)).thenReturn(new ArrayList<>());
+        ReaderTask task = new ReaderTask(targetQueryRequest, containerMock, 1);
         task.run();
         Mockito.verify(containerMock, Mockito.times(0)).write(Mockito.any());
-        Mockito.verify(containerMock, Mockito.times(1)).complete();
+        Mockito.verify(containerMock, Mockito.times(1)).reportReaderTaskComplete(true);
 
-        // two matching blocks
+        // two matching blocks per entity store
         Mockito.reset(containerMock);
+        Mockito.when(containerMock.getNextTask()).thenReturn(entityStoreMock1).thenReturn(null);
         Metadata<StrandStorageKey> metadata = new Metadata<>();
         prepareSSTable(1, 2, metadata);
         MatchedSSTable matchedSSTable = new MatchedSSTable(metadata);
         matchedSSTable.addMatchedInterval(new Interval(0, 21));
-        Mockito.when(entityStoreMock.temporalQuery(exp)).thenReturn(Collections.singletonList(matchedSSTable));
+        Mockito.when(entityStoreMock1.temporalQuery(exp)).thenReturn(Collections.singletonList(matchedSSTable));
         task.run();
         Mockito.verify(containerMock, Mockito.times(2)).write(Mockito.any());
-        Mockito.verify(containerMock, Mockito.times(1)).complete();
+        Mockito.verify(containerMock, Mockito.times(1)).reportReaderTaskComplete(true);
 
         // error during reading
+        Mockito.reset(containerMock);
+        Mockito.when(containerMock.getNextTask()).thenReturn(entityStoreMock1).thenReturn(null);
         File f = new File(tempDir + File.separator + "non_existing_file");
         f.createNewFile(); // empty file
         metadata.setPath(f.getAbsolutePath());
         Mockito.reset(containerMock);
         task.run();
         Mockito.verify(containerMock, Mockito.times(0)).write(Mockito.any());
-        Mockito.verify(containerMock, Mockito.times(1)).complete();
-
+        Mockito.verify(containerMock, Mockito.times(1)).reportReaderTaskComplete(true);
     }
 
+    @Test
+    void testRunWithMultipleEntityStores() throws QueryException, IOException {
+        MockitoAnnotations.initMocks(this);
+        Mockito.when(entityStoreMock1.getEntityId()).thenReturn("store_1");
+        Mockito.when(entityStoreMock2.getEntityId()).thenReturn("store_2");
+        Mockito.when(containerMock.getNextTask()).thenReturn(entityStoreMock1).thenReturn(entityStoreMock2)
+               .thenReturn(null);
+        Expression exp = Expression.newBuilder().build();
+        TargetQueryRequest targetQueryRequest = TargetQueryRequest.newBuilder().setTemporalScope(exp).build();
+        Mockito.when(entityStoreMock1.temporalQuery(Mockito.any())).thenReturn(new ArrayList<>());
+
+        Metadata<StrandStorageKey> metadata = new Metadata<>();
+        prepareSSTable(1, 2, metadata);
+        MatchedSSTable matchedSSTable = new MatchedSSTable(metadata);
+        matchedSSTable.addMatchedInterval(new Interval(0, 21));
+        Mockito.when(entityStoreMock2.temporalQuery(Mockito.any()))
+               .thenReturn(Collections.singletonList(matchedSSTable));
+
+        ReaderTask task = new ReaderTask(targetQueryRequest, containerMock, 1024 * 1024);
+        task.run();
+        Mockito.verify(containerMock, Mockito.times(3)).getNextTask();
+        Mockito.verify(entityStoreMock1, Mockito.times(1)).temporalQuery(exp);
+        Mockito.verify(entityStoreMock2, Mockito.times(1)).temporalQuery(exp);
+        // make sure the wrapper is closed
+        Mockito.verify(containerMock, Mockito.times(1)).write(Mockito.any());
+        Mockito.verify(containerMock, Mockito.times(1)).reportReaderTaskComplete(true);
+    }
+
+    @Test
+    void testRunWithReadError() throws QueryException {
+        MockitoAnnotations.initMocks(this);
+        Mockito.when(containerMock.getNextTask()).thenReturn(entityStoreMock1).thenReturn(null);
+        Mockito.when(entityStoreMock1.temporalQuery(Mockito.any())).thenThrow(new QueryException("Invalid Query"));
+        ReaderTask task = new ReaderTask(TargetQueryRequest.newBuilder().build(), containerMock, 1024 * 1024);
+        task.run();
+        // test fail fast approach during query handling
+        Mockito.verify(containerMock, Mockito.times(1)).getNextTask();
+        Mockito.verify(containerMock, Mockito.times(0)).write(Mockito.any());
+        Mockito.verify(containerMock, Mockito.times(1)).reportReaderTaskComplete(false);
+    }
 
     private void prepareSSTable(int strandsPerBlock, int blockCount, Metadata<StrandStorageKey> metadata)
             throws IOException {

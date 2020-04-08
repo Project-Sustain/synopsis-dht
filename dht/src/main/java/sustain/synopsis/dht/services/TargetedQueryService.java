@@ -2,7 +2,7 @@ package sustain.synopsis.dht.services;
 
 import io.grpc.stub.StreamObserver;
 import sustain.synopsis.dht.store.node.NodeStore;
-import sustain.synopsis.dht.store.query.QueryCoordinator;
+import sustain.synopsis.dht.store.query.QueryScheduler;
 import sustain.synopsis.dht.store.query.QueryException;
 import sustain.synopsis.dht.store.services.TargetQueryRequest;
 import sustain.synopsis.dht.store.services.TargetQueryResponse;
@@ -12,17 +12,18 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 
 public class TargetedQueryService extends TargetedQueryServiceGrpc.TargetedQueryServiceImplBase {
-    private final QueryCoordinator coordinator;
+    private final QueryScheduler coordinator;
 
     public TargetedQueryService(NodeStore nodeStore) {
-        this.coordinator = new QueryCoordinator(nodeStore, Executors
+        this.coordinator = new QueryScheduler(nodeStore, Executors
                 .newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2));
     }
 
     @Override
     public void query(TargetQueryRequest request, StreamObserver<TargetQueryResponse> responseObserver) {
         try {
-            CompletableFuture<Boolean> future = coordinator.schedule(request, responseObserver);
+            CompletableFuture<Boolean> future =
+                    coordinator.schedule(request, responseObserver, Runtime.getRuntime().availableProcessors());
             future.thenAccept(status -> {
                 responseObserver.onCompleted();
             });

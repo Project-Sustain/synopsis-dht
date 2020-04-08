@@ -11,19 +11,20 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.stream.IntStream;
 
-public class QueryCoordinator {
-    private final Logger logger = Logger.getLogger(QueryCoordinator.class);
+public class QueryScheduler {
+    private final Logger logger = Logger.getLogger(QueryScheduler.class);
     private final NodeStore nodeStore;
     private final ExecutorService readers;
 
-    public QueryCoordinator(NodeStore nodeStore, ExecutorService readers) {
+    public QueryScheduler(NodeStore nodeStore, ExecutorService readers) {
         this.nodeStore = nodeStore;
         this.readers = readers;
     }
 
     public CompletableFuture<Boolean> schedule(TargetQueryRequest queryRequest,
-                                               StreamObserver<TargetQueryResponse> responseObserver)
+                                               StreamObserver<TargetQueryResponse> responseObserver, int readerCount)
             throws QueryException {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         Set<EntityStore> matchingEntityStores = nodeStore.getMatchingEntityStores(queryRequest);
@@ -31,14 +32,13 @@ public class QueryCoordinator {
             logger.debug("Number of matching entity stores: " + matchingEntityStores.size());
         }
         if (matchingEntityStores.isEmpty()) {
-            future.complete(false);
+            future.complete(true);
             return future;
         }
         QueryContainer container =
-                new QueryContainer(new CountDownLatch(matchingEntityStores.size()), future, responseObserver);
-        for (EntityStore entityStore : matchingEntityStores) {
-            readers.submit(new ReaderTask(entityStore, queryRequest, container));
-        }
+                new QueryContainer(new CountDownLatch(readerCount), future, responseObserver, matchingEntityStores);
+        container.startStreamPublisher();
+        IntStream.range(0, readerCount).forEach(i -> readers.submit(new ReaderTask(queryRequest, container)));
         return future;
     }
 }

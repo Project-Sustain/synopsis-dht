@@ -2,37 +2,86 @@ package sustain.synopsis.dht.store.query;
 
 import io.grpc.stub.StreamObserver;
 import org.apache.log4j.Logger;
+import sustain.synopsis.dht.store.entity.EntityStore;
 import sustain.synopsis.dht.store.services.TargetQueryResponse;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
+import java.util.Queue;
+import java.util.Set;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-public class QueryContainer {
+public class QueryContainer implements Runnable {
     private final Logger logger = Logger.getLogger(QueryContainer.class);
+    private BlockingQueue<TargetQueryResponse> queue = new LinkedBlockingDeque<>(1024);
+    private AtomicBoolean queryActive = new AtomicBoolean(true);
     private final CountDownLatch latch;
     private final CompletableFuture<Boolean> future;
     private final StreamObserver<TargetQueryResponse> responseObserver;
+    private Thread streamWriter;
+    private final Queue<EntityStore> pendingTasks;
 
     public QueryContainer(CountDownLatch latch, CompletableFuture<Boolean> future,
-                          StreamObserver<TargetQueryResponse> responseObserver) {
+                          StreamObserver<TargetQueryResponse> responseObserver, Set<EntityStore> entityStores) {
         this.latch = latch;
         this.future = future;
         this.responseObserver = responseObserver;
+        this.streamWriter = new Thread(this);
+        this.pendingTasks = new ConcurrentLinkedQueue<>(entityStores);
+    }
+
+    public EntityStore getNextTask() {
+        return queryActive.get() ? pendingTasks.poll() : null;
     }
 
     public void write(TargetQueryResponse targetQueryResponse) {
-        synchronized (responseObserver) {
-            responseObserver.onNext(targetQueryResponse);
+        // if the query is terminated, stop accepting responses. Otherwise, the all writers may get blocked
+        // because the consumer thread has stopped.
+        if (!queryActive.get()) {
+            return;
+        }
+        try {
+            queue.put(targetQueryResponse);
+        } catch (InterruptedException e) {
+            logger.error("Error during writing.", e);
+            streamWriter.interrupt(); // make the query terminate
         }
     }
 
-    public void complete() {
-        latch.countDown();
-        if (latch.getCount() == 0) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("Last reader task is done. Query is complete.");
-            }
-            future.complete(true);
+    public void reportReaderTaskComplete(boolean successful) {
+        if (!successful) {
+            streamWriter.interrupt();
+            return;
         }
+        latch.countDown();
+        if (logger.isDebugEnabled() && latch.getCount() == 0) {
+            logger.debug("Last reader task is done. Disk I/O is complete.");
+        }
+    }
+
+    @Override
+    public void run() {
+        long startTS = System.nanoTime();
+        while (latch.getCount() > 0 || !queue.isEmpty()) {
+            try {
+                TargetQueryResponse resp = queue.take();
+                responseObserver.onNext(resp);
+            } catch (Throwable e) {
+                // Could be due to errors when writing to the stream or a reader task failure.
+                logger.error("Query Evaluation Error.", e);
+                queryActive.set(false);
+                queue.clear(); // this will unlock any waiting writers
+                future.complete(false);
+                return;
+            }
+        }
+        future.complete(true);
+        if (logger.isDebugEnabled()) {
+            logger.debug("Publishing to stream is complete. Time elapsed (ms): " + (System.nanoTime() - startTS) / Math
+                    .pow(10d, 6));
+        }
+    }
+
+    public void startStreamPublisher() {
+        this.streamWriter.start();
     }
 }

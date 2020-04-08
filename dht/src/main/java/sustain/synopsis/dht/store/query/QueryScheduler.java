@@ -14,6 +14,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.stream.IntStream;
 
 public class QueryScheduler {
+    private static final int QUERY_CONTAINER_BUFFER_SIZE = 1024;
     private final Logger logger = Logger.getLogger(QueryScheduler.class);
     private final NodeStore nodeStore;
     private final ExecutorService readers;
@@ -36,7 +37,8 @@ public class QueryScheduler {
             return future;
         }
         QueryContainer container =
-                new QueryContainer(new CountDownLatch(readerCount), future, responseObserver, matchingEntityStores);
+                new QueryContainer(new CountDownLatch(readerCount), future, responseObserver, matchingEntityStores,
+                                   QUERY_CONTAINER_BUFFER_SIZE);
         container.startStreamPublisher();
         IntStream.range(0, readerCount).forEach(i -> readers.submit(new ReaderTask(queryRequest, container)));
         return future;

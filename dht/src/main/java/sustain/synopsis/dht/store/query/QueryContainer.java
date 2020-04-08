@@ -12,21 +12,23 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class QueryContainer implements Runnable {
     private final Logger logger = Logger.getLogger(QueryContainer.class);
-    private BlockingQueue<TargetQueryResponse> queue = new LinkedBlockingDeque<>(1024);
     private AtomicBoolean queryActive = new AtomicBoolean(true);
     private final CountDownLatch latch;
     private final CompletableFuture<Boolean> future;
     private final StreamObserver<TargetQueryResponse> responseObserver;
     private Thread streamWriter;
     private final Queue<EntityStore> pendingTasks;
+    private final BlockingQueue<TargetQueryResponse> queue;
 
     public QueryContainer(CountDownLatch latch, CompletableFuture<Boolean> future,
-                          StreamObserver<TargetQueryResponse> responseObserver, Set<EntityStore> entityStores) {
+                          StreamObserver<TargetQueryResponse> responseObserver, Set<EntityStore> entityStores,
+                          int bufferCapacity) {
         this.latch = latch;
         this.future = future;
         this.responseObserver = responseObserver;
         this.streamWriter = new Thread(this);
         this.pendingTasks = new ConcurrentLinkedQueue<>(entityStores);
+        this.queue = new LinkedBlockingDeque<>(bufferCapacity);
     }
 
     public EntityStore getNextTask() {
@@ -63,8 +65,13 @@ public class QueryContainer implements Runnable {
         long startTS = System.nanoTime();
         while (latch.getCount() > 0 || !queue.isEmpty()) {
             try {
-                TargetQueryResponse resp = queue.take();
-                responseObserver.onNext(resp);
+                if (Thread.interrupted()) {
+                    throw new Exception("A reader task has failed.");
+                }
+                TargetQueryResponse resp = queue.poll(3, TimeUnit.SECONDS);
+                if (resp != null) {
+                    responseObserver.onNext(resp);
+                }
             } catch (Throwable e) {
                 // Could be due to errors when writing to the stream or a reader task failure.
                 logger.error("Query Evaluation Error.", e);

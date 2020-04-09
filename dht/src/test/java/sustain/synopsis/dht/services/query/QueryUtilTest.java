@@ -1,7 +1,11 @@
-package sustain.synopsis.dht.store.query;
+package sustain.synopsis.dht.services.query;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import sustain.synopsis.dht.services.query.Interval;
+import sustain.synopsis.dht.services.query.MatchedSSTable;
+import sustain.synopsis.dht.services.query.QueryException;
+import sustain.synopsis.dht.services.query.QueryUtil;
 import sustain.synopsis.dht.store.StrandStorageKey;
 import sustain.synopsis.dht.store.services.Expression;
 import sustain.synopsis.dht.store.services.Predicate;

@@ -1,4 +1,4 @@
-package sustain.synopsis.dht.store.query;
+package sustain.synopsis.dht.services.query;
 
 import io.grpc.stub.StreamObserver;
 import org.junit.jupiter.api.Assertions;
@@ -7,6 +7,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.stubbing.Answer;
+import sustain.synopsis.dht.services.query.QueryContainer;
 import sustain.synopsis.dht.store.entity.EntityStore;
 import sustain.synopsis.dht.store.services.TargetQueryResponse;
 

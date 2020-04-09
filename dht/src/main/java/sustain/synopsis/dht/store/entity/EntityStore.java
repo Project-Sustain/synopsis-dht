@@ -2,10 +2,10 @@ package sustain.synopsis.dht.store.entity;
 
 import org.apache.log4j.Logger;
 import sustain.synopsis.dht.store.*;
-import sustain.synopsis.dht.store.query.Interval;
-import sustain.synopsis.dht.store.query.MatchedSSTable;
-import sustain.synopsis.dht.store.query.QueryException;
-import sustain.synopsis.dht.store.query.QueryUtil;
+import sustain.synopsis.dht.services.query.Interval;
+import sustain.synopsis.dht.services.query.MatchedSSTable;
+import sustain.synopsis.dht.services.query.QueryException;
+import sustain.synopsis.dht.services.query.QueryUtil;
 import sustain.synopsis.dht.store.services.Expression;
 import sustain.synopsis.storage.lsmtree.*;
 import sustain.synopsis.storage.lsmtree.compress.BlockCompressor;

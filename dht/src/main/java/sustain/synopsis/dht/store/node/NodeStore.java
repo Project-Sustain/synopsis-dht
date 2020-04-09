@@ -7,10 +7,10 @@ import sustain.synopsis.dht.Util;
 import sustain.synopsis.dht.journal.Logger;
 import sustain.synopsis.dht.store.*;
 import sustain.synopsis.dht.store.entity.EntityStore;
-import sustain.synopsis.dht.store.query.QueryException;
+import sustain.synopsis.dht.services.query.QueryException;
 import sustain.synopsis.dht.store.services.Predicate;
 import sustain.synopsis.dht.store.services.TargetQueryRequest;
-import sustain.synopsis.dht.store.workers.WriterPool;
+import sustain.synopsis.dht.services.ingestion.WriterPool;
 
 import java.io.File;
 import java.io.IOException;

@@ -1,7 +1,6 @@
-package sustain.synopsis.dht.services;
+package sustain.synopsis.dht.services.ingestion;
 
 import io.grpc.stub.StreamObserver;
-import sustain.synopsis.dht.IngestionRequestDispatcher;
 import sustain.synopsis.dht.store.services.*;
 
 public class IngestionService extends IngestionServiceGrpc.IngestionServiceImplBase {

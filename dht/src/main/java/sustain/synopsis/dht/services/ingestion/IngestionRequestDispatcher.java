@@ -1,11 +1,11 @@
-package sustain.synopsis.dht;
+package sustain.synopsis.dht.services.ingestion;
 
+import sustain.synopsis.dht.Context;
 import sustain.synopsis.dht.store.StorageException;
 import sustain.synopsis.dht.store.StrandStorageKey;
 import sustain.synopsis.dht.store.StrandStorageValue;
 import sustain.synopsis.dht.store.node.NodeStore;
 import sustain.synopsis.dht.store.services.*;
-import sustain.synopsis.dht.store.workers.WriterPool;
 
 import java.io.IOException;
 import java.util.ArrayList;

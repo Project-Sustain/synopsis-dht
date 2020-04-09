@@ -1,4 +1,4 @@
-package sustain.synopsis.dht.store.workers;
+package sustain.synopsis.dht.services.ingestion;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

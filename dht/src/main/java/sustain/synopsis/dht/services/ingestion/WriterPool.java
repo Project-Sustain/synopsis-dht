@@ -1,4 +1,4 @@
-package sustain.synopsis.dht.store.workers;
+package sustain.synopsis.dht.services.ingestion;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;

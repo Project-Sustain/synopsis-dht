@@ -1,9 +1,7 @@
-package sustain.synopsis.dht.services;
+package sustain.synopsis.dht.services.query;
 
 import io.grpc.stub.StreamObserver;
 import sustain.synopsis.dht.store.node.NodeStore;
-import sustain.synopsis.dht.store.query.QueryScheduler;
-import sustain.synopsis.dht.store.query.QueryException;
 import sustain.synopsis.dht.store.services.TargetQueryRequest;
 import sustain.synopsis.dht.store.services.TargetQueryResponse;
 import sustain.synopsis.dht.store.services.TargetedQueryServiceGrpc;

@@ -1,4 +1,4 @@
-package sustain.synopsis.dht.store.query;
+package sustain.synopsis.dht.services.query;
 
 import io.grpc.stub.StreamObserver;
 import org.apache.log4j.Logger;

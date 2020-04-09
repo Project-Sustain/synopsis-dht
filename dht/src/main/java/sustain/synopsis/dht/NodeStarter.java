@@ -2,8 +2,9 @@ package sustain.synopsis.dht;
 
 import io.grpc.BindableService;
 import org.apache.log4j.Logger;
-import sustain.synopsis.dht.services.IngestionService;
-import sustain.synopsis.dht.services.TargetedQueryService;
+import sustain.synopsis.dht.services.ingestion.IngestionRequestDispatcher;
+import sustain.synopsis.dht.services.ingestion.IngestionService;
+import sustain.synopsis.dht.services.query.TargetedQueryService;
 import sustain.synopsis.dht.store.StorageException;
 import sustain.synopsis.dht.store.node.NodeStore;
 

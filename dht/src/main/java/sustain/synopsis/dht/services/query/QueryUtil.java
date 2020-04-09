@@ -1,4 +1,4 @@
-package sustain.synopsis.dht.store.query;
+package sustain.synopsis.dht.services.query;
 
 import sustain.synopsis.dht.store.StrandStorageKey;
 import sustain.synopsis.dht.store.services.Expression;

@@ -7,11 +7,8 @@ import io.grpc.Channel;
 import io.grpc.ManagedChannelBuilder;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 import sustain.synopsis.common.Strand;
-import sustain.synopsis.dht.store.services.IngestionRequest;
-import sustain.synopsis.dht.store.services.IngestionResponse;
-import sustain.synopsis.dht.store.services.IngestionServiceGrpc;
+import sustain.synopsis.dht.store.services.*;
 import sustain.synopsis.dht.store.services.IngestionServiceGrpc.IngestionServiceFutureStub;
-import sustain.synopsis.dht.store.services.NodeMapping;
 
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -20,7 +17,7 @@ import java.util.concurrent.Semaphore;
 
 public class DHTStrandPublisher implements StrandPublisher {
 
-    public static final int channelSendLimit = 1;
+    public static final int channelSendLimit = 4;
 
     private final ExecutorService responseExecutorService = Executors.newSingleThreadExecutor();
 
@@ -63,6 +60,11 @@ public class DHTStrandPublisher implements StrandPublisher {
         }
     }
 
+    @Override
+    public void terminateSession() {
+        defaultMyChannel.terminateSession();
+    }
+
     class MyChannel {
         Semaphore limiter = new Semaphore(channelSendLimit);
         IngestionServiceFutureStub futureStub;
@@ -101,6 +103,15 @@ public class DHTStrandPublisher implements StrandPublisher {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+        }
+
+        void terminateSession() {
+            TerminateSessionRequest request = TerminateSessionRequest.newBuilder()
+                    .setDatasetId(datasetId)
+                    .setSessionId(sessionId)
+                    .build();
+
+            futureStub.terminateSession(request);
         }
 
     }

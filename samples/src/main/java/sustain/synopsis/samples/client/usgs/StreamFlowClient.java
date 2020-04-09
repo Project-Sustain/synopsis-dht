@@ -2,6 +2,7 @@ package sustain.synopsis.samples.client.usgs;
 
 import com.opencsv.exceptions.CsvValidationException;
 import sustain.synopsis.ingestion.client.core.*;
+import sustain.synopsis.ingestion.client.publishing.SimpleStrandPublisher;
 
 import java.io.File;
 import java.io.IOException;

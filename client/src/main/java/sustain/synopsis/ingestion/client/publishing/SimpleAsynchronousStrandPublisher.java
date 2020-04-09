@@ -1,4 +1,4 @@
-package sustain.synopsis.ingestion.client.core;
+package sustain.synopsis.ingestion.client.publishing;
 
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -10,7 +10,6 @@ import sustain.synopsis.common.Strand;
 import sustain.synopsis.dht.store.services.IngestionRequest;
 import sustain.synopsis.dht.store.services.IngestionResponse;
 import sustain.synopsis.dht.store.services.IngestionServiceGrpc;
-import sustain.synopsis.dht.store.services.IngestionServiceGrpc.IngestionServiceBlockingStub;
 import sustain.synopsis.dht.store.services.IngestionServiceGrpc.IngestionServiceFutureStub;
 
 import java.util.ArrayList;
@@ -60,8 +59,8 @@ public class SimpleAsynchronousStrandPublisher implements StrandPublisher {
         return IngestionServiceGrpc.newFutureStub(channel);
     }
 
-    List<sustain.synopsis.dht.store.services.Strand> getConvertedStrandList(Collection<Strand> strands) {
-        List<sustain.synopsis.dht.store.services.Strand> convertedStrands = new ArrayList<>(strands.size());
+    static List<sustain.synopsis.dht.store.services.Strand> getConvertedStrandList(Iterable<Strand> strands) {
+        List<sustain.synopsis.dht.store.services.Strand> convertedStrands = new ArrayList<>();
         for (Strand s : strands) {
             convertedStrands.add(DHTStrandPublisher.convertStrand(s));
         }
@@ -69,7 +68,7 @@ public class SimpleAsynchronousStrandPublisher implements StrandPublisher {
     }
 
     @Override
-    public void publish(Collection<Strand> strands) {
+    public void publish(Iterable<Strand> strands) {
         IngestionRequest request = IngestionRequest.newBuilder()
                 .setDatasetId(datasetId)
                 .setSessionId(sessionId)

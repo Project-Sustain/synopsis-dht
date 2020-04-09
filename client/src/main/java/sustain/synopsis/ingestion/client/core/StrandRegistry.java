@@ -2,6 +2,7 @@ package sustain.synopsis.ingestion.client.core;
 
 import org.apache.log4j.Logger;
 import sustain.synopsis.common.Strand;
+import sustain.synopsis.ingestion.client.publishing.StrandPublisher;
 
 import java.util.*;
 

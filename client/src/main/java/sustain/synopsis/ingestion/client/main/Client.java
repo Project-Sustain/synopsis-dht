@@ -5,7 +5,7 @@ import io.grpc.ManagedChannelBuilder;
 import sustain.synopsis.ingestion.client.connectors.DataConnector;
 import sustain.synopsis.ingestion.client.connectors.file.FileParser;
 import sustain.synopsis.ingestion.client.connectors.file.FileDataConnector;
-import sustain.synopsis.ingestion.client.core.DHTStrandPublisher;
+import sustain.synopsis.ingestion.client.publishing.DHTStrandPublisher;
 import sustain.synopsis.ingestion.client.core.SessionSchema;
 import sustain.synopsis.ingestion.client.core.StrandConversionTaskManager;
 import sustain.synopsis.ingestion.client.core.Util;

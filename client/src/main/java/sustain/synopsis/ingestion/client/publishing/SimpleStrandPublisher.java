@@ -1,4 +1,4 @@
-package sustain.synopsis.ingestion.client.core;
+package sustain.synopsis.ingestion.client.publishing;
 
 import io.grpc.Channel;
 import io.grpc.ManagedChannelBuilder;
@@ -36,21 +36,13 @@ public class SimpleStrandPublisher implements StrandPublisher {
         return IngestionServiceGrpc.newBlockingStub(channel);
     }
 
-    List<sustain.synopsis.dht.store.services.Strand> getConvertedStrandList(Collection<Strand> strands) {
-        List<sustain.synopsis.dht.store.services.Strand> convertedStrands = new ArrayList<>(strands.size());
-        for (Strand s : strands) {
-            convertedStrands.add(DHTStrandPublisher.convertStrand(s));
-        }
-        return convertedStrands;
-    }
-
     public long getTotalStrandsPublished() {
         return totalStrandsPublished;
     }
 
     @Override
-    public void publish(Collection<Strand> strands) {
-        List<sustain.synopsis.dht.store.services.Strand> convertedStrandList = getConvertedStrandList(strands);
+    public void publish(Iterable<Strand> strands) {
+        List<sustain.synopsis.dht.store.services.Strand> convertedStrandList = SimpleAsynchronousStrandPublisher.getConvertedStrandList(strands);
         totalStrandsPublished += convertedStrandList.size();
 
         IngestionRequest request = IngestionRequest.newBuilder()
@@ -70,4 +62,5 @@ public class SimpleStrandPublisher implements StrandPublisher {
                         setSessionId(sessionId).
                         build());
     }
+
 }

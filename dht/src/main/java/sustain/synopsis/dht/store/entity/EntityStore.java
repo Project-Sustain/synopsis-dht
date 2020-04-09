@@ -49,7 +49,8 @@ public class EntityStore {
 
     public EntityStore(String datasetId, String entityId, String metadataDir, long memTableSize, long blockSize,
                        DiskManager diskManager) {
-        this(datasetId, entityId, new EntityStoreJournal(entityId, metadataDir), memTableSize, blockSize, diskManager);
+        this(datasetId, entityId, new EntityStoreJournal(datasetId, entityId, metadataDir), memTableSize, blockSize,
+             diskManager);
     }
 
     // used for unit testing by injecting entity store journal

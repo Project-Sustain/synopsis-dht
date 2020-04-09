@@ -41,17 +41,6 @@ public class DHTStrandPublisher implements StrandPublisher {
         this.sessionId = sessionId;
     }
 
-    // https://stackoverflow.com/a/30968827
-    static byte[] serializeToBytes(Strand s) throws IOException {
-        try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
-             SerializationOutputStream sos = new SerializationOutputStream(bos)) {
-            s.serialize(sos);
-            sos.flush();
-            bos.flush();
-            return bos.toByteArray();
-        }
-    }
-
     IngestionServiceFutureStub getStubForAddress(String address) {
         String host = address.split(":")[0];
         int port = Integer.parseInt(address.split(":")[1]);

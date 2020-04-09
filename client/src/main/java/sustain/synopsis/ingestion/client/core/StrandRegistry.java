@@ -78,6 +78,9 @@ public class StrandRegistry {
     }
 
     private void publish(Collection<Strand> strands) {
+        for (Strand s : strands) {
+            strandKeyMap.remove(s.getKey());
+        }
         publisher.publish(strands);
         totalPublishedStrandCount += strands.size();
     }

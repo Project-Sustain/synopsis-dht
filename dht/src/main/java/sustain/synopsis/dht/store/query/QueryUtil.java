@@ -38,6 +38,10 @@ public class QueryUtil {
         if (floorKey != null && floorKey.getEndTS() > lowerBound) {
             from = floorKey;
         }
+        // in case where block index has a single key
+        if(metadataMap.size() == 1 && metadataMap.firstKey().getStartTS() <= upperBound){
+            return metadataMap;
+        }
 
         StrandStorageKey to = new StrandStorageKey(upperBound, Long.MAX_VALUE);
         return metadataMap.subMap(from, true, to, includeUpperBound);

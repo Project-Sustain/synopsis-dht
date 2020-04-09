@@ -20,44 +20,81 @@ import java.util.stream.StreamSupport;
 
 public class ReaderTask implements Runnable {
 
-    private static final int DEFAULT_BATCH_SIZE = 1204 * 1024;
-    private final EntityStore entityStore;
-    private final TargetQueryRequest queryRequest;
-    private final QueryContainer container;
-    private final int batchSize;
-    private Logger logger = Logger.getLogger(ReaderTask.class);
+    /**
+     * Aggregate data from multiple reads into a single TargetQueryResponse Reduces the number of responses sent by
+     * increasing the size of a single message to improve the network I/O.
+     */
+    class TargetQueryResponseWrapper {
+        private final long batchSizeLimit;
+        private TargetQueryResponse.Builder queryResponseBuilder;
+        private long responseSize;
 
-    public ReaderTask(EntityStore entityStore, TargetQueryRequest queryRequest, QueryContainer container,
-                      int batchSize) {
-        this.entityStore = entityStore;
-        this.queryRequest = queryRequest;
-        this.container = container;
-        this.batchSize = batchSize;
+        TargetQueryResponseWrapper(long batchSizeLimit) {
+            this.batchSizeLimit = batchSizeLimit;
+            this.queryResponseBuilder = TargetQueryResponse.newBuilder();
+            this.responseSize = 0;
+        }
+
+        void addProtoBuffSerializedStrand(ProtoBuffSerializedStrand strand) {
+            this.queryResponseBuilder.addStrands(strand);
+            responseSize += strand.getSerializedSize();
+            if (responseSize >= batchSizeLimit) {
+                publish();
+            }
+        }
+
+        void publish() {
+            if (responseSize > 0) {
+                container.write(queryResponseBuilder.build());
+                this.queryResponseBuilder.clear();
+                this.responseSize = 0;
+            }
+        }
+
+        void close() {
+            publish();
+        }
     }
 
-    public ReaderTask(EntityStore entityStore, TargetQueryRequest queryRequest, QueryContainer container) {
-        this(entityStore, queryRequest, container, DEFAULT_BATCH_SIZE);
+    private Logger logger = Logger.getLogger(ReaderTask.class);
+    private static final int DEFAULT_BATCH_SIZE = 4 * 1024;
+    private final TargetQueryRequest queryRequest;
+    private final QueryContainer container;
+    private final TargetQueryResponseWrapper responseWrapper;
+
+    public ReaderTask(TargetQueryRequest queryRequest, QueryContainer container, int batchSize) {
+        this.queryRequest = queryRequest;
+        this.container = container;
+        this.responseWrapper = new TargetQueryResponseWrapper(batchSize);
+    }
+
+    public ReaderTask(TargetQueryRequest queryRequest, QueryContainer container) {
+        this(queryRequest, container, DEFAULT_BATCH_SIZE);
     }
 
     @Override
     public void run() {
-        if (logger.isDebugEnabled()) {
-            logger.debug("Reader task started for entity: " + entityStore.getEntityId());
-        }
+        boolean successful = true;
         try {
-            List<MatchedSSTable> matchingSSTables = entityStore.temporalQuery(queryRequest.getTemporalScope());
-            if (logger.isDebugEnabled()) {
-                logger.debug("Number of matching SSTables" + matchingSSTables.size());
-            }
-            if (!matchingSSTables.isEmpty()) {
-                for (MatchedSSTable matchedSSTable : matchingSSTables) {
-                    readSSTable(matchedSSTable);
+            EntityStore entityStore;
+            while ((entityStore = container.getNextTask()) != null) {
+                List<MatchedSSTable> matchingSSTables = entityStore.temporalQuery(queryRequest.getTemporalScope());
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Entity store: " + entityStore.getEntityId() + "Number of matching SSTables"
+                                 + matchingSSTables.size());
+                }
+                if (!matchingSSTables.isEmpty()) {
+                    for (MatchedSSTable matchedSSTable : matchingSSTables) {
+                        readSSTable(matchedSSTable);
+                    }
                 }
             }
+            responseWrapper.close();
         } catch (Throwable e) { // not letting the thread get killed.
             logger.error(e.getMessage(), e);
+            successful = false;
         } finally {
-            container.complete();
+            container.reportReaderTaskComplete(successful);
         }
     }
 
@@ -71,7 +108,7 @@ public class ReaderTask implements Runnable {
         try {
             reader = new SSTableReader<>(matchedSSTable.getMetadata(), StrandStorageKey.class);
             for (StrandStorageKey firstKey : matchingBlocks) {
-                sendStrandsAsBatches(readBlock(reader, firstKey, matchedSSTable.getMatchedIntervals()));
+                appendToResponse(readBlock(reader, firstKey, matchedSSTable.getMatchedIntervals()));
             }
             long t2 = System.currentTimeMillis();
             if (logger.isDebugEnabled()) {
@@ -112,28 +149,13 @@ public class ReaderTask implements Runnable {
         return result;
     }
 
-    void sendStrandsAsBatches(List<TableIterator.TableEntry<StrandStorageKey, byte[]>> entries)
+    void appendToResponse(List<TableIterator.TableEntry<StrandStorageKey, byte[]>> entries)
             throws InvalidProtocolBufferException {
-        long t1 = System.currentTimeMillis();
-        TargetQueryResponse response = TargetQueryResponse.newBuilder().buildPartial();
-        int payloadSize = 0;
+        ProtoBuffSerializedStrand.Builder strandBuilder = ProtoBuffSerializedStrand.newBuilder();
         for (TableIterator.TableEntry<StrandStorageKey, byte[]> entry : entries) {
-            ProtoBuffSerializedStrand strand =
-                    ProtoBuffSerializedStrand.newBuilder().mergeFrom(entry.getValue()).build();
-            response = response.toBuilder().addStrands(strand).buildPartial();
-            payloadSize += entry.getValue().length;
-            if (payloadSize >= batchSize) {
-                container.write(response.toBuilder().build());
-                response = TargetQueryResponse.newBuilder().buildPartial();
-                payloadSize = 0;
-            }
-        }
-        if (payloadSize > 0) {
-            container.write(response.toBuilder().build());
-        }
-        long t2 = System.currentTimeMillis();
-        if (logger.isDebugEnabled()) {
-            logger.debug("Time spent on sending the response back: " + (t2 - t1));
+            strandBuilder.mergeFrom(entry.getValue()).build();
+            responseWrapper.addProtoBuffSerializedStrand(strandBuilder.build());
+            strandBuilder.clear();
         }
     }
 }

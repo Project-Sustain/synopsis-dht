@@ -27,16 +27,16 @@ public class TestIngestService implements Runnable {
         this.hostMap = hostMap;
     }
 
-    public static void main(String[] args) {
-        int port = Integer.parseInt(args[0]);
-        Map<String, String> hostMapping = new HashMap<>();
-        if (args.length > 1) {
-            hostMapping.put("b", "localhost:44002");
-        }
-
-        TestIngestService testIngestService = new TestIngestService(port, hostMapping);
-        testIngestService.run();
-    }
+//    public static void main(String[] args) {
+//        int port = Integer.parseInt(args[0]);
+//        Map<String, String> hostMapping = new HashMap<>();
+//        if (args.length > 1) {
+//            hostMapping.put("b", "localhost:44002");
+//        }
+//
+//        TestIngestService testIngestService = new TestIngestService(port, hostMapping);
+//        testIngestService.run();
+//    }
 
     @Override
     public void run() {

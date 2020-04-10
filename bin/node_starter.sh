@@ -34,4 +34,4 @@ java_opts=${java_opts}' -Dlog4j.configuration='${log4j_conf_file}
 java \
     ${java_opts} \
     -cp ${SST_CLASSPATH} \
-    sustain.synopsis.dht.NodeStarter ${SST_HOME}/conf/dht-node-config.yaml
+    sustain.synopsis.dht.DHTNodeStarter ${SST_HOME}/conf/dht-node-config.yaml

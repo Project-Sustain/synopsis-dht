@@ -2,21 +2,20 @@ package sustain.synopsis.dht;
 
 import io.grpc.BindableService;
 import org.apache.log4j.Logger;
-import sustain.synopsis.dht.services.ingestion.IngestionRequestDispatcher;
+import sustain.synopsis.dht.services.ingestion.IngestionRequestProcessor;
 import sustain.synopsis.dht.services.ingestion.IngestionService;
 import sustain.synopsis.dht.services.query.TargetedQueryService;
 import sustain.synopsis.dht.store.StorageException;
 import sustain.synopsis.dht.store.node.NodeStore;
 
 import java.io.IOException;
-import java.util.concurrent.CountDownLatch;
 
 /**
  * @author Thilina Buddhika
  */
-public class NodeStarter {
+public class DHTNodeStarter {
 
-    public static Logger logger = Logger.getLogger(NodeStarter.class);
+    public static Logger logger = Logger.getLogger(DHTNodeStarter.class);
 
     public static void main(String[] args) {
         if (args.length == 0) {
@@ -42,18 +41,12 @@ public class NodeStarter {
             NodeStore nodeStore = new NodeStore();
             nodeStore.init();
             BindableService[] services =
-                    new BindableService[]{new IngestionService(new IngestionRequestDispatcher(nodeStore)),
+                    new BindableService[]{new IngestionService(new IngestionRequestProcessor(nodeStore)),
                             new TargetedQueryService(nodeStore)};
             Node node = new Node(port, services);
-            // this is a blocking call
-            CountDownLatch latch = new CountDownLatch(1);
-            node.start(latch);
-            latch.await();
-            logger.info("Server start up is complete!");
+            node.start(true);
         } catch (StorageException e) {
             logger.error("Error initiating the ingestion service.", e);
-        } catch (InterruptedException e) {
-            logger.error("Interrupted while waiting for the server to start.", e);
         }
     }
 }

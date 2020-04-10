@@ -13,11 +13,11 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-public class IngestionRequestDispatcher {
+public class IngestionRequestProcessor {
     private final WriterPool writerPool;
     private final NodeStore nodeStore;
 
-    public IngestionRequestDispatcher(NodeStore nodeStore) {
+    public IngestionRequestProcessor(NodeStore nodeStore) {
         this.nodeStore = nodeStore;
         this.writerPool = new WriterPool(Context.getInstance().getNodeConfig().getWriterPoolSize());
     }
@@ -51,7 +51,7 @@ public class IngestionRequestDispatcher {
                                             .collect(Collectors.toList())).build());
     }
 
-    public CompletableFuture<IngestionResponse> dispatch(IngestionRequest ingestionRequest) {
+    public CompletableFuture<IngestionResponse> process(IngestionRequest ingestionRequest) {
         List<CompletableFuture<NodeMapping>> nodeMappingCompletableFutures =
                 new ArrayList<>(ingestionRequest.getStrandCount());
         for (int i = 0; i < ingestionRequest.getStrandCount(); i++) {

@@ -12,7 +12,6 @@ import sustain.synopsis.dht.zk.ZooKeeperAgent;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -30,7 +29,7 @@ public class Node {
         this.services = services;
     }
 
-    public void start(CountDownLatch latch) {
+    public void start(boolean registerInZK) {
         try {
             logger.info("Trying to bind to port: " + this.port);
             // start gRPC services
@@ -38,15 +37,17 @@ public class Node {
             Arrays.stream(services).forEach(builder::addService);
             this.server = builder.build().start();
             logger.info("Node is running on " + this.port);
-            // register in ZK
-            try {
-                registerInZK();
-            } catch (ZKError zkError) {
-                logger.error("Error when registering with ZK. Shutting down.");
-                return;
+            if (registerInZK) {
+                // register in ZK
+                try {
+                    registerInZK();
+                    // allow some time for the ZK write to sync in.
+                    Thread.sleep(5 * 1000);
+                } catch (ZKError zkError) {
+                    logger.error("Error when registering with ZK. Shutting down.");
+                    return;
+                }
             }
-            // allow some time for the ZK write to sync in.
-            Thread.sleep(5 * 1000);
             // start the membership changes listener thread.
             Ring ring = new Ring();
             new Thread(ring).start();
@@ -64,7 +65,7 @@ public class Node {
                     logger.info("Shutdown complete!");
                 }
             });
-            latch.countDown();
+            logger.info("Server startup is complete..");
             server.awaitTermination();
         } catch (InterruptedException e) {
             logger.error("Error starting the node. ", e);

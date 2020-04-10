@@ -114,7 +114,7 @@ public class Driver {
             int port = Context.getInstance().getNodeConfig().getIngestionServicePort();
             BindableService[] services = new BindableService[]{new IngestionService(dispatcher)};
             Node node = new Node(port, services);
-            node.start(latch);
+            node.start(true);
         });
         serverT.start();
         try {

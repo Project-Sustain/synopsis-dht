@@ -43,10 +43,7 @@ public class IngestionRequestProcessor {
     public CompletableFuture<IngestionResponse> toCombinedCompletableFuture(long messageId, String datasetId,
                                                                             long sessionId,
                                                                             List<CompletableFuture<Boolean>> strandStoreStatus) {
-        CompletableFuture<Boolean> statusFuture =
-                CompletableFuture.allOf(strandStoreStatus.toArray(new CompletableFuture[0])).thenApply(
-                        future -> strandStoreStatus.stream().map(CompletableFuture::join)
-                                                   .reduce(true, (b1, b2) -> b1 && b2));
+        CompletableFuture<Boolean> statusFuture = combineCompletableBinaryFutures(strandStoreStatus);
         return statusFuture.thenApply(
                 status -> IngestionResponse.newBuilder().setMessageId(messageId).setDatasetId(datasetId)
                                            .setSessionId(sessionId).setStatus(status).build());
@@ -65,7 +62,13 @@ public class IngestionRequestProcessor {
     public CompletableFuture<Boolean> terminateSession(TerminateSessionRequest terminateSessionRequest) {
         List<CompletableFuture<Boolean>> futures = nodeStore
                 .endSession(terminateSessionRequest.getDatasetId(), terminateSessionRequest.getSessionId(), writerPool);
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenApply(
-                future -> futures.stream().map(CompletableFuture::join).reduce(true, (b1, b2) -> b1 && b2));
+        return combineCompletableBinaryFutures(futures);
     }
+
+    private CompletableFuture<Boolean> combineCompletableBinaryFutures(
+            List<CompletableFuture<Boolean>> strandStoreStatus) {
+        return CompletableFuture.allOf(strandStoreStatus.toArray(new CompletableFuture[0])).thenApply(
+                future -> strandStoreStatus.stream().map(CompletableFuture::join).reduce(true, (b1, b2) -> b1 && b2));
+    }
+
 }

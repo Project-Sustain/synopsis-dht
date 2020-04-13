@@ -83,10 +83,8 @@ public class ReaderTask implements Runnable {
                     logger.debug("Entity store: " + entityStore.getEntityId() + "Number of matching SSTables"
                                  + matchingSSTables.size());
                 }
-                if (!matchingSSTables.isEmpty()) {
-                    for (MatchedSSTable matchedSSTable : matchingSSTables) {
-                        readSSTable(matchedSSTable);
-                    }
+                for (MatchedSSTable matchedSSTable : matchingSSTables) {
+                    readSSTable(matchedSSTable);
                 }
             }
             responseWrapper.close();

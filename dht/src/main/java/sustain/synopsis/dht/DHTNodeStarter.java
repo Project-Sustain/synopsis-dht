@@ -24,29 +24,26 @@ public class DHTNodeStarter {
         }
         String configFilePath = args[0];
         logger.info("Using the configuration: " + configFilePath);
-        // initialize context
+
         Context ctx = Context.getInstance();
         try {
-            ctx.initialize(configFilePath);
+            ctx.initialize(configFilePath);  // set the hostname
+            ctx.setProperty(ServerConstants.HOSTNAME, Util.getHostname());
+            logger.info("Successfully initialized node context.");
         } catch (IOException e) {
             logger.error("Error initializing node config. Config file not found.", e);
             return;
         }
-        // set the hostname
-        ctx.setProperty(ServerConstants.HOSTNAME, Util.getHostname());
-        logger.info("Successfully initialized node context.");
 
-        int port = ctx.getNodeConfig().getIngestionServicePort();
         try {
             NodeStore nodeStore = new NodeStore();
             nodeStore.init();
-            BindableService[] services =
-                    new BindableService[]{new IngestionService(new IngestionRequestProcessor(nodeStore)),
-                            new TargetedQueryService(nodeStore)};
-            Node node = new Node(port, services);
+            Node node = new Node(ctx.getNodeConfig().getIngestionServicePort(),
+                                 new BindableService[]{new IngestionService(new IngestionRequestProcessor(nodeStore)),
+                                         new TargetedQueryService(nodeStore)});
             node.start(true);
         } catch (StorageException e) {
-            logger.error("Error initiating the ingestion service.", e);
-        }
+            logger.error("Error initializing the NodeStore.", e);
+            }
     }
 }

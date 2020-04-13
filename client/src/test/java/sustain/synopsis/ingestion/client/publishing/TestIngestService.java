@@ -59,30 +59,12 @@ public class TestIngestService implements Runnable {
 
         private Set<String> sentMappings = new HashSet<>(hostMap.size());
 
-        private List<NodeMapping> processStrands(List<Strand> strands) {
-            totalStrandsReceived += strands.size();
-            List<NodeMapping> mappings = new ArrayList<>();
-            for (Strand s : strands) {
-                String key = s.getEntityId();
-                String nodeMapping = hostMap.get(key);
-                if (nodeMapping != null && !sentMappings.contains(key)) {
-                    mappings.add(NodeMapping.newBuilder()
-                            .setEntityId(key)
-                            .setDhtNodeAddress(nodeMapping)
-                            .build());
-                    sentMappings.add(key);
-                }
-            }
-            return mappings;
-        }
-
         @Override
         public void ingest(IngestionRequest request, StreamObserver<IngestionResponse> responseObserver) {
             IngestionResponse response = IngestionResponse.newBuilder()
                         .setDatasetId(request.getDatasetId())
                         .setSessionId(request.getSessionId())
                         .setStatus(true)
-                        .addAllMapping(processStrands(request.getStrandList()))
                         .build();
 
             responseObserver.onNext(response);

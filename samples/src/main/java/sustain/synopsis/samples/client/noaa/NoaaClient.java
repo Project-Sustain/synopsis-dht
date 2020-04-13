@@ -2,6 +2,8 @@ package sustain.synopsis.samples.client.noaa;
 
 import sustain.synopsis.common.Strand;
 import sustain.synopsis.ingestion.client.core.*;
+import sustain.synopsis.ingestion.client.publishing.SimpleStrandPublisher;
+import sustain.synopsis.ingestion.client.publishing.StrandPublisher;
 
 import java.io.File;
 import java.io.IOException;

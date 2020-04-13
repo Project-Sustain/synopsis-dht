@@ -1,6 +1,7 @@
 package sustain.synopsis.ingestion.client.core;
 
 import org.apache.log4j.Logger;
+import sustain.synopsis.ingestion.client.publishing.StrandPublisher;
 import sustain.synopsis.sketch.dataset.Quantizer;
 import sustain.synopsis.sketch.util.Geohash;
 

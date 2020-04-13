@@ -1,7 +1,8 @@
-package sustain.synopsis.ingestion.client.core;
+package sustain.synopsis.ingestion.client.publishing;
 
 import org.apache.log4j.Logger;
 import sustain.synopsis.common.Strand;
+import sustain.synopsis.ingestion.client.core.TemporalQuantizer;
 import sustain.synopsis.sketch.graph.DataContainer;
 import sustain.synopsis.sketch.graph.Path;
 import sustain.synopsis.sketch.graph.Vertex;
@@ -17,7 +18,7 @@ public class ConsoleStrandPublisher implements StrandPublisher {
     private final Logger logger = Logger.getLogger(ConsoleStrandPublisher.class);
 
     @Override
-    public void publish(long messageId, Collection<Strand> strands) {
+    public void publish(long messageId, Iterable<Strand> strands) {
         for(Strand strand : strands) {
             logger.info("Published strand. Geohash: " + strand.getGeohash() +
                     ", from: " + TemporalQuantizer.epochToLocalDateTime(strand.getFromTimeStamp()) +

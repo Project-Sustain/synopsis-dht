@@ -112,8 +112,8 @@ class IngestionTest {
         LocalDateTime to = LocalDateTime.of(2019, 2, 12, 1, 1, 0);
         Strand strand1 = createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
                 TemporalQuantizer.localDateTimeToEpoch(to), 1.0, 2.0);
-        StrandRegistry registry = new StrandRegistry(strands -> {
-            //ignore
+        StrandRegistry registry = new StrandRegistry((messageId, strands) -> {
+
         });
         assertEquals(1, registry.add(strand1));
 
@@ -163,7 +163,7 @@ class IngestionTest {
         expectedOutput.add(strand2);
         expectedOutput.add(strand3);
         expectedOutput.add(strand4);
-        Mockito.verify(publisherMock, Mockito.timeout(1)).publish(expectedOutput);
+        Mockito.verify(publisherMock, Mockito.timeout(1)).publish(0, expectedOutput);
     }
 
     private Strand createStrand(Path path, String geohash, long ts, long to, double... features) {

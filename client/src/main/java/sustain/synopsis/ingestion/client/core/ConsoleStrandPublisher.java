@@ -17,7 +17,7 @@ public class ConsoleStrandPublisher implements StrandPublisher {
     private final Logger logger = Logger.getLogger(ConsoleStrandPublisher.class);
 
     @Override
-    public void publish(Collection<Strand> strands) {
+    public void publish(long messageId, Collection<Strand> strands) {
         for(Strand strand : strands) {
             logger.info("Published strand. Geohash: " + strand.getGeohash() +
                     ", from: " + TemporalQuantizer.epochToLocalDateTime(strand.getFromTimeStamp()) +

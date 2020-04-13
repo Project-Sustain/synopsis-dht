@@ -10,33 +10,24 @@ import sustain.synopsis.dht.store.services.IngestionRequest;
 import sustain.synopsis.dht.store.services.IngestionResponse;
 import sustain.synopsis.dht.store.services.IngestionServiceGrpc;
 import sustain.synopsis.dht.store.services.IngestionServiceGrpc.IngestionServiceFutureStub;
-import sustain.synopsis.dht.store.services.NodeMapping;
-import sustain.synopsis.sketch.serialization.SerializationOutputStream;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Semaphore;
 
 public class DHTStrandPublisher implements StrandPublisher {
-
-    public final int channelSendLimit = 3;
-    //TODO these maps will need some locking
-    private final Map<String, IngestionServiceFutureStub> geohashStubMap = new HashMap<>();
-    private final Map<IngestionServiceFutureStub, Semaphore> sendLimitMap = new HashMap<>();
 
     private final ExecutorService senderExecutorService = Executors.newFixedThreadPool(4);
     private final ExecutorService responseExecutorService = Executors.newSingleThreadExecutor();
 
     private final String datasetId;
     private final long sessionId;
-    private final IngestionServiceFutureStub defaultStub;
+    private final IngestionServiceFutureStub proxyStub;
 
-    public DHTStrandPublisher(String initialAddress, String datasetId, long sessionId) {
-        defaultStub = getStubForAddress(initialAddress);
-        sendLimitMap.put(defaultStub, new Semaphore(channelSendLimit));
+    public DHTStrandPublisher(String proxyAddress, String datasetId, long sessionId) {
+        proxyStub = getStubForAddress(proxyAddress);
         this.datasetId = datasetId;
         this.sessionId = sessionId;
     }
@@ -50,17 +41,6 @@ public class DHTStrandPublisher implements StrandPublisher {
         return IngestionServiceGrpc.newFutureStub(channel);
     }
 
-    Map<IngestionServiceFutureStub, List<Strand>> getStrandsForStubMap(Collection<Strand> strands) {
-        Map<IngestionServiceFutureStub, List<Strand>> strandsForStub = new HashMap<>();
-        for (Strand s : strands) {
-            IngestionServiceFutureStub stub = geohashStubMap.getOrDefault(s.getGeohash(), defaultStub);
-
-            List<Strand> strandList = strandsForStub.computeIfAbsent(stub, k -> new ArrayList<>());
-            strandList.add(s);
-        }
-        return strandsForStub;
-    }
-
     static sustain.synopsis.dht.store.services.Strand convertStrand(Strand strand) {
         return sustain.synopsis.dht.store.services.Strand.newBuilder().setEntityId(strand.getGeohash())
                                                          .setToTs(strand.getToTimestamp())
@@ -68,53 +48,25 @@ public class DHTStrandPublisher implements StrandPublisher {
                                                          .setBytes(strand.serializeAsProtoBuff()).build();
     }
 
-    void processNodeMapping(NodeMapping mapping) {
-        String nodeAddress = mapping.getDhtNodeAddress();
-        if (!geohashStubMap.containsKey(nodeAddress)) {
-            IngestionServiceFutureStub stubForAddress = getStubForAddress(nodeAddress);
-            geohashStubMap.put(mapping.getEntityId(), stubForAddress);
-            sendLimitMap.put(stubForAddress, new Semaphore(channelSendLimit));
-        }
-    }
-
-
-    void publishStrandsForStub(IngestionServiceFutureStub stub, List<Strand> strands) {
-        try {
-            Semaphore limiter = sendLimitMap.get(stub);
-            limiter.acquire();
-
-            List<sustain.synopsis.dht.store.services.Strand> convertedStrandList = new ArrayList<>(strands.size());
-            strands.stream().forEach(s -> convertedStrandList.add(convertStrand(s)));
-
-            IngestionRequest req = IngestionRequest.newBuilder().setDatasetId(datasetId).setSessionId(sessionId)
-                                                   .addAllStrand(convertedStrandList).build();
-            ListenableFuture<IngestionResponse> ingestFuture = stub.ingest(req);
-
-            Futures.addCallback(ingestFuture, new FutureCallback<IngestionResponse>() {
-                @Override
-                public void onSuccess(IngestionResponse result) {
-                    for (int i = 0; i < result.getMappingCount(); i++) {
-                        processNodeMapping(result.getMapping(i));
-                    }
-                }
-
-                @Override
-                public void onFailure(Throwable t) {
-
-                }
-            }, responseExecutorService);
-
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-
     @Override
-    public void publish(Collection<Strand> strands) {
-        Map<IngestionServiceFutureStub, List<Strand>> strandsForStub = getStrandsForStubMap(strands);
-        for (IngestionServiceFutureStub stub : strandsForStub.keySet()) {
-            publishStrandsForStub(stub, strandsForStub.get(stub));
-        }
-    }
+    public void publish(long messageId, Collection<Strand> strands) {
+        List<sustain.synopsis.dht.store.services.Strand> convertedStrandList = new ArrayList<>(strands.size());
+        strands.forEach(s -> convertedStrandList.add(convertStrand(s)));
 
+        IngestionRequest req = IngestionRequest.newBuilder().setDatasetId(datasetId).setSessionId(sessionId)
+                                               .addAllStrand(convertedStrandList).build();
+        ListenableFuture<IngestionResponse> ingestFuture = proxyStub.ingest(req);
+
+        Futures.addCallback(ingestFuture, new FutureCallback<IngestionResponse>() {
+            @Override
+            public void onSuccess(IngestionResponse result) {
+
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+
+            }
+        }, responseExecutorService);
+    }
 }

@@ -10,7 +10,6 @@ import sustain.synopsis.common.Strand;
 import sustain.synopsis.dht.store.services.IngestionRequest;
 import sustain.synopsis.dht.store.services.IngestionResponse;
 import sustain.synopsis.dht.store.services.IngestionServiceGrpc;
-import sustain.synopsis.dht.store.services.IngestionServiceGrpc.IngestionServiceBlockingStub;
 import sustain.synopsis.dht.store.services.IngestionServiceGrpc.IngestionServiceFutureStub;
 
 import java.util.ArrayList;
@@ -69,8 +68,9 @@ public class SimpleAsynchronousStrandPublisher implements StrandPublisher {
     }
 
     @Override
-    public void publish(Collection<Strand> strands) {
+    public void publish(long messageId, Collection<Strand> strands) {
         IngestionRequest request = IngestionRequest.newBuilder()
+                .setMessageId(messageId)
                 .setDatasetId(datasetId)
                 .setSessionId(sessionId)
                 .addAllStrand(getConvertedStrandList(strands))

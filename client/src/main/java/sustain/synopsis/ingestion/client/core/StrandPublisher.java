@@ -5,7 +5,7 @@ import sustain.synopsis.common.Strand;
 import java.util.Collection;
 
 public interface StrandPublisher {
-    void publish(Collection<Strand> strands);
+    void publish(long messageId, Collection<Strand> strands);
 
     default void terminateSession(){};
 }

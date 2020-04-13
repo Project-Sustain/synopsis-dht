@@ -49,11 +49,12 @@ public class SimpleStrandPublisher implements StrandPublisher {
     }
 
     @Override
-    public void publish(Collection<Strand> strands) {
+    public void publish(long messageId, Collection<Strand> strands) {
         List<sustain.synopsis.dht.store.services.Strand> convertedStrandList = getConvertedStrandList(strands);
         totalStrandsPublished += convertedStrandList.size();
 
         IngestionRequest request = IngestionRequest.newBuilder()
+                .setMessageId(messageId)
                 .setDatasetId(datasetId)
                 .setSessionId(sessionId)
                 .addAllStrand(convertedStrandList)

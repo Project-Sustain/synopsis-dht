@@ -2,7 +2,7 @@ package sustain.synopsis.dht;
 
 import io.grpc.BindableService;
 import org.apache.log4j.Logger;
-import sustain.synopsis.dht.services.ingestion.IngestionRequestProcessor;
+import sustain.synopsis.dht.services.ingestion.DHTIngestionRequestProcessor;
 import sustain.synopsis.dht.services.ingestion.IngestionService;
 import sustain.synopsis.dht.services.query.TargetedQueryService;
 import sustain.synopsis.dht.store.StorageException;
@@ -39,7 +39,7 @@ public class DHTNodeStarter {
             NodeStore nodeStore = new NodeStore();
             nodeStore.init();
             Node node = new Node(ctx.getNodeConfig().getIngestionServicePort(),
-                                 new BindableService[]{new IngestionService(new IngestionRequestProcessor(nodeStore)),
+                                 new BindableService[]{new IngestionService(new DHTIngestionRequestProcessor(nodeStore)),
                                          new TargetedQueryService(nodeStore)});
             node.start(true);
         } catch (StorageException e) {

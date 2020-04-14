@@ -21,8 +21,8 @@ public class IngestionService extends IngestionServiceGrpc.IngestionServiceImplB
     @Override
     public void terminateSession(TerminateSessionRequest request,
                                  StreamObserver<TerminateSessionResponse> responseObserver) {
-        dispatcher.terminateSession(request).thenAccept(status -> {
-            responseObserver.onNext(TerminateSessionResponse.newBuilder().setStatus(status).build());
+        dispatcher.process(request).thenAccept(response -> {
+            responseObserver.onNext(response);
             responseObserver.onCompleted();
         });
     }

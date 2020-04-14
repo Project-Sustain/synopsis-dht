@@ -5,6 +5,7 @@ import io.grpc.BindableService;
 import org.apache.log4j.Logger;
 import sustain.synopsis.dht.*;
 import sustain.synopsis.dht.services.ingestion.IngestionRequestProcessor;
+import sustain.synopsis.dht.services.ingestion.DHTIngestionRequestProcessor;
 import sustain.synopsis.dht.services.ingestion.IngestionService;
 import sustain.synopsis.dht.store.StorageException;
 import sustain.synopsis.dht.store.node.NodeStore;
@@ -87,7 +88,7 @@ public class Driver {
     private Driver() throws StorageException {
         NodeStore nodeStore = new NodeStore();
         nodeStore.init();
-        dispatcher = new IngestionRequestProcessor(nodeStore);
+        dispatcher = new DHTIngestionRequestProcessor(nodeStore);
         // a thread that reports the write throughout over time
         statThread.scheduleAtFixedRate(() -> {
             if (lastReportedTS == -1 && lastReportedCount == -1) {

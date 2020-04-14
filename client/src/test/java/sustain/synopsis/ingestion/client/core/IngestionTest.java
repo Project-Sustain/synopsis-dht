@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import sustain.synopsis.common.CommonUtil;
 import sustain.synopsis.common.Strand;
 import sustain.synopsis.ingestion.client.publishing.StrandPublisher;
 import sustain.synopsis.sketch.dataset.Quantizer;
@@ -45,7 +46,7 @@ class IngestionTest {
                 new CountDownLatch(1), new CountDownLatch(1));
         Record record = new Record();
         record.setGeohash("9xj");
-        long ts = TemporalQuantizer.localDateTimeToEpoch(LocalDateTime.of(2019, 2, 12, 1, 23));
+        long ts = CommonUtil.localDateTimeToEpoch(LocalDateTime.of(2019, 2, 12, 1, 23));
         record.setTimestamp(ts);
         record.addFeatureValue("feature_1", 3.0f);
         record.addFeatureValue("feature_2", 140.0f);
@@ -87,13 +88,13 @@ class IngestionTest {
 
         Record r1 = new Record();
         r1.setGeohash("9xj");
-        r1.setTimestamp(TemporalQuantizer.localDateTimeToEpoch(LocalDateTime.of(2019, 2, 12, 1, 23)));
+        r1.setTimestamp(CommonUtil.localDateTimeToEpoch(LocalDateTime.of(2019, 2, 12, 1, 23)));
         r1.addFeatureValue("feature_1", 20.0f);
         r1.addFeatureValue("feature_2", 200.0f);
 
         Record r2 = new Record();
         r2.setGeohash("9xj");
-        r2.setTimestamp(TemporalQuantizer.localDateTimeToEpoch(LocalDateTime.of(2019, 2, 12, 1, 24)));
+        r2.setTimestamp(CommonUtil.localDateTimeToEpoch(LocalDateTime.of(2019, 2, 12, 1, 24)));
         r2.addFeatureValue("feature_1", 20.0f);
         r2.addFeatureValue("feature_2", 200.0f);
 
@@ -111,21 +112,21 @@ class IngestionTest {
     void testStrandRegistryAdd() {
         LocalDateTime from = LocalDateTime.of(2019, 2, 12, 1, 0, 0);
         LocalDateTime to = LocalDateTime.of(2019, 2, 12, 1, 1, 0);
-        Strand strand1 = createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
-                TemporalQuantizer.localDateTimeToEpoch(to), 1.0, 2.0);
+        Strand strand1 = createStrand(new Path(), "9xj", CommonUtil.localDateTimeToEpoch(from),
+                                      CommonUtil.localDateTimeToEpoch(to), 1.0, 2.0);
         StrandRegistry registry = new StrandRegistry((messageId, strands) -> {
 
         });
         assertEquals(1, registry.add(strand1));
 
         // add a different strand
-        Strand strand2 = createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
-                TemporalQuantizer.localDateTimeToEpoch(to), 1.1, 2.0);
+        Strand strand2 = createStrand(new Path(), "9xj", CommonUtil.localDateTimeToEpoch(from),
+                                      CommonUtil.localDateTimeToEpoch(to), 1.1, 2.0);
         assertEquals(2, registry.add(strand2));
 
         // add a strand for merging
-        Strand similarStrand = createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
-                TemporalQuantizer.localDateTimeToEpoch(to), 1.0, 2.0);
+        Strand similarStrand = createStrand(new Path(), "9xj", CommonUtil.localDateTimeToEpoch(from),
+                                            CommonUtil.localDateTimeToEpoch(to), 1.0, 2.0);
         assertEquals(2, registry.add(similarStrand));
     }
 
@@ -133,18 +134,18 @@ class IngestionTest {
     void testStrandPublishing() {
         LocalDateTime from = LocalDateTime.of(2019, 2, 12, 1, 0, 0);
         LocalDateTime to = LocalDateTime.of(2019, 2, 12, 1, 1, 0);
-        Strand strand1 = createStrand(new Path(), "9xk", TemporalQuantizer.localDateTimeToEpoch(from),
-                TemporalQuantizer.localDateTimeToEpoch(to), 1.0, 2.0);
+        Strand strand1 = createStrand(new Path(), "9xk", CommonUtil.localDateTimeToEpoch(from),
+                                      CommonUtil.localDateTimeToEpoch(to), 1.0, 2.0);
         // same geohash and temporal bounds, different feature values.
-        Strand strand2 = createStrand(new Path(), "9xi", TemporalQuantizer.localDateTimeToEpoch(from),
-                TemporalQuantizer.localDateTimeToEpoch(to), 1.1, 2.0);
+        Strand strand2 = createStrand(new Path(), "9xi", CommonUtil.localDateTimeToEpoch(from),
+                                      CommonUtil.localDateTimeToEpoch(to), 1.1, 2.0);
         // different geohash
-        Strand strand3 = createStrand(new Path(), "9xj", TemporalQuantizer.localDateTimeToEpoch(from),
-                TemporalQuantizer.localDateTimeToEpoch(to), 1.0, 2.0);
+        Strand strand3 = createStrand(new Path(), "9xj", CommonUtil.localDateTimeToEpoch(from),
+                                      CommonUtil.localDateTimeToEpoch(to), 1.0, 2.0);
         // increments the timestamp for the prefix 9xj. Should trigger publishing strand 1 and strand 2
         Strand strand4 = createStrand(new Path(), "9xh",
-                TemporalQuantizer.localDateTimeToEpoch(from.plusMinutes(1)),
-                TemporalQuantizer.localDateTimeToEpoch(to.plusMinutes(1)), 1.0, 2.0);
+                                      CommonUtil.localDateTimeToEpoch(from.plusMinutes(1)),
+                                      CommonUtil.localDateTimeToEpoch(to.plusMinutes(1)), 1.0, 2.0);
 
         StrandRegistry registry = new StrandRegistry(publisherMock);
         registry.add(strand1);

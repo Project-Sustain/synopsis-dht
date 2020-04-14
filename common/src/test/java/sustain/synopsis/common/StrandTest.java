@@ -121,7 +121,7 @@ public class StrandTest {
         Strand strand2 = createStrand(new Path(3), "9xj", 1000, 2000, 1.34, 1.5, 100.5);
         strand1.merge(strand2);
 
-        ProtoBuffSerializedStrand protoBuffSerializedStrand = StrandSerializationUtil.toProtoBuff(strand1);
+        ProtoBuffSerializedStrand protoBuffSerializedStrand = CommonUtil.strandToProtoBuff(strand1);
         Assertions.assertEquals("9xj", protoBuffSerializedStrand.getGeohash());
         Assertions.assertEquals(1000, protoBuffSerializedStrand.getStartTS());
         Assertions.assertEquals(
@@ -146,7 +146,7 @@ public class StrandTest {
     @Test
     void testToProtoBuffWithOneObservation() {
         Strand strand = createStrand(new Path(2), "9xj", 1000, 2000, 1.34, 1.5, 100.5);
-        ProtoBuffSerializedStrand protoBuffSerializedStrand = StrandSerializationUtil.toProtoBuff(strand);
+        ProtoBuffSerializedStrand protoBuffSerializedStrand = CommonUtil.strandToProtoBuff(strand);
         Assertions.assertEquals("9xj", protoBuffSerializedStrand.getGeohash());
         Assertions.assertEquals(1000, protoBuffSerializedStrand.getStartTS());
         Assertions
@@ -166,7 +166,7 @@ public class StrandTest {
     @Test
     void testSerializeAsProtoBuff() {
         Strand strand = createStrand(new Path(3), "9xj", 1000, 2000, 1.34, 1.5, 100.5);
-        ProtoBuffSerializedStrand protoBuffSerializedStrand = StrandSerializationUtil.toProtoBuff(strand);
+        ProtoBuffSerializedStrand protoBuffSerializedStrand = CommonUtil.strandToProtoBuff(strand);
         Assertions.assertEquals(protoBuffSerializedStrand.toByteString(), strand.serializeAsProtoBuff());
     }
 
@@ -174,8 +174,8 @@ public class StrandTest {
     void testFromProtoBuffToStrandWithOneObservation() {
         // strands with a single observation
         Strand originalStrand = createStrand(new Path(3), "9xj", 1000, 2000, 1.34, 1.5, 100.5);
-        ProtoBuffSerializedStrand protoBuffSerializedStrand = StrandSerializationUtil.toProtoBuff(originalStrand);
-        Strand convertedStrand = StrandSerializationUtil.fromProtoBuff(protoBuffSerializedStrand);
+        ProtoBuffSerializedStrand protoBuffSerializedStrand = CommonUtil.strandToProtoBuff(originalStrand);
+        Strand convertedStrand = CommonUtil.protoBuffToStrand(protoBuffSerializedStrand);
         compareStrands(originalStrand, convertedStrand);
     }
 
@@ -184,8 +184,8 @@ public class StrandTest {
         Strand strand1 = createStrand(new Path(3), "9xj", 1000, 2000, 1.34, 1.5, 100.5);
         Strand strand2 = createStrand(new Path(3), "9xj", 1000, 2000, 1.34, 1.5, 100.5);
         strand1.merge(strand2);
-        ProtoBuffSerializedStrand protoBuffSerializedStrand = StrandSerializationUtil.toProtoBuff(strand1);
-        Strand convertedStrand = StrandSerializationUtil.fromProtoBuff(protoBuffSerializedStrand);
+        ProtoBuffSerializedStrand protoBuffSerializedStrand = CommonUtil.strandToProtoBuff(strand1);
+        Strand convertedStrand = CommonUtil.protoBuffToStrand(protoBuffSerializedStrand);
         compareStrands(strand1, convertedStrand);
     }
 

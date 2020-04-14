@@ -1,5 +1,7 @@
 package sustain.synopsis.ingestion.client.core;
 
+import sustain.synopsis.common.CommonUtil;
+
 import java.time.*;
 
 /**
@@ -20,7 +22,7 @@ public class TemporalQuantizer {
      * @return Boundary as a epoch millisecond timestamp
      */
     public long[] getTemporalBoundaries(long ts) {
-        LocalDateTime dateTime = epochToLocalDateTime(ts);
+        LocalDateTime dateTime = CommonUtil.epochToLocalDateTime(ts);
         if (boundary == null) {
             boundary = dateTime.minusHours(dateTime.getHour()).minusMinutes(dateTime.getMinute()).minusSeconds(
                     dateTime.getSecond()).minusNanos(dateTime.getNano()); // initialize to the start of the day of the first timestamp
@@ -30,21 +32,14 @@ public class TemporalQuantizer {
             while (!tempBoundary.isBefore(dateTime)) {    // find the last boundary before the ts
                 tempBoundary = tempBoundary.minus(interval);
             }
-            return new long[]{localDateTimeToEpoch(tempBoundary.minus(interval)),
-                    localDateTimeToEpoch(tempBoundary.plus(interval))};
+            return new long[]{CommonUtil.localDateTimeToEpoch(tempBoundary.minus(interval)),
+                    CommonUtil.localDateTimeToEpoch(tempBoundary.plus(interval))};
         }
         while (boundary.isBefore(dateTime)) {   // find the first boundary after the timestamp - this also handles the case of sparse/missing timestamps
             boundary = boundary.plus(interval);
         }
-        return new long[]{localDateTimeToEpoch(boundary.minus(interval)), localDateTimeToEpoch(boundary)};
+        return new long[]{
+                CommonUtil.localDateTimeToEpoch(boundary.minus(interval)), CommonUtil.localDateTimeToEpoch(boundary)};
     }
 
-    public static long localDateTimeToEpoch(LocalDateTime localDateTime) {
-        ZonedDateTime zdt = localDateTime.atZone(ZoneId.of("UTC"));
-        return zdt.toInstant().toEpochMilli();
-    }
-
-    public static LocalDateTime epochToLocalDateTime(long startTS) {
-        return LocalDateTime.ofInstant(Instant.ofEpochMilli(startTS), ZoneId.of("UTC"));
-    }
 }

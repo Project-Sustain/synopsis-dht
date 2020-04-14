@@ -5,13 +5,17 @@ import sustain.synopsis.sketch.graph.DataContainer;
 import sustain.synopsis.sketch.graph.Path;
 import sustain.synopsis.sketch.stat.RunningStatisticsND;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class StrandSerializationUtil {
-    public static ProtoBuffSerializedStrand toProtoBuff(Strand strand) {
+public class CommonUtil {
+    public static ProtoBuffSerializedStrand strandToProtoBuff(Strand strand) {
         ProtoBuffSerializedStrand protoBuffStrand =
                 ProtoBuffSerializedStrand.newBuilder().setGeohash(strand.getGeohash())
                                          .setStartTS(strand.getFromTimeStamp()).buildPartial();
@@ -33,7 +37,7 @@ public class StrandSerializationUtil {
         return builder.build();
     }
 
-    public static Strand fromProtoBuff(ProtoBuffSerializedStrand strand) {
+    public static Strand protoBuffToStrand(ProtoBuffSerializedStrand strand) {
         List<Double> featuresList = strand.getFeaturesList();
         Path path = new Path(featuresList.size());
         featuresList.stream().map(Feature::new).forEach(path::add);
@@ -61,5 +65,14 @@ public class StrandSerializationUtil {
         double[] array = new double[list.size()];
         IntStream.range(0, list.size()).forEach(i -> array[i] = list.get(i));
         return array;
+    }
+
+    public static long localDateTimeToEpoch(LocalDateTime localDateTime) {
+        ZonedDateTime zdt = localDateTime.atZone(ZoneId.of("UTC"));
+        return zdt.toInstant().toEpochMilli();
+    }
+
+    public static LocalDateTime epochToLocalDateTime(long startTS) {
+        return LocalDateTime.ofInstant(Instant.ofEpochMilli(startTS), ZoneId.of("UTC"));
     }
 }

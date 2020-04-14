@@ -3,7 +3,7 @@ package sustain.synopsis.dht.store;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import sustain.synopsis.common.Strand;
-import sustain.synopsis.common.StrandSerializationUtil;
+import sustain.synopsis.common.CommonUtil;
 import sustain.synopsis.sketch.dataset.feature.Feature;
 import sustain.synopsis.sketch.graph.DataContainer;
 import sustain.synopsis.sketch.graph.Path;
@@ -28,7 +28,7 @@ public class StrandStorageKeyValueTest {
     }
 
     public static byte[] serializeStrand(Strand strand) throws IOException {
-        return StrandSerializationUtil.toProtoBuff(strand).toByteArray();
+        return CommonUtil.strandToProtoBuff(strand).toByteArray();
     }
 
     @Test

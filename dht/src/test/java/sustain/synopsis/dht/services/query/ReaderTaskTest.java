@@ -9,7 +9,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import sustain.synopsis.common.ProtoBuffSerializedStrand;
-import sustain.synopsis.common.StrandSerializationUtil;
+import sustain.synopsis.common.CommonUtil;
 import sustain.synopsis.dht.store.StrandStorageKey;
 import sustain.synopsis.dht.store.StrandStorageKeyValueTest;
 import sustain.synopsis.dht.store.entity.EntityStore;
@@ -56,8 +56,8 @@ public class ReaderTaskTest {
 
         Mockito.reset(containerMock);
         // with one strand - one strand is 62 bytes
-        ProtoBuffSerializedStrand strand = StrandSerializationUtil
-                .toProtoBuff(StrandStorageKeyValueTest.createStrand("9xj", 1000, 2000, 100.0, 122.0, 513.4));
+        ProtoBuffSerializedStrand strand = CommonUtil
+                .strandToProtoBuff(StrandStorageKeyValueTest.createStrand("9xj", 1000, 2000, 100.0, 122.0, 513.4));
         wrapper.addProtoBuffSerializedStrand(strand);
         Mockito.verify(containerMock, Mockito.times(0)).write(Mockito.any());
 
@@ -74,7 +74,7 @@ public class ReaderTaskTest {
             Mockito.reset(containerMock);
             for (int i = 0; i < batchSize; i++) {
                 long fromTS = 1000 * batchId + i;
-                strand = StrandSerializationUtil.toProtoBuff(
+                strand = CommonUtil.strandToProtoBuff(
                         StrandStorageKeyValueTest.createStrand("9xj", fromTS, fromTS + 100, 100.0, 122.0, 513.4));
                 wrapper.addProtoBuffSerializedStrand(strand);
                 builder.addStrands(strand);

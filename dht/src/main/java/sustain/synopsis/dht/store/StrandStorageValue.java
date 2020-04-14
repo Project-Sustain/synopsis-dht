@@ -3,7 +3,7 @@ package sustain.synopsis.dht.store;
 import com.google.protobuf.InvalidProtocolBufferException;
 import sustain.synopsis.common.ProtoBuffSerializedStrand;
 import sustain.synopsis.common.Strand;
-import sustain.synopsis.common.StrandSerializationUtil;
+import sustain.synopsis.common.CommonUtil;
 import sustain.synopsis.storage.lsmtree.MergeError;
 import sustain.synopsis.storage.lsmtree.Mergeable;
 import sustain.synopsis.storage.lsmtree.StreamSerializable;
@@ -52,6 +52,6 @@ public class StrandStorageValue implements Mergeable<StrandStorageValue>, Stream
 
     public Strand getStrand() throws InvalidProtocolBufferException {
         ProtoBuffSerializedStrand strand = ProtoBuffSerializedStrand.newBuilder().mergeFrom(serializedStrand).build();
-        return StrandSerializationUtil.fromProtoBuff(strand);
+        return CommonUtil.protoBuffToStrand(strand);
     }
 }

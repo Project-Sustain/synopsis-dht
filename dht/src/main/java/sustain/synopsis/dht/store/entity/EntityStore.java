@@ -156,7 +156,7 @@ public class EntityStore {
             if (logger.isDebugEnabled()) {
                 logger.debug("Unable to end the session. Invalid session id: " + session.getSessionId());
             }
-            return false;
+            return true;
         }
         MemTable<StrandStorageKey, StrandStorageValue> memTable = activeSessions.get(session);
         if (memTable.getEntryCount() > 0) {

@@ -22,15 +22,15 @@ public class ResponseContainerTest {
         Mockito.verify(helperMock, Mockito.times(parallelismLevel)).getEmptyMessage();
 
         for (int i = 0; i < responseCount - 1; i++) {
-            container.add(IngestionResponse.newBuilder().setDatasetId("dataset").setSessionId(1).setMessageId(1000 + i)
-                                           .setStatus(true).build());
+            container.handleResponse(IngestionResponse.newBuilder().setDatasetId("dataset").setSessionId(1).setMessageId(1000 + i)
+                                                      .setStatus(true).build());
             Mockito.verify(helperMock, Mockito.times(1)).merge(Mockito.any(), Mockito.any());
             Mockito.reset(helperMock);
         }
         // all responses are received
-        Assertions.assertTrue(container.add(IngestionResponse.newBuilder().setDatasetId("dataset").setSessionId(1)
-                                                             .setMessageId(1000 + responseCount).setStatus(true)
-                                                             .build()));
+        Assertions.assertTrue(container.handleResponse(IngestionResponse.newBuilder().setDatasetId("dataset").setSessionId(1)
+                                                                        .setMessageId(1000 + responseCount).setStatus(true)
+                                                                        .build()));
         Mockito.verify(helperMock, Mockito.times(1)).merge(Mockito.any(), Mockito.any());
         Mockito.reset(helperMock);
 
@@ -58,8 +58,8 @@ public class ResponseContainerTest {
 
 
         for (int i = 0; i < responseCount; i++) {
-            container.add(IngestionResponse.newBuilder().setDatasetId("dataset").setSessionId(1).setMessageId(1)
-                                           .setStatus(true).build());
+            container.handleResponse(IngestionResponse.newBuilder().setDatasetId("dataset").setSessionId(1).setMessageId(1)
+                                                      .setStatus(true).build());
         }
 
         IngestionResponse resp = container.getMergedResponse();

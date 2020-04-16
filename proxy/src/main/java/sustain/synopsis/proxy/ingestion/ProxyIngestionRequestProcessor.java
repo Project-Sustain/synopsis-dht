@@ -68,50 +68,43 @@ public class ProxyIngestionRequestProcessor implements IngestionRequestProcessor
 
     @Override
     public CompletableFuture<IngestionResponse> process(IngestionRequest request) {
-        try {
-            Map<String, IngestionRequest> splits = split(request);
-            CompletableFuture<IngestionResponse> future = new CompletableFuture<>();
-            if (splits.isEmpty()) {
-                future.complete(IngestionResponse.newBuilder().setDatasetId(request.getDatasetId())
-                                                 .setSessionId(request.getSessionId())
-                                                 .setMessageId(request.getMessageId()).setStatus(true).build());
-                return future;
+        CompletableFuture<IngestionResponse> future = new CompletableFuture<>();
+        if (request.getStrandCount() == 0) { // handling empty ingestion requests
+            future.complete(IngestionResponse.newBuilder().setDatasetId(request.getDatasetId())
+                                             .setSessionId(request.getSessionId()).setMessageId(request.getMessageId())
+                                             .setStatus(true).build());
+            return future;
+        }
+        Map<String, IngestionRequest> splits = split(request);
+        ResponseContainer<IngestionResponse> responseContainer =
+                new ResponseContainer<>(splits.size(), ingestionResponseHelper,
+                                        Math.min(DEFAULT_MERGE_PARALLELISM, splits.size()));
+        splits.forEach((endpoint, split) -> dispatchSplit(getStub(endpoint), split, responseContainer, future));
+        return future;
+    }
+
+    void dispatchSplit(IngestionServiceGrpc.IngestionServiceFutureStub stub, IngestionRequest splitRequest,
+                       ResponseContainer<IngestionResponse> responseContainer,
+                       CompletableFuture<IngestionResponse> future) {
+        Futures.addCallback(stub.ingest(splitRequest), new FutureCallback<IngestionResponse>() {
+            @Override
+            public void onSuccess(@NullableDecl IngestionResponse result) {
+                boolean complete = responseContainer.handleResponse(result);
+                if (complete) {
+                    future.complete(responseContainer.getMergedResponse());
+                }
             }
 
-            ResponseContainer<IngestionResponse> responseContainer =
-                    new ResponseContainer<>(splits.size(), ingestionResponseHelper,
-                                            Math.min(DEFAULT_MERGE_PARALLELISM, splits.size()));
-            splits.forEach((endpoint, splitRequest) -> {
-                IngestionServiceGrpc.IngestionServiceFutureStub stub = getStub(endpoint);
-                ListenableFuture<IngestionResponse> listenableFuture = stub.ingest(splitRequest);
-                Futures.addCallback(listenableFuture, new FutureCallback<IngestionResponse>() {
-                    @Override
-                    public void onSuccess(@NullableDecl IngestionResponse result) {
-                        if (result == null) {
-                            return;
-                        }
-                        boolean complete = responseContainer.add(result);
-                        if (complete) {
-                            future.complete(responseContainer.getMergedResponse());
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Throwable t) {
-                        t.printStackTrace(); // todo: handle this better
-                    }
-                }, responseHandlers);
-            });
-            return future;
-        } catch (Throwable e) {
-            e.printStackTrace();
-            return new CompletableFuture<>();
-        }
+            @Override
+            public void onFailure(Throwable t) {
+                future.completeExceptionally(t);
+            }
+        }, responseHandlers);
     }
 
     @Override
     public CompletableFuture<TerminateSessionResponse> process(TerminateSessionRequest request) {
-        // send it to all dht nodes
+        // send to all dht nodes
         ResponseContainer<TerminateSessionResponse> container =
                 new ResponseContainer<>(stubs.size(), terminateSessionResponseHelper,
                                         Math.min(DEFAULT_MERGE_PARALLELISM, stubs.size()));
@@ -121,7 +114,7 @@ public class ProxyIngestionRequestProcessor implements IngestionRequestProcessor
             Futures.addCallback(listenableFuture, new FutureCallback<TerminateSessionResponse>() {
                 @Override
                 public void onSuccess(@NullableDecl TerminateSessionResponse result) {
-                    boolean complete = container.add(result);
+                    boolean complete = container.handleResponse(result);
                     if (complete) {
                         future.complete(container.getMergedResponse());
                     }
@@ -129,7 +122,7 @@ public class ProxyIngestionRequestProcessor implements IngestionRequestProcessor
 
                 @Override
                 public void onFailure(Throwable t) {
-                    t.printStackTrace(); // TODO: handle failures
+                    future.completeExceptionally(t);
                 }
             }, responseHandlers);
         });
@@ -160,7 +153,7 @@ public class ProxyIngestionRequestProcessor implements IngestionRequestProcessor
         return strand.getEntityId() + ":" + CommonUtil.epochToLocalDateTime(strand.getFromTs()).getMonthValue();
     }
 
-    IngestionServiceGrpc.IngestionServiceFutureStub getStub(String endpoint) {
+    private IngestionServiceGrpc.IngestionServiceFutureStub getStub(String endpoint) {
         if (stubs.containsKey(endpoint)) {
             return stubs.get(endpoint);
         }

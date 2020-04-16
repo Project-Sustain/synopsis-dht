@@ -23,17 +23,14 @@ public class DHTNodeStarter {
             logger.error("Path to the configuration file is missing. Exiting!");
             return;
         }
-        String configFilePath = args[0];
-        logger.info("Using the configuration: " + configFilePath);
-
+        logger.info("Using the configuration: " + args[0]);
         Context ctx = Context.getInstance();
         try {
-            ctx.initialize(configFilePath);  // set the hostname
-            // start the membership changes listener thread.
+            ctx.initialize(args[0]);
             Ring ring = new Ring();
-            new Thread(ring).start();
+            new Thread(ring).start(); // start the membership changes listener thread.
             ctx.setRing(ring);
-            ctx.setProperty(ServerConstants.HOSTNAME, Util.getHostname());
+            ctx.setProperty(ServerConstants.HOSTNAME, Util.getHostname()); // set the hostname
             logger.info("Successfully initialized node context.");
         } catch (IOException | ZKError e) {
             logger.error("Error initializing the context.", e);
@@ -43,12 +40,12 @@ public class DHTNodeStarter {
         try {
             NodeStore nodeStore = new NodeStore();
             nodeStore.init();
-            Node node = new Node(ctx.getNodeConfig().getIngestionServicePort(),
-                                 new BindableService[]{new IngestionService(new DHTIngestionRequestProcessor(nodeStore)),
-                                         new TargetedQueryService(nodeStore)});
+            Node node = new Node(ctx.getNodeConfig().getIngestionServicePort(), new BindableService[]{
+                    new IngestionService(new DHTIngestionRequestProcessor(nodeStore)),
+                    new TargetedQueryService(nodeStore)});
             node.start(true);
         } catch (StorageException e) {
             logger.error("Error initializing the NodeStore.", e);
-            }
+        }
     }
 }

@@ -1,6 +1,7 @@
 package sustain.synopsis.proxy.ingestion;
 
 import com.google.protobuf.Message;
+import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,7 +40,10 @@ public class ResponseContainer<T extends Message> {
         IntStream.range(0, mergeParallelism).forEach(i -> this.baseResponses.add(new ThreadSafeResponseBase()));
     }
 
-    public boolean add(T resp) {
+    public boolean handleResponse(@NullableDecl T resp) {
+        if (resp == null) {
+            return false;
+        }
         ThreadSafeResponseBase base = baseResponses.get(remainingResponseCount.get() % mergeParallelism);
         base.merge(resp);
         return remainingResponseCount.decrementAndGet() == 0;

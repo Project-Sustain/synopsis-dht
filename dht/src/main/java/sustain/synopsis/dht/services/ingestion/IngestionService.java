@@ -15,6 +15,10 @@ public class IngestionService extends IngestionServiceGrpc.IngestionServiceImplB
         dispatcher.process(request).thenAccept(resp -> {
             responseObserver.onNext(resp);
             responseObserver.onCompleted();
+        }).exceptionally(err -> {
+            responseObserver.onError(err);
+            responseObserver.onCompleted();
+            return null;
         });
     }
 
@@ -24,6 +28,10 @@ public class IngestionService extends IngestionServiceGrpc.IngestionServiceImplB
         dispatcher.process(request).thenAccept(response -> {
             responseObserver.onNext(response);
             responseObserver.onCompleted();
+        }).exceptionally(err -> {
+            responseObserver.onError(err);
+            responseObserver.onCompleted();
+            return null;
         });
     }
 }

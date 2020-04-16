@@ -5,13 +5,14 @@ plugins {
 configurations {
     sustainDht
     sustainIngestionClient
+    sustainDhtProxy
 }
 
 dependencies {
     sustainDht project(':dht')
     sustainIngestionClient project(':client')
     sustainIngestionClient project(':samples')
-
+    sustainDhtProxy project(':proxy')
 }
 
 distributions {
@@ -38,6 +39,24 @@ distributions {
         contents {
             into('lib') {
                 from(project.configurations.sustainIngestionClient)
+            }
+            into('bin') {
+                from('../bin/')
+            }
+            into('conf') {
+                from('../conf/')
+            }
+            into('lib') {
+                from('../log4j.properties')
+            }
+        }
+    }
+
+    sustainDhtProxy {
+        distributionBaseName = 'synopsis-proxy'
+        contents {
+            into('lib') {
+                from(project.configurations.sustainDhtProxy)
             }
             into('bin') {
                 from('../bin/')

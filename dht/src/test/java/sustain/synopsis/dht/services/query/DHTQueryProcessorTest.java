@@ -6,9 +6,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import sustain.synopsis.dht.services.query.QueryException;
-import sustain.synopsis.dht.services.query.QueryScheduler;
-import sustain.synopsis.dht.services.query.ReaderTask;
 import sustain.synopsis.dht.store.entity.EntityStore;
 import sustain.synopsis.dht.store.node.NodeStore;
 import sustain.synopsis.dht.store.services.TargetQueryRequest;
@@ -21,9 +18,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 
-public class QuerySchedulerTest {
+public class DHTQueryProcessorTest {
     @Mock
-    ExecutorService executorService;
+    ExecutorService executorServiceMock;
 
     @Mock
     NodeStore nodeStore;
@@ -35,29 +32,38 @@ public class QuerySchedulerTest {
     EntityStore entityStoreMock2;
 
     @Mock
+    EntityStore entityStoreMock3;
+
+    @Mock
     StreamObserver<TargetQueryResponse> responseObserverMock;
 
     @Test
-    void testSchedulerWithNoMatchingEntityStores() throws QueryException, ExecutionException, InterruptedException {
+    void testSchedulerWithNoMatchingEntityStores() throws ExecutionException, InterruptedException {
         MockitoAnnotations.initMocks(this);
         TargetQueryRequest request = TargetQueryRequest.newBuilder().build();
         Mockito.when(nodeStore.getMatchingEntityStores(request)).thenReturn(Collections.emptySet());
-        QueryScheduler scheduler = new QueryScheduler(nodeStore, executorService);
-        CompletableFuture<Boolean> future = scheduler.schedule(request, responseObserverMock, 1);
+        DHTQueryProcessor scheduler = new DHTQueryProcessor(nodeStore, executorServiceMock, 2);
+        CompletableFuture<Boolean> future = scheduler.process(request, responseObserverMock);
         // there should not be any reader tasks created
-        Mockito.verify(executorService, Mockito.never()).submit(Mockito.any(ReaderTask.class));
+        Mockito.verify(executorServiceMock, Mockito.never()).submit(Mockito.any(ReaderTask.class));
         Assertions.assertTrue(future.get());
     }
 
     @Test
-    void testScheduleReaderCount() throws QueryException, ExecutionException, InterruptedException {
+    void testScheduleReaderCount() {
         MockitoAnnotations.initMocks(this);
         TargetQueryRequest request = TargetQueryRequest.newBuilder().build();
+        // when the number of matching entities is less than the number of cores
         Mockito.when(nodeStore.getMatchingEntityStores(request))
-               .thenReturn(new HashSet<>(Arrays.asList(entityStoreMock1, entityStoreMock2)));
-        QueryScheduler scheduler = new QueryScheduler(nodeStore, executorService);
-        scheduler.schedule(request, responseObserverMock, 2);
-        // there should not be any reader tasks created
-        Mockito.verify(executorService, Mockito.times(2)).submit(Mockito.any(ReaderTask.class));
+               .thenReturn(new HashSet<>(Collections.singletonList(entityStoreMock1)));
+        DHTQueryProcessor scheduler = new DHTQueryProcessor(nodeStore, executorServiceMock, 2);
+        scheduler.process(request, responseObserverMock);
+        Mockito.verify(executorServiceMock, Mockito.times(1)).submit(Mockito.any(ReaderTask.class));
+
+        Mockito.when(nodeStore.getMatchingEntityStores(request))
+               .thenReturn(new HashSet<>(Arrays.asList(entityStoreMock1, entityStoreMock2, entityStoreMock3)));
+        Mockito.reset(executorServiceMock);
+        scheduler.process(request, responseObserverMock);
+        Mockito.verify(executorServiceMock, Mockito.times(2)).submit(Mockito.any(ReaderTask.class));
     }
 }

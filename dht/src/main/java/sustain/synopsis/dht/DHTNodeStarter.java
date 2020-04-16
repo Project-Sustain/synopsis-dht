@@ -4,6 +4,7 @@ import io.grpc.BindableService;
 import org.apache.log4j.Logger;
 import sustain.synopsis.dht.services.ingestion.DHTIngestionRequestProcessor;
 import sustain.synopsis.dht.services.ingestion.IngestionService;
+import sustain.synopsis.dht.services.query.DHTQueryProcessor;
 import sustain.synopsis.dht.services.query.TargetedQueryService;
 import sustain.synopsis.dht.store.StorageException;
 import sustain.synopsis.dht.store.node.NodeStore;
@@ -42,7 +43,7 @@ public class DHTNodeStarter {
             nodeStore.init();
             Node node = new Node(ctx.getNodeConfig().getIngestionServicePort(), new BindableService[]{
                     new IngestionService(new DHTIngestionRequestProcessor(nodeStore)),
-                    new TargetedQueryService(nodeStore)});
+                    new TargetedQueryService(new DHTQueryProcessor(nodeStore))});
             node.start(true);
         } catch (StorageException e) {
             logger.error("Error initializing the NodeStore.", e);

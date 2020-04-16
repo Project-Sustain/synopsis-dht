@@ -10,6 +10,7 @@ import sustain.synopsis.dht.zk.MembershipTracker;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -45,6 +46,13 @@ public class RingTest {
         ring.updateRing(entities);
 
         Assertions.assertEquals(5, ring.getSize());
+        List<String> expectedEndpointList =
+                Arrays.asList("localhost:200", "localhost:300", "localhost:600", "localhost:900", "localhost:1100");
+        List<String> returnedEndpointList = ring.getAllNodeAddresses();
+        Collections.sort(expectedEndpointList);
+        Collections.sort(returnedEndpointList);
+        Assertions.assertEquals(expectedEndpointList, returnedEndpointList);
+
         Assertions.assertEquals(ring.lookup("0"), "localhost:1100");
         Assertions.assertEquals(ring.lookup("100"), "localhost:1100");
         Assertions.assertEquals(ring.lookup("150"), "localhost:200");

@@ -83,6 +83,15 @@ public class Ring implements Runnable, MembershipListener {
         return lookup(ringIdMapper.getIdentifier(key));
     }
 
+    public List<String> getAllNodeAddresses() {
+        try {
+            lock.readLock().lock();
+            return ring.values().stream().map(entity -> entity.addr).collect(Collectors.toList());
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
     private String lookup(BigInteger identifier) {
         try {
             lock.readLock().lock();

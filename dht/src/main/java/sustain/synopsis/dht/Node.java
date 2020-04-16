@@ -48,11 +48,6 @@ public class Node {
                     return;
                 }
             }
-            // start the membership changes listener thread.
-            Ring ring = new Ring();
-            new Thread(ring).start();
-            Context ctx = Context.getInstance();
-            ctx.setRing(ring);
             Runtime.getRuntime().addShutdownHook(new Thread() {
                 @Override
                 public void run() {
@@ -71,8 +66,6 @@ public class Node {
             logger.error("Error starting the node. ", e);
         } catch (IOException e) {
             logger.error("Error starting the gRPC services.", e);
-        } catch (ZKError zkError) {
-            logger.error("Error initializing the ring with zk client.", zkError);
         }
     }
 

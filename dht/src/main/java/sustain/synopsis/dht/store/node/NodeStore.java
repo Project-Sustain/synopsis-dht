@@ -5,19 +5,15 @@ import org.apache.commons.collections4.trie.PatriciaTrie;
 import sustain.synopsis.dht.Context;
 import sustain.synopsis.dht.Util;
 import sustain.synopsis.dht.journal.Logger;
+import sustain.synopsis.dht.services.ingestion.WriterPool;
 import sustain.synopsis.dht.store.*;
 import sustain.synopsis.dht.store.entity.EntityStore;
-import sustain.synopsis.dht.services.query.QueryException;
 import sustain.synopsis.dht.store.services.Predicate;
 import sustain.synopsis.dht.store.services.TargetQueryRequest;
-import sustain.synopsis.dht.services.ingestion.WriterPool;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -129,14 +125,15 @@ public class NodeStore {
     }
 
     /**
-     * Store the given key and value in the appropriate entity store. Session is validated before performing
-     * the storage operation.
-     * @param datasetId Dataset identifier
-     * @param entityId Entity identifier
-     * @param sessionId Session Id
-     * @param storageKey Key for the storage object
+     * Store the given key and value in the appropriate entity store. Session is validated before performing the storage
+     * operation.
+     *
+     * @param datasetId    Dataset identifier
+     * @param entityId     Entity identifier
+     * @param sessionId    Session Id
+     * @param storageKey   Key for the storage object
      * @param storageValue Value for the storage object
-     * @throws IOException Error when storing strands on disk
+     * @throws IOException      Error when storing strands on disk
      * @throws StorageException Error during serialization
      */
     public void store(String datasetId, String entityId, long sessionId, StrandStorageKey storageKey,
@@ -272,12 +269,12 @@ public class NodeStore {
      * @param queryRequest Query request
      * @return List of matching entity stores
      */
-    public Set<EntityStore> getMatchingEntityStores(TargetQueryRequest queryRequest) throws QueryException {
+    public Set<EntityStore> getMatchingEntityStores(TargetQueryRequest queryRequest) {
         try {
             lock.readLock().lock();
             String dataset = queryRequest.getDataset();
             if (!entityStoreMap.containsKey(dataset)) {
-                throw new QueryException("Non existing dataset: " + dataset);
+                return new HashSet<>();
             }
             Trie<String, EntityStore> entityStores = entityStoreMap.get(dataset);
             List<Predicate> spatialPredicates = queryRequest.getSpatialScopeList();

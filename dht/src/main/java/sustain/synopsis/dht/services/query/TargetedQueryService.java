@@ -19,14 +19,14 @@ public class TargetedQueryService extends TargetedQueryServiceGrpc.TargetedQuery
 
     @Override
     public void query(TargetQueryRequest request, StreamObserver<TargetQueryResponse> responseObserver) {
-        try {
-            CompletableFuture<Boolean> future =
-                    coordinator.schedule(request, responseObserver, Runtime.getRuntime().availableProcessors());
-            future.thenAccept(status -> {
-                responseObserver.onCompleted();
-            });
-        } catch (QueryException e) { // todo: handle the error
-            e.printStackTrace();
-        }
+        CompletableFuture<Boolean> future =
+                coordinator.schedule(request, responseObserver, Runtime.getRuntime().availableProcessors());
+        future.thenAccept(status -> {
+            responseObserver.onCompleted();
+        }).exceptionally(err -> {
+            responseObserver.onError(err);
+            responseObserver.onCompleted();
+            return null;
+        });
     }
 }

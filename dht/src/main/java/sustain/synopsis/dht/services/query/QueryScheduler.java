@@ -25,8 +25,7 @@ public class QueryScheduler {
     }
 
     public CompletableFuture<Boolean> schedule(TargetQueryRequest queryRequest,
-                                               StreamObserver<TargetQueryResponse> responseObserver, int readerCount)
-            throws QueryException {
+                                               StreamObserver<TargetQueryResponse> responseObserver, int readerCount) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         Set<EntityStore> matchingEntityStores = nodeStore.getMatchingEntityStores(queryRequest);
         if (logger.isDebugEnabled()) {

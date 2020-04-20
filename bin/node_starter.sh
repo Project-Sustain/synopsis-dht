@@ -1,5 +1,13 @@
 #!/bin/bash
 
+if [[ $1 == "proxy" ]]; then
+  MAIN_CLASS=sustain.synopsis.proxy.ProxyStarter
+  echo 'Starting a DHT node'
+else
+  MAIN_CLASS=sustain.synopsis.dht.DHTNodeStarter
+  echo 'Starting a proxy node'
+fi
+
 total_m=$(awk '/MemTotal/{print $2}' /proc/meminfo | xargs -I {} echo "scale=4; {}/1024^2" | bc)
 heap_m=$(echo "$total_m * 0.75" | bc -l)
 xmx=$(( ${heap_m%.*} + 1))
@@ -36,7 +44,8 @@ log4j_conf_file='file:'${SST_HOME}'/lib/log4j.properties'
 # append it to java opts
 java_opts=${java_opts}' -Dlog4j.configuration='${log4j_conf_file}
 
+
 java \
     ${java_opts} \
     -cp ${SST_CLASSPATH} \
-    sustain.synopsis.dht.DHTNodeStarter ${SST_HOME}/conf/dht-node-config.yaml
+    ${MAIN_CLASS} ${SST_HOME}/conf/dht-node-config.yaml

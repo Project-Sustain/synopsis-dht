@@ -1,6 +1,11 @@
 #!/bin/bash
 
-java_opts="-Xmx4096m"
+total_m=$(awk '/MemTotal/{print $2}' /proc/meminfo | xargs -I {} echo "scale=4; {}/1024^2" | bc)
+heap_m=$(echo "$total_m * 0.75" | bc -l)
+xmx=$(( ${heap_m%.*} + 1))
+
+java_opts="-Xmx"${xmx}"g"
+echo 'Allocated Heap: '$xmx'g, Total: '$total_m'g'
 
 if [[ ! -d "../lib/" ]]; then
   echo "Could not locate Sustain jars. Exiting!"
@@ -8,8 +13,8 @@ if [[ ! -d "../lib/" ]]; then
 fi
 
 PRG="$0"
-PRGDIR=`dirname "$PRG"`
-SST_HOME=`cd "$PRGDIR/.." ; pwd`
+PRGDIR=$(dirname "$PRG")
+SST_HOME=$(cd "$PRGDIR/.." || exit ; pwd)
 
 echo 'Sustain Home: '${SST_HOME}
 

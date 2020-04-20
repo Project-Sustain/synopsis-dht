@@ -133,7 +133,7 @@ public class ProxyIngestionRequestProcessor implements IngestionRequestProcessor
         Map<String, IngestionRequest.Builder> splitBuilders = new HashMap<>();
         request.getStrandList().forEach(s -> {
             // look up the primary data holder
-            String targetNode = ring.lookup(getKey(s));
+            String targetNode = ring.lookup(getKey(request.getDatasetId(), s));
             IngestionRequest.Builder builder;
             if (!splitBuilders.containsKey(targetNode)) {
                 builder = IngestionRequest.newBuilder();
@@ -149,8 +149,9 @@ public class ProxyIngestionRequestProcessor implements IngestionRequestProcessor
                             .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().build()));
     }
 
-    String getKey(Strand strand) {
-        return strand.getEntityId() + ":" + CommonUtil.epochToLocalDateTime(strand.getFromTs()).getMonthValue();
+    String getKey(String datasetId, Strand strand) {
+        return datasetId + ":" + strand.getEntityId() + ":" + CommonUtil
+                .epochToLocalDateTime(strand.getFromTs()).getMonthValue();
     }
 
     private IngestionServiceGrpc.IngestionServiceFutureStub getStub(String endpoint) {

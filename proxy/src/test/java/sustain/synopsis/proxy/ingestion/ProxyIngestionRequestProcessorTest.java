@@ -124,7 +124,7 @@ public class ProxyIngestionRequestProcessorTest {
         LocalDateTime ts = LocalDateTime.of(2020, 4, 15, 0, 7, 45);
         ProxyIngestionRequestProcessor proxyIngestionRequestProcessor = new ProxyIngestionRequestProcessor();
         Strand strand = Strand.newBuilder().setEntityId("9xji").setFromTs(CommonUtil.localDateTimeToEpoch(ts)).build();
-        Assertions.assertEquals("9xji:4", proxyIngestionRequestProcessor.getKey(strand));
+        Assertions.assertEquals("dataset_1:9xji:4", proxyIngestionRequestProcessor.getKey("dataset_1", strand));
     }
 
     @Test
@@ -169,7 +169,7 @@ public class ProxyIngestionRequestProcessorTest {
     }
 
 
-    void testGetStub(){
+    void testGetStub() {
 
     }
 }

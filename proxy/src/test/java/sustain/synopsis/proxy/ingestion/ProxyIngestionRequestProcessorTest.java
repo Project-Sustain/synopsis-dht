@@ -141,10 +141,10 @@ public class ProxyIngestionRequestProcessorTest {
         IngestionRequest request = builder.build();
 
         // partition 1
-        Mockito.when(ringMock.lookup("9xh:4")).thenReturn("host1:9000");
-        Mockito.when(ringMock.lookup("9xi:4")).thenReturn("host1:9000");
+        Mockito.when(ringMock.lookup("dataset:9xh:4")).thenReturn("host1:9000");
+        Mockito.when(ringMock.lookup("dataset:9xi:4")).thenReturn("host1:9000");
         // partition 2
-        Mockito.when(ringMock.lookup("9xj:4")).thenReturn("host2:9000");
+        Mockito.when(ringMock.lookup("dataset:9xj:4")).thenReturn("host2:9000");
 
         ProxyIngestionRequestProcessor proxyIngestionRequestProcessor = new ProxyIngestionRequestProcessor(ringMock);
         Map<String, IngestionRequest> splits = proxyIngestionRequestProcessor.split(request);

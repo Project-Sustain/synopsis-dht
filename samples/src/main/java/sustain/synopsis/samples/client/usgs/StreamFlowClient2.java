@@ -114,6 +114,7 @@ public class StreamFlowClient2 {
         streamFlowFileParser.initWithSchemaAndHandler(sessionSchema, handler);
 
         for (RemoteFile rf : remoteFiles) {
+            System.out.println("parsing file with id: "+rf.id);
             streamFlowFileParser.parse(rf.getInputStream());
         }
 

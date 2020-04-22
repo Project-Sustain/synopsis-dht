@@ -17,20 +17,33 @@ public class ConsoleStrandPublisher implements StrandPublisher {
 
     private final Logger logger = Logger.getLogger(ConsoleStrandPublisher.class);
 
+    long totalPublished = 0;
+
     @Override
     public void publish(Iterable<Strand> strands) {
-        for(Strand strand : strands) {
-            logger.info("Published strand. Geohash: " + strand.getGeohash() +
-                    ", from: " + TemporalQuantizer.epochToLocalDateTime(strand.getFromTimeStamp()) +
-                    ", to: " + TemporalQuantizer.epochToLocalDateTime(strand.getToTimestamp()));
-            StringBuilder stringBuilder = new StringBuilder();
-            Path path = strand.getPath();
-            for(Vertex v : path){
-                stringBuilder.append(v.getLabel().getName() + "=" + v.getLabel().getDouble()).append(",");
-            }
-            DataContainer container = path.get(path.size()-1).getData();
-            stringBuilder.append("count=").append(container.statistics.count());
-            logger.info("Path: " + stringBuilder.toString());
+//        for(Strand strand : strands) {
+//            logger.info("Published strand. Geohash: " + strand.getGeohash() +
+//                    ", from: " + TemporalQuantizer.epochToLocalDateTime(strand.getFromTimeStamp()) +
+//                    ", to: " + TemporalQuantizer.epochToLocalDateTime(strand.getToTimestamp()));
+//            StringBuilder stringBuilder = new StringBuilder();
+//            Path path = strand.getPath();
+//            for(Vertex v : path){
+//                stringBuilder.append(v.getLabel().getName() + "=" + v.getLabel().getDouble()).append(",");
+//            }
+//            DataContainer container = path.get(path.size()-1).getData();
+//            stringBuilder.append("count=").append(container.statistics.count());
+//            logger.info("Path: " + stringBuilder.toString());
+//        }
+        int count = 0;
+        for (Strand s : strands) {
+            count++;
         }
+        totalPublished += count;
+        logger.info("Published "+count+" strands");
+    }
+
+    @Override
+    public long getTotalStrandsPublished() {
+        return totalPublished;
     }
 }

@@ -7,6 +7,7 @@ import sustain.fileshare.FileshareServiceGrpc;
 import sustain.fileshare.FileshareServiceGrpc.FileshareServiceBlockingStub;
 import sustain.fileshare.FileshareServiceOuterClass;
 import sustain.synopsis.ingestion.client.core.*;
+import sustain.synopsis.ingestion.client.publishing.ConsoleStrandPublisher;
 import sustain.synopsis.ingestion.client.publishing.SimpleStrandPublisher;
 
 import java.io.*;
@@ -105,6 +106,8 @@ public class StreamFlowClient2 {
         SessionSchema sessionSchema = new SessionSchema(Util.quantizerMapFromFile(binConfigPath), GEOHASH_LENGTH, TEMPORAL_BRACKET_LENGTH);
 
         SimpleStrandPublisher publisher = new SimpleStrandPublisher(dhtNodeAddress, datasetId, sessionId);
+//        ConsoleStrandPublisher publisher = new ConsoleStrandPublisher();
+
         StrandRegistry strandRegistry = new StrandRegistry(publisher, 10000, 100);
 
         TemporalQuantizer temporalQuantizer = new TemporalQuantizer(TEMPORAL_BRACKET_LENGTH);

@@ -19,7 +19,17 @@ public class StreamFlowSiteDataParser {
     final static Map<String, ZoneId> timeZoneMap = new HashMap<>();
 
     static {
-        timeZoneMap.put("MST", ZoneId.of("America/Denver"));
+        timeZoneMap.put("PDT", ZoneId.of("US/Pacific-New"));
+        timeZoneMap.put("PST", ZoneId.of("US/Pacific-New"));
+
+        timeZoneMap.put("MDT", ZoneId.of("US/Mountain"));
+        timeZoneMap.put("MST", ZoneId.of("US/Mountain"));
+
+        timeZoneMap.put("CST", ZoneId.of("US/Central"));
+        timeZoneMap.put("CDT", ZoneId.of("US/Central"));
+
+        timeZoneMap.put("EST", ZoneId.of("US/Eastern"));
+        timeZoneMap.put("EDT", ZoneId.of("US/Eastern"));
     }
 
     Map<String, Integer> headerMap;

@@ -9,36 +9,25 @@ import java.io.*;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
 
-public class StreamFlowFileParser implements FileParser {
+public class StreamFlowParser {
 
     private SessionSchema schema;
     RecordCallbackHandler recordCallbackHandler;
     final Map<String, StationParser.Location> stationMap;
 
-    public StreamFlowFileParser(Map<String, StationParser.Location> stationMap) {
+    public StreamFlowParser(Map<String, StationParser.Location> stationMap) {
         this.stationMap = stationMap;
     }
 
-    @Override
     public void initWithSchemaAndHandler(SessionSchema schema, RecordCallbackHandler handler) {
         this.schema = schema;
         this.recordCallbackHandler = handler;
     }
 
-    @Override
-    public void parse(File file) {
-        try {
-            BufferedReader br;
-            if (file.getName().endsWith(".gz")) {
-                GZIPInputStream gzipInputStream = new GZIPInputStream(new FileInputStream(file));
-                br = new BufferedReader(new InputStreamReader(gzipInputStream));
-            } else {
-                br = new BufferedReader(new FileReader(file));
-            }
+    public void parse(InputStream is) {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new GZIPInputStream(is)))) {
 
             parseHeader(br);
-
-
             StreamFlowSiteDataParser siteDataParser;
             while((siteDataParser = getSiteParser(br)) != null) {
                 if (!siteDataParser.parseSiteData(br)) {
@@ -46,8 +35,6 @@ public class StreamFlowFileParser implements FileParser {
                 }
             }
 
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }

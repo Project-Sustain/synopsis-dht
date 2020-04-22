@@ -5,6 +5,7 @@ import sustain.synopsis.ingestion.client.core.*;
 import sustain.synopsis.ingestion.client.publishing.SimpleStrandPublisher;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -112,11 +113,11 @@ public class StreamFlowClient {
         TemporalQuantizer temporalQuantizer = new TemporalQuantizer(TEMPORAL_BRACKET_LENGTH);
         StreamFlowRecordCallbackHandler handler = new StreamFlowRecordCallbackHandler(strandRegistry, sessionSchema, temporalQuantizer);
 
-        StreamFlowFileParser streamFlowFileParser = new StreamFlowFileParser(stationMap);
+        StreamFlowParser streamFlowFileParser = new StreamFlowParser(stationMap);
         streamFlowFileParser.initWithSchemaAndHandler(sessionSchema, handler);
 
         for (File f : inputFiles) {
-            streamFlowFileParser.parse(f);
+            streamFlowFileParser.parse(new FileInputStream(f));
         }
 
         strandRegistry.terminateSession();

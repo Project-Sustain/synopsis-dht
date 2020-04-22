@@ -5,6 +5,7 @@ import sustain.synopsis.ingestion.client.core.*;
 import sustain.synopsis.sketch.dataset.Quantizer;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.text.ParseException;
 import java.time.Duration;
@@ -49,11 +50,11 @@ public class StreamFlowBinCalculator {
         }
 
         MyRecordCallbackHandler handler = new MyRecordCallbackHandler(features, proportion);
-        StreamFlowFileParser fileParser = new StreamFlowFileParser(StationParser.parseFile(stationsFile));
+        StreamFlowParser fileParser = new StreamFlowParser(StationParser.parseFile(stationsFile));
         fileParser.initWithSchemaAndHandler(new SessionSchema(quantizerMap, GEOHASH_LENGTH, TEMPORAL_BUCKET_LENGTH), handler);
 
         for (int i = 0; i < inputFiles.size(); i += daysToSkip) {
-            fileParser.parse(inputFiles.get(i));
+            fileParser.parse(new FileInputStream(inputFiles.get(i)));
         }
 
         List<Record> records = handler.getRecords();

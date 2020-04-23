@@ -24,7 +24,6 @@ import java.util.regex.Pattern;
 public class StreamFlowClient2 {
 
     static Logger logger = Logger.getLogger(StreamFlowClient2.class);
-
     public static final int GEOHASH_LENGTH = 5;
     public static final Duration TEMPORAL_BRACKET_LENGTH = Duration.ofHours(6);
     public static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy_MM_dd");
@@ -130,8 +129,8 @@ public class StreamFlowClient2 {
         System.out.println("Num stations in stationLocationFile: " + stationMap.size());
         SessionSchema sessionSchema = new SessionSchema(Util.quantizerMapFromFile(binConfigPath), GEOHASH_LENGTH, TEMPORAL_BRACKET_LENGTH);
 
-//        SimpleStrandPublisher publisher = new SimpleStrandPublisher(dhtNodeAddress, datasetId, sessionId);
-        ConsoleStrandPublisher publisher = new ConsoleStrandPublisher();
+        SimpleStrandPublisher publisher = new SimpleStrandPublisher(dhtNodeAddress, datasetId, sessionId);
+//        ConsoleStrandPublisher publisher = new ConsoleStrandPublisher();
 
         StrandRegistry strandRegistry = new StrandRegistry(publisher, 10000, 100);
 
@@ -156,7 +155,7 @@ public class StreamFlowClient2 {
         System.out.println("Stations missing location data count: " + streamFlowFileParser.missingStationIds.size());
     }
 
-    private static class RemoteFile {
+    static class RemoteFile {
         final String id;
         final String host;
         final String path;

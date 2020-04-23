@@ -150,6 +150,6 @@ public class Strand {
     }
 
     public ByteString serializeAsProtoBuff() {
-        return StrandSerializationUtil.toProtoBuff(this).toByteString();
+        return CommonUtil.strandToProtoBuff(this).toByteString();
     }
 }

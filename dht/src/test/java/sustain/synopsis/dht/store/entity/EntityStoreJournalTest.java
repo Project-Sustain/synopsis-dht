@@ -27,8 +27,9 @@ public class EntityStoreJournalTest {
 
     @Test
     void testGetJournalFilePath() {
-        EntityStoreJournal metaStore = new EntityStoreJournal("entity1", "/tmp");
-        Assertions.assertEquals("/tmp" + File.separator + "entity1_metadata.slog", metaStore.getJournalFilePath());
+        EntityStoreJournal metaStore = new EntityStoreJournal("dataset1", "entity1", "/tmp");
+        Assertions.assertEquals("/tmp" + File.separator + "dataset1_entity1_metadata.slog",
+                                metaStore.getJournalFilePath());
     }
 
     @Test
@@ -37,7 +38,7 @@ public class EntityStoreJournalTest {
         metadataList.put(1000L, new ArrayList<>());
         metadataList.put(1001L, new ArrayList<>());
 
-        EntityStoreJournal metaStore = new EntityStoreJournal("", "");
+        EntityStoreJournal metaStore = new EntityStoreJournal("", "", "");
 
         // invalid session id
         SerializeSSTableActivity activity = new SerializeSSTableActivity(1002L, new Metadata<>());
@@ -71,7 +72,7 @@ public class EntityStoreJournalTest {
         Map<Long, List<Metadata<StrandStorageKey>>> sessions = new HashMap<>();
         sessions.put(1000L, new ArrayList<>());
 
-        EntityStoreJournal metaStore = new EntityStoreJournal("", "");
+        EntityStoreJournal metaStore = new EntityStoreJournal("", "", "");
         // invalid session id
         Assertions.assertFalse(metaStore.validateEndSessionActivity(sessions, new EndSessionActivity(1001L)));
         // valid session
@@ -108,7 +109,7 @@ public class EntityStoreJournalTest {
         logger.append(new IncSeqIdActivity(2).serialize());
         logger.close();
 
-        EntityStoreJournal metaStore = new EntityStoreJournal("", "");
+        EntityStoreJournal metaStore = new EntityStoreJournal("","", "");
         metaStore.parseJournal(logger.iterator());
         List<Metadata<StrandStorageKey>> metadataList = metaStore.getMetadata();
         Assertions.assertEquals(2, metadataList.size());
@@ -135,7 +136,7 @@ public class EntityStoreJournalTest {
         logger.append(new EndSessionActivity(1000L).serialize());
         logger.close();
 
-        EntityStoreJournal metaStore = new EntityStoreJournal("", "");
+        EntityStoreJournal metaStore = new EntityStoreJournal("", "", "");
         Assertions.assertThrows(JournalingException.class, () -> metaStore.parseJournal(logger.iterator()));
 
         Logger logger2 = new Logger(tempDir.getAbsolutePath() + File.separator + "test2.slog");

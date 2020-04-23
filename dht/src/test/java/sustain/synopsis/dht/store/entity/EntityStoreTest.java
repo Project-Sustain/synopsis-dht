@@ -7,9 +7,9 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import sustain.synopsis.dht.store.*;
-import sustain.synopsis.dht.store.query.Interval;
-import sustain.synopsis.dht.store.query.MatchedSSTable;
-import sustain.synopsis.dht.store.query.QueryException;
+import sustain.synopsis.dht.services.query.Interval;
+import sustain.synopsis.dht.services.query.MatchedSSTable;
+import sustain.synopsis.dht.services.query.QueryException;
 import sustain.synopsis.dht.store.services.Expression;
 import sustain.synopsis.dht.store.services.Predicate;
 import sustain.synopsis.storage.lsmtree.Metadata;
@@ -131,8 +131,8 @@ public class EntityStoreTest {
         assertEquals(0, entityStore.activeMetadata.size());
         assertEquals(0, entityStore.activeSessions.size());
 
-        // try to an invalid session
-        Assertions.assertFalse(entityStore.endSession(new IngestionSession("alice", System.currentTimeMillis(), 100)));
+        // try to an non-existing session
+        Assertions.assertTrue(entityStore.endSession(new IngestionSession("alice", System.currentTimeMillis(), 100)));
     }
 
     @Test

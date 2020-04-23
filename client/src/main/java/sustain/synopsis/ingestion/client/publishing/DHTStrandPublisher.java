@@ -24,7 +24,6 @@ public class DHTStrandPublisher implements StrandPublisher {
     final String datasetId;
     final long sessionId;
 
-    final Map<String, MyChannel> myChannelMap = new HashMap<>();
     final MyChannel defaultMyChannel;
 
     public DHTStrandPublisher(String initialAddress, String datasetId, long sessionId) {
@@ -33,31 +32,12 @@ public class DHTStrandPublisher implements StrandPublisher {
         this.defaultMyChannel = new MyChannel(initialAddress);
     }
 
-    synchronized Map<MyChannel, List<sustain.synopsis.dht.store.services.Strand>> mapStrandsToChannels(Iterable<Strand> strands) {
-        Map<MyChannel, List<sustain.synopsis.dht.store.services.Strand>> strandsForStub = new HashMap<>();
-        for (Strand s : strands) {
-            MyChannel myChannel = myChannelMap.getOrDefault(s.getGeohash(), defaultMyChannel);
-            List<sustain.synopsis.dht.store.services.Strand> strandList = strandsForStub.computeIfAbsent(myChannel, k -> new ArrayList<>());
-            strandList.add(convertStrand(s));
-        }
-        return strandsForStub;
-    }
-
-    synchronized void processNodeMappings(List<NodeMapping> mappings) {
-        for (NodeMapping mapping : mappings) {
-            String nodeAddress = mapping.getDhtNodeAddress();
-            if (!myChannelMap.containsKey(nodeAddress)) {
-                myChannelMap.put(mapping.getEntityId(), new MyChannel(nodeAddress));
-            }
-        }
-    }
 
     @Override
-    public void publish(Iterable<Strand> strands) {
-        Map<MyChannel, List<sustain.synopsis.dht.store.services.Strand>> strandsForStubMap = mapStrandsToChannels(strands);
-        for (MyChannel myChannel : strandsForStubMap.keySet()) {
-            myChannel.publish(strandsForStubMap.get(myChannel));
-        }
+    public void publish(long messageId, Iterable<Strand> strands) {
+        List<sustain.synopsis.dht.store.services.Strand> strandsList = new ArrayList<>();
+        strands.forEach(s -> strandsList.add(convertStrand(s)));
+        defaultMyChannel.publish(messageId, strandsList);
     }
 
     @Override
@@ -76,12 +56,13 @@ public class DHTStrandPublisher implements StrandPublisher {
             this.futureStub = IngestionServiceGrpc.newFutureStub(channel);
         }
 
-        void publish(List<sustain.synopsis.dht.store.services.Strand> strands) {
+        void publish(long messageId, List<sustain.synopsis.dht.store.services.Strand> strands) {
             try {
                 limiter.acquire();
                 IngestionRequest request = IngestionRequest.newBuilder()
                         .setDatasetId(datasetId)
                         .setSessionId(sessionId)
+                        .setSessionId(messageId)
                         .addAllStrand(strands)
                         .build();
 
@@ -89,7 +70,6 @@ public class DHTStrandPublisher implements StrandPublisher {
                 Futures.addCallback(responseFuture, new FutureCallback<IngestionResponse>() {
                     @Override
                     public void onSuccess(@NullableDecl IngestionResponse result) {
-                        processNodeMappings(result.getMappingList());
                         limiter.release();
                     }
 

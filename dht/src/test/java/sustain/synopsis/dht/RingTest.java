@@ -9,9 +9,7 @@ import sustain.synopsis.dht.dispersion.RingIdMapper;
 import sustain.synopsis.dht.zk.MembershipTracker;
 
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class RingTest {
     @Mock
@@ -45,6 +43,7 @@ public class RingTest {
         ring.updateRing(entities);
 
         Assertions.assertEquals(5, ring.getSize());
+
         Assertions.assertEquals(ring.lookup("0"), "localhost:1100");
         Assertions.assertEquals(ring.lookup("100"), "localhost:1100");
         Assertions.assertEquals(ring.lookup("150"), "localhost:200");
@@ -60,6 +59,25 @@ public class RingTest {
         Assertions.assertEquals(ring.lookup("0"), "localhost:1000");
         Assertions.assertEquals(ring.lookup("1"), "localhost:1100");
         Assertions.assertEquals(ring.lookup("950"), "localhost:1000");
+    }
+
+    @Test
+    void testGetNodeList() {
+        MockitoAnnotations.initMocks(this);
+        RingIdMapper simpleDispersionScheme = key -> BigInteger.valueOf(Long.parseLong(key) % 1000);
+        Ring ring = new Ring(simpleDispersionScheme, membershipTrackerMock);
+        List<Ring.Entity> entities = new ArrayList<>();
+        entities.add(new Ring.Entity(simpleDispersionScheme.getIdentifier("200"), "localhost:200", 0));
+        entities.add(new Ring.Entity(simpleDispersionScheme.getIdentifier("300"), "localhost:200", 1));
+        entities.add(new Ring.Entity(simpleDispersionScheme.getIdentifier("600"), "localhost:300", 0));
+        entities.add(new Ring.Entity(simpleDispersionScheme.getIdentifier("900"), "localhost:300", 1));
+        entities.add(new Ring.Entity(simpleDispersionScheme.getIdentifier("1100"), "localhost:300", 2));
+        ring.updateRing(entities);
+
+        Assertions.assertEquals(5, ring.getSize());
+        Set<String> expectedEndpointSet = new HashSet<>(Arrays.asList("localhost:200", "localhost:300"));
+        Set<String> returnedEndpointSet = ring.getUniqueEndpoints();
+        Assertions.assertEquals(expectedEndpointSet, returnedEndpointSet);
     }
 
     @Test

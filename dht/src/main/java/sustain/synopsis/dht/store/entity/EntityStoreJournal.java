@@ -20,13 +20,15 @@ import java.util.stream.Collectors;
 
 public class EntityStoreJournal {
     private final String metadataRoot;
+    private final String datasetId;
     private final String entityId;
     private Logger logger = Logger.getLogger(EntityStoreJournal.class);
     private sustain.synopsis.dht.journal.Logger journal;
     private Map<Long, List<Metadata<StrandStorageKey>>> metadataMap = new HashMap<>();
     private int sequenceId = 0;
 
-    public EntityStoreJournal(String entityId, String metaStoreDir) {
+    public EntityStoreJournal(String datasetId, String entityId, String metaStoreDir) {
+        this.datasetId = datasetId;
         this.metadataRoot = metaStoreDir;
         this.entityId = entityId;
     }
@@ -165,7 +167,7 @@ public class EntityStoreJournal {
     }
 
     String getJournalFilePath() {
-        return metadataRoot + File.separator + entityId + "_metadata.slog";
+        return metadataRoot + File.separator + datasetId + "_" + entityId + "_metadata.slog";
     }
 
     public List<Metadata<StrandStorageKey>> getMetadata() {

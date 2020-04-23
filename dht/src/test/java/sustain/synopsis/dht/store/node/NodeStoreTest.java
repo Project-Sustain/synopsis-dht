@@ -12,12 +12,12 @@ import sustain.synopsis.common.Strand;
 import sustain.synopsis.dht.Context;
 import sustain.synopsis.dht.NodeConfiguration;
 import sustain.synopsis.dht.journal.Logger;
+import sustain.synopsis.dht.services.ingestion.WriterPool;
+import sustain.synopsis.dht.services.query.QueryException;
 import sustain.synopsis.dht.store.*;
 import sustain.synopsis.dht.store.entity.EntityStore;
-import sustain.synopsis.dht.store.query.QueryException;
 import sustain.synopsis.dht.store.services.Predicate;
 import sustain.synopsis.dht.store.services.TargetQueryRequest;
-import sustain.synopsis.dht.store.workers.WriterPool;
 
 import java.io.File;
 import java.io.IOException;
@@ -87,7 +87,8 @@ public class NodeStoreTest {
         assertTrue(nodeStore.entityStoreMap.get("dataset_1").containsKey("entity_1"));
         assertTrue(nodeStore.validatedSessions.containsKey(1000L));
 
-        String entityCommitLogPath = metadataStoreDir.getAbsolutePath() + File.separator + "entity_1_metadata.slog";
+        String entityCommitLogPath =
+                metadataStoreDir.getAbsolutePath() + File.separator + "dataset_1_entity_1_metadata" + ".slog";
         Mockito.verify(sessionValidatorMock, Mockito.times(1)).validate("dataset_1", 1000L);
         Mockito.verify(loggerMock, Mockito.times(1))
                .append(new CreateEntityStoreActivity("dataset_1", "entity_1").serialize());
@@ -294,7 +295,7 @@ public class NodeStoreTest {
         Predicate predicate = Predicate.newBuilder().setStringValue("8qr").build();
         TargetQueryRequest finalReq =
                 TargetQueryRequest.newBuilder().setDataset("non_existing_dataset").addSpatialScope(predicate).build();
-        Assertions.assertThrows(QueryException.class, () -> nodeStore.getMatchingEntityStores(finalReq));
+        Assertions.assertEquals(0, nodeStore.getMatchingEntityStores(finalReq).size());
     }
 
     @Test

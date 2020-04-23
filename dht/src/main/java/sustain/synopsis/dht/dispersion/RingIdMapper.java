@@ -12,5 +12,5 @@ public interface RingIdMapper {
      * @param key Key in the form of a string
      * @return Identifier in ring identifier
      */
-    public BigInteger getIdentifier(String key);
+    BigInteger getIdentifier(String key);
 }

@@ -2,10 +2,10 @@ package sustain.synopsis.dht.store.entity;
 
 import org.apache.log4j.Logger;
 import sustain.synopsis.dht.store.*;
-import sustain.synopsis.dht.store.query.Interval;
-import sustain.synopsis.dht.store.query.MatchedSSTable;
-import sustain.synopsis.dht.store.query.QueryException;
-import sustain.synopsis.dht.store.query.QueryUtil;
+import sustain.synopsis.dht.services.query.Interval;
+import sustain.synopsis.dht.services.query.MatchedSSTable;
+import sustain.synopsis.dht.services.query.QueryException;
+import sustain.synopsis.dht.services.query.QueryUtil;
 import sustain.synopsis.dht.store.services.Expression;
 import sustain.synopsis.storage.lsmtree.*;
 import sustain.synopsis.storage.lsmtree.compress.BlockCompressor;
@@ -49,7 +49,8 @@ public class EntityStore {
 
     public EntityStore(String datasetId, String entityId, String metadataDir, long memTableSize, long blockSize,
                        DiskManager diskManager) {
-        this(datasetId, entityId, new EntityStoreJournal(entityId, metadataDir), memTableSize, blockSize, diskManager);
+        this(datasetId, entityId, new EntityStoreJournal(datasetId, entityId, metadataDir), memTableSize, blockSize,
+             diskManager);
     }
 
     // used for unit testing by injecting entity store journal
@@ -155,7 +156,7 @@ public class EntityStore {
             if (logger.isDebugEnabled()) {
                 logger.debug("Unable to end the session. Invalid session id: " + session.getSessionId());
             }
-            return false;
+            return true;
         }
         MemTable<StrandStorageKey, StrandStorageValue> memTable = activeSessions.get(session);
         if (memTable.getEntryCount() > 0) {

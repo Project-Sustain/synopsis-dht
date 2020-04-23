@@ -9,6 +9,7 @@ import sustain.synopsis.dht.zk.ZKError;
 
 import java.math.BigInteger;
 import java.util.List;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
@@ -81,6 +82,15 @@ public class Ring implements Runnable, MembershipListener {
 
     public String lookup(String key) {
         return lookup(ringIdMapper.getIdentifier(key));
+    }
+
+    public Set<String> getUniqueEndpoints() {
+        try {
+            lock.readLock().lock();
+            return ring.values().stream().map(entity -> entity.addr).collect(Collectors.toSet());
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
     private String lookup(BigInteger identifier) {

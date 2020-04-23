@@ -5,6 +5,7 @@ import sustain.synopsis.common.Strand;
 import sustain.synopsis.ingestion.client.publishing.StrandPublisher;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Registry to keep track of strands at the client's end.
@@ -30,6 +31,7 @@ public class StrandRegistry {
     private final LRUCache<Strand> lruCache = new LRUCache<>();
     private final int cacheSize;
     private final int publishBatchSize;
+    private final AtomicLong messageId = new AtomicLong(0);
 
     private long totalPublishedStrandCount = 0;
 
@@ -82,7 +84,7 @@ public class StrandRegistry {
         for (Strand s : strands) {
             strandKeyMap.remove(s.getKey());
         }
-        publisher.publish(strands);
+        publisher.publish(messageId.getAndIncrement(), strands);
         totalPublishedStrandCount += strands.size();
     }
 

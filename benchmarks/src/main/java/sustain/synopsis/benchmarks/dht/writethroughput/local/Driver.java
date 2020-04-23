@@ -4,7 +4,9 @@ import com.google.protobuf.ByteString;
 import io.grpc.BindableService;
 import org.apache.log4j.Logger;
 import sustain.synopsis.dht.*;
-import sustain.synopsis.dht.services.IngestionService;
+import sustain.synopsis.dht.services.ingestion.IngestionRequestProcessor;
+import sustain.synopsis.dht.services.ingestion.DHTIngestionRequestProcessor;
+import sustain.synopsis.dht.services.ingestion.IngestionService;
 import sustain.synopsis.dht.store.StorageException;
 import sustain.synopsis.dht.store.node.NodeStore;
 import sustain.synopsis.dht.store.services.IngestionRequest;
@@ -64,7 +66,7 @@ public class Driver {
 
                 IngestionRequest request = generateIngestRequest();
 
-                CompletableFuture<IngestionResponse> future = dispatcher.dispatch(request);
+                CompletableFuture<IngestionResponse> future = dispatcher.process(request);
                 future.thenAccept(ingestionResponse -> {
                     completedReqCount.getAndAdd(ingestionResponse.getStatus() ? 1 : 0);
                 });
@@ -75,7 +77,7 @@ public class Driver {
 
     private static Logger LOGGER = Logger.getLogger(Driver.class);
 
-    private final IngestionRequestDispatcher dispatcher;
+    private final IngestionRequestProcessor dispatcher;
     private AtomicLong submittedReqCount = new AtomicLong(0);
     private AtomicLong completedReqCount = new AtomicLong(0);
     private ScheduledExecutorService statThread = Executors.newScheduledThreadPool(1);
@@ -86,7 +88,7 @@ public class Driver {
     private Driver() throws StorageException {
         NodeStore nodeStore = new NodeStore();
         nodeStore.init();
-        dispatcher = new IngestionRequestDispatcher(nodeStore);
+        dispatcher = new DHTIngestionRequestProcessor(nodeStore);
         // a thread that reports the write throughout over time
         statThread.scheduleAtFixedRate(() -> {
             if (lastReportedTS == -1 && lastReportedCount == -1) {
@@ -113,7 +115,7 @@ public class Driver {
             int port = Context.getInstance().getNodeConfig().getIngestionServicePort();
             BindableService[] services = new BindableService[]{new IngestionService(dispatcher)};
             Node node = new Node(port, services);
-            node.start(latch);
+            node.start(true);
         });
         serverT.start();
         try {

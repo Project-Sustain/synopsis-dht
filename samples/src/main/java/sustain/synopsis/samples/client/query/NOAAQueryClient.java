@@ -2,9 +2,9 @@ package sustain.synopsis.samples.client.query;
 
 import io.grpc.Channel;
 import io.grpc.ManagedChannelBuilder;
+import sustain.synopsis.common.CommonUtil;
 import sustain.synopsis.common.ProtoBuffSerializedStrand;
 import sustain.synopsis.dht.store.services.*;
-import sustain.synopsis.ingestion.client.core.TemporalQuantizer;
 
 import java.time.LocalDateTime;
 import java.time.Month;
@@ -24,19 +24,18 @@ public class NOAAQueryClient {
         Predicate fromPredicate =
                 Predicate.newBuilder().setComparisonOp(Predicate.ComparisonOperator.GREATER_THAN_OR_EQUAL)
                          .setIntegerValue(
-                                 TemporalQuantizer.localDateTimeToEpoch(LocalDateTime.of(2015, Month.JANUARY, 1, 0, 0)))
+                                 CommonUtil.localDateTimeToEpoch(LocalDateTime.of(2015, Month.JANUARY, 1, 0, 0)))
                          .build();
         // t < 12:00 Jan 03, 2015
         Predicate toPredicate = Predicate.newBuilder().setComparisonOp(Predicate.ComparisonOperator.LESS_THAN)
-                                         .setIntegerValue(TemporalQuantizer.localDateTimeToEpoch(
-                                                 LocalDateTime.of(2015, Month.JANUARY, 3, 12, 0))).build();
+                                         .setIntegerValue(CommonUtil.localDateTimeToEpoch(
+                                                 LocalDateTime.of(2015, Month.JANUARY, 31, 23, 59))).build();
         // combine both predicates such that 00:00 Jan 01, 2015 =< t < 12:00 Jan 03, 2015
         Expression temporalExp =
                 Expression.newBuilder().setPredicate1(fromPredicate).setCombineOp(Expression.CombineOperator.AND)
                           .setPredicate2(toPredicate).build();
 
-        //String[] geohashPrefixes = new String[]{"9y8b9", "9y8b", "9y8", "9y", "9"};
-        String[] geohashPrefixes = new String[]{"9y8b9"};
+        String[] geohashPrefixes = new String[]{"9y8b9", "9y8b", "9y8", "9y", "9"};
 
         // run queries for each of the geohashes
         for (String geohash : geohashPrefixes) {
@@ -59,7 +58,6 @@ public class NOAAQueryClient {
                     /* Only need to access data container values if the
                      observation count is > 1. Otherwise you can use the feature list.*/
                     if (strand.getObservationCount() > 1) {
-                        System.out.println("Mean values: " + strand.getMeanList());
                         System.out.println("Min values: " + strand.getMinList());
                         System.out.println("Max values: " + strand.getMaxList());
                         System.out.println("M2 values: " + strand.getM2List());

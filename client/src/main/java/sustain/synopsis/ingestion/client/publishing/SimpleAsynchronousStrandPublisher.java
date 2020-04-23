@@ -68,8 +68,9 @@ public class SimpleAsynchronousStrandPublisher implements StrandPublisher {
     }
 
     @Override
-    public void publish(Iterable<Strand> strands) {
+    public void publish(long messageId, Iterable<Strand> strands) {
         IngestionRequest request = IngestionRequest.newBuilder()
+                .setMessageId(messageId)
                 .setDatasetId(datasetId)
                 .setSessionId(sessionId)
                 .addAllStrand(getConvertedStrandList(strands))

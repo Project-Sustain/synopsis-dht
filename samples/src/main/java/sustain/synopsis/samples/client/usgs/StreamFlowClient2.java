@@ -28,10 +28,8 @@ public class StreamFlowClient2 {
     public static final Duration TEMPORAL_BRACKET_LENGTH = Duration.ofHours(6);
     public static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy_MM_dd");
 
-
     static int fileshareServicePort = 44044;
     static Map<String, FileshareServiceBlockingStub> stubMap = new HashMap<>();
-
 
     static String state;
     static LocalDate beginDate;

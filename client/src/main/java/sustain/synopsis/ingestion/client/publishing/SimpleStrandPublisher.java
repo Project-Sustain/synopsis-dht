@@ -9,9 +9,11 @@ import sustain.synopsis.dht.store.services.IngestionServiceGrpc.IngestionService
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import org.apache.log4j.Logger;
 
 public class SimpleStrandPublisher implements StrandPublisher {
 
+    Logger logger = Logger.getLogger(SimpleStrandPublisher.class);
     private final String datasetId;
     private final long sessionId;
 
@@ -52,6 +54,7 @@ public class SimpleStrandPublisher implements StrandPublisher {
                 .build();
 
         IngestionResponse response = stub.ingest(request);
+        logger.info("published "+convertedStrandList.size()+" strands with status "+response.getStatus());
     }
 
     @Override

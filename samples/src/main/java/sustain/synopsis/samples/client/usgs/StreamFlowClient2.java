@@ -3,6 +3,7 @@ package sustain.synopsis.samples.client.usgs;
 import com.opencsv.exceptions.CsvValidationException;
 import io.grpc.Channel;
 import io.grpc.ManagedChannelBuilder;
+import org.apache.log4j.Logger;
 import sustain.fileshare.FileshareServiceGrpc;
 import sustain.fileshare.FileshareServiceGrpc.FileshareServiceBlockingStub;
 import sustain.fileshare.FileshareServiceOuterClass;
@@ -21,6 +22,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class StreamFlowClient2 {
+
+    static Logger logger = Logger.getLogger(StreamFlowClient2.class);
 
     public static final int GEOHASH_LENGTH = 5;
     public static final Duration TEMPORAL_BRACKET_LENGTH = Duration.ofHours(6);
@@ -139,7 +142,7 @@ public class StreamFlowClient2 {
         streamFlowFileParser.initWithSchemaAndHandler(sessionSchema, handler);
 
         for (RemoteFile rf : remoteFiles) {
-            System.out.println("parsing file with id: "+rf.id);
+            logger.info("parsing file with id: "+rf.id);
             streamFlowFileParser.parse(rf.getInputStream());
         }
 
@@ -171,6 +174,7 @@ public class StreamFlowClient2 {
         public InputStream getInputStream() {
             FileshareServiceBlockingStub stubForHost = getStubForHost(host);
             FileshareServiceOuterClass.FileResponse fileResponse = stubForHost.requestFile(FileshareServiceOuterClass.FileRequest.newBuilder().setPath(path).build());
+            logger.info("file response has data of size: "+fileResponse.getData().size());
             return fileResponse.getData().newInput();
         }
 

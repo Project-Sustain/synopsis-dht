@@ -34,8 +34,8 @@ public class StreamFlowBinCalculator2 {
         StreamFlowClient2.endDate = LocalDate.parse(args[4], StreamFlowClient2.dateFormatter);
 
         // proportion of records to be included
-        int daysToSkip = Integer.parseInt((args[4]));
-        double proportion = Double.parseDouble(args[5]);
+        int daysToSkip = Integer.parseInt((args[5]));
+        double proportion = Double.parseDouble(args[6]);
 
         List<StreamFlowClient2.RemoteFile> remoteFiles = parseBackupDirectoryForMatchingFilePaths(backupDir);
         remoteFiles.sort(Comparator.comparing(StreamFlowClient2.RemoteFile::getId));

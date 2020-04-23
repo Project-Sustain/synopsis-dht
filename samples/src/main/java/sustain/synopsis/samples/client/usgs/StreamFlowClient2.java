@@ -14,6 +14,8 @@ import java.io.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -22,9 +24,17 @@ public class StreamFlowClient2 {
 
     public static final int GEOHASH_LENGTH = 5;
     public static final Duration TEMPORAL_BRACKET_LENGTH = Duration.ofHours(6);
+    public static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy_MM_dd");
+
 
     static int fileshareServicePort = 44044;
     static Map<String, FileshareServiceBlockingStub> stubMap = new HashMap<>();
+
+
+    static String state;
+    static LocalDate beginDate;
+    static LocalDate endDate;
+
 
     static FileshareServiceBlockingStub createStubForHost(String host) {
         Channel channel = ManagedChannelBuilder
@@ -54,12 +64,22 @@ public class StreamFlowClient2 {
     // 2016_01_01
     // 2020_01_01
 
-    public static void addMatchingPaths(File f, String state, List<RemoteFile> listOut) {
+    public static void addMatchingPaths(File f, List<RemoteFile> listOut) {
         try (BufferedReader br = new BufferedReader(new FileReader(f))) {
             String line;
             while ((line = br.readLine()) != null) {
-                if (line.startsWith(state)) {
-                    String[] parts = line.split("[: ]");
+
+                String[] parts = line.split("[: ]");
+
+                LocalDate partBeginDate = LocalDate.parse(line.substring(3,13), dateFormatter);
+                LocalDate partEndDate = LocalDate.parse(line.substring(14, 24), dateFormatter);
+
+                boolean matches = line.startsWith(state)
+                        && partBeginDate.compareTo(endDate) < 0
+                        && partEndDate.compareTo(beginDate) > 0
+                        && partEndDate.compareTo(endDate) <= 0;
+
+                if (matches) {
                     listOut.add(new RemoteFile(parts[0], parts[1], parts[2]));
                 }
             }
@@ -69,10 +89,10 @@ public class StreamFlowClient2 {
         }
     }
 
-    public static List<RemoteFile> parseBackupDirectoryForMatchingFilePaths(File backupDir, String state) {
+    public static List<RemoteFile> parseBackupDirectoryForMatchingFilePaths(File backupDir) {
         List<RemoteFile> list = new ArrayList<>();
         for (File f : backupDir.listFiles()) {
-            addMatchingPaths(f, state, list);
+            addMatchingPaths(f, list);
         }
         return list;
     }
@@ -93,9 +113,11 @@ public class StreamFlowClient2 {
         String binConfigPath = args[3];
         File stationLocationFile = new File(args[4]);
         File backupDir = new File(args[5]);
-        String state = args[6];
+        state = args[6];
+        beginDate = LocalDate.parse(args[7], dateFormatter);
+        endDate = LocalDate.parse(args[8], dateFormatter);
 
-        List<RemoteFile> remoteFiles = parseBackupDirectoryForMatchingFilePaths(backupDir, state);
+        List<RemoteFile> remoteFiles = parseBackupDirectoryForMatchingFilePaths(backupDir);
         remoteFiles.sort(Comparator.comparing(RemoteFile::getId));
 
 
@@ -105,8 +127,8 @@ public class StreamFlowClient2 {
         System.out.println("Num stations in stationLocationFile: " + stationMap.size());
         SessionSchema sessionSchema = new SessionSchema(Util.quantizerMapFromFile(binConfigPath), GEOHASH_LENGTH, TEMPORAL_BRACKET_LENGTH);
 
-        SimpleStrandPublisher publisher = new SimpleStrandPublisher(dhtNodeAddress, datasetId, sessionId);
-//        ConsoleStrandPublisher publisher = new ConsoleStrandPublisher();
+//        SimpleStrandPublisher publisher = new SimpleStrandPublisher(dhtNodeAddress, datasetId, sessionId);
+        ConsoleStrandPublisher publisher = new ConsoleStrandPublisher();
 
         StrandRegistry strandRegistry = new StrandRegistry(publisher, 10000, 100);
 

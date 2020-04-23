@@ -29,14 +29,13 @@ public class StreamFlowBinCalculator2 {
 
         File backupDir = new File(args[0]);
         File stationsFile = new File(args[1]);
-        String state = args[2];
-        LocalDate beginDate = LocalDate.parse(args[3], StreamFlowClient2.dateFormatter);
-        LocalDate endDate = LocalDate.parse(args[4], StreamFlowClient2.dateFormatter);
+        StreamFlowClient2.state = args[2];
+        StreamFlowClient2.beginDate = LocalDate.parse(args[3], StreamFlowClient2.dateFormatter);
+        StreamFlowClient2.endDate = LocalDate.parse(args[4], StreamFlowClient2.dateFormatter);
 
         // proportion of records to be included
         int daysToSkip = Integer.parseInt((args[4]));
         double proportion = Double.parseDouble(args[5]);
-
 
         List<StreamFlowClient2.RemoteFile> remoteFiles = parseBackupDirectoryForMatchingFilePaths(backupDir);
         remoteFiles.sort(Comparator.comparing(StreamFlowClient2.RemoteFile::getId));
@@ -69,7 +68,6 @@ public class StreamFlowBinCalculator2 {
 
         String binConfiguration = new BinCalculator().getBinConfiguration(handler.getRecords());
         System.out.println(binConfiguration);
-
     }
 
     private static class MyRecordCallbackHandler implements RecordCallbackHandler {

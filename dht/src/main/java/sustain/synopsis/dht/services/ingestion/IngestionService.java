@@ -1,9 +1,11 @@
 package sustain.synopsis.dht.services.ingestion;
 
 import io.grpc.stub.StreamObserver;
+import org.apache.log4j.Logger;
 import sustain.synopsis.dht.store.services.*;
 
 public class IngestionService extends IngestionServiceGrpc.IngestionServiceImplBase {
+    private final Logger logger = Logger.getLogger(IngestionService.class);
     private final IngestionRequestProcessor dispatcher;
 
     public IngestionService(IngestionRequestProcessor dispatcher) {
@@ -16,6 +18,7 @@ public class IngestionService extends IngestionServiceGrpc.IngestionServiceImplB
             responseObserver.onNext(resp);
             responseObserver.onCompleted();
         }).exceptionally(err -> {
+            logger.error(err);
             responseObserver.onError(err);
             responseObserver.onCompleted();
             return null;
@@ -29,6 +32,7 @@ public class IngestionService extends IngestionServiceGrpc.IngestionServiceImplB
             responseObserver.onNext(response);
             responseObserver.onCompleted();
         }).exceptionally(err -> {
+            logger.error(err);
             responseObserver.onError(err);
             responseObserver.onCompleted();
             return null;

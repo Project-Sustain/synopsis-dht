@@ -145,7 +145,6 @@ public class StreamFlowClient2 {
 
         strandRegistry.terminateSession();
         handler.onTermination();
-        publisher.terminateSession();
 
         System.out.println("Total records: "+handler.totalRecordsHandled);
         System.out.println("Total strands: "+publisher.getTotalStrandsPublished());

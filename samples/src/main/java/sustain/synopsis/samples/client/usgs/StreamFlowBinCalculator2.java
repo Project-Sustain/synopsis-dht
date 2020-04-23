@@ -43,10 +43,10 @@ public class StreamFlowBinCalculator2 {
 
 
         Set<String> features = new HashSet<>();
-        if (args[6].contains("t")) {
+        if (args[7].contains("t")) {
             features.add(StreamFlowClient.TEMPERATURE_FEATURE);
         }
-        if (args[6].contains("d")) {
+        if (args[7].contains("d")) {
             features.add(StreamFlowClient.DISCHARGE_FEATURE);
         }
 

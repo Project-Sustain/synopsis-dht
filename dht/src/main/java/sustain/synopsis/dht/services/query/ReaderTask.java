@@ -1,15 +1,17 @@
 package sustain.synopsis.dht.services.query;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.log4j.Logger;
 import sustain.synopsis.common.ProtoBuffSerializedStrand;
 import sustain.synopsis.dht.store.StrandStorageKey;
+import sustain.synopsis.dht.store.StrandStorageValue;
 import sustain.synopsis.dht.store.entity.EntityStore;
 import sustain.synopsis.dht.store.services.TargetQueryRequest;
 import sustain.synopsis.dht.store.services.TargetQueryResponse;
 import sustain.synopsis.storage.lsmtree.SSTableReader;
 import sustain.synopsis.storage.lsmtree.TableIterator;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -147,13 +149,15 @@ public class ReaderTask implements Runnable {
         return result;
     }
 
-    void appendToResponse(List<TableIterator.TableEntry<StrandStorageKey, byte[]>> entries)
-            throws InvalidProtocolBufferException {
-        ProtoBuffSerializedStrand.Builder strandBuilder = ProtoBuffSerializedStrand.newBuilder();
+    void appendToResponse(List<TableIterator.TableEntry<StrandStorageKey, byte[]>> entries) throws IOException {
         for (TableIterator.TableEntry<StrandStorageKey, byte[]> entry : entries) {
-            strandBuilder.mergeFrom(entry.getValue()).build();
-            responseWrapper.addProtoBuffSerializedStrand(strandBuilder.build());
-            strandBuilder.clear();
+            try (ByteArrayInputStream bais = new ByteArrayInputStream(entry.getValue());
+                 DataInputStream dis = new DataInputStream(bais)) {
+                StrandStorageValue strandStorageValue = new StrandStorageValue();
+                strandStorageValue.deserialize(dis);
+                strandStorageValue.getProtoBuffSerializedStrands()
+                                  .forEach(responseWrapper::addProtoBuffSerializedStrand);
+            }
         }
     }
 }

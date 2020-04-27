@@ -41,7 +41,8 @@ public class SSTableReaderTest {
         FileChannel channel = FileChannel.open(file.toPath(), READ);
         Metadata<LSMTestKey> metadata = new Metadata<>();
         metadata.setPath(file.getAbsolutePath());
-        SSTableReader<LSMTestKey> reader = new SSTableReader<>(metadata, LSMTestKey.class);
+        SSTableReader<LSMTestKey, LSMTestValue> reader =
+                new SSTableReader<>(metadata, LSMTestKey.class, LSMTestValue.class);
 
         byte[] readData = reader.extractBlockData(channel);
         Assertions.assertArrayEquals(data, readData);
@@ -68,7 +69,8 @@ public class SSTableReaderTest {
         Metadata<LSMTestKey> metadata = new Metadata<>();
         metadata.setPath(file.getAbsolutePath());
 
-        SSTableReader<LSMTestKey> reader = new SSTableReader<>(metadata, LSMTestKey.class);
+        SSTableReader<LSMTestKey, LSMTestValue> reader =
+                new SSTableReader<>(metadata, LSMTestKey.class, LSMTestValue.class);
         byte[] readData = reader.extractBlockData(channel);
         Assertions.assertArrayEquals(data, readData);
     }
@@ -97,15 +99,16 @@ public class SSTableReaderTest {
         Metadata<LSMTestKey> metadata = new Metadata<>();
         metadata.setPath(file.getAbsolutePath());
 
-        SSTableReader<LSMTestKey> reader = new SSTableReader<>(metadata, LSMTestKey.class);
-        Iterator<TableIterator.TableEntry<LSMTestKey, byte[]>> iterator = reader.getPairIterator(block);
+        SSTableReader<LSMTestKey, LSMTestValue> reader =
+                new SSTableReader<>(metadata, LSMTestKey.class, LSMTestValue.class);
+        Iterator<TableIterator.TableEntry<LSMTestKey, LSMTestValue>> iterator = reader.getPairIterator(block);
         int elemCount = 0;
         random = new Random(1); // reinitialize the random number generator
         while (iterator.hasNext()) {
-            TableIterator.TableEntry<LSMTestKey, byte[]> entry = iterator.next();
+            TableIterator.TableEntry<LSMTestKey, LSMTestValue> entry = iterator.next();
             Assertions.assertEquals(new LSMTestKey(elemCount++), entry.getKey());
             random.nextBytes(payload);
-            Assertions.assertArrayEquals(payload, entry.getValue());
+            Assertions.assertArrayEquals(payload, entry.getValue().getVal());
         }
         Assertions.assertEquals(ELEM_COUNT, elemCount);
     }
@@ -117,8 +120,9 @@ public class SSTableReaderTest {
         file.createNewFile();
         Metadata<LSMTestKey> metadata = new Metadata<>();
         metadata.setPath(file.getAbsolutePath());
-        SSTableReader<LSMTestKey> reader = new SSTableReader<>(metadata, LSMTestKey.class);
-        Iterator<TableIterator.TableEntry<LSMTestKey, byte[]>> iterator = reader.getPairIterator(new byte[0]);
+        SSTableReader<LSMTestKey, LSMTestValue> reader =
+                new SSTableReader<>(metadata, LSMTestKey.class, LSMTestValue.class);
+        Iterator<TableIterator.TableEntry<LSMTestKey, LSMTestValue>> iterator = reader.getPairIterator(new byte[0]);
         Assertions.assertFalse(iterator.hasNext());
     }
 
@@ -136,12 +140,12 @@ public class SSTableReaderTest {
             }
 
             @Override
-            public void serialize(DataOutputStream dataOutputStream) throws IOException {
+            public void serialize(DataOutputStream dataOutputStream){
 
             }
 
             @Override
-            public void deserialize(DataInputStream dataInputStream) throws IOException {
+            public void deserialize(DataInputStream dataInputStream){
 
             }
         }
@@ -151,8 +155,9 @@ public class SSTableReaderTest {
         file.createNewFile();
         Metadata<NoDefaultConstructor> metadata = new Metadata<>();
         metadata.setPath(file.getAbsolutePath());
-        SSTableReader<NoDefaultConstructor> reader = new SSTableReader<>(metadata, NoDefaultConstructor.class);
-        Iterator<TableIterator.TableEntry<NoDefaultConstructor, byte[]>> iterator =
+        SSTableReader<NoDefaultConstructor, LSMTestValue> reader =
+                new SSTableReader<>(metadata, NoDefaultConstructor.class, LSMTestValue.class);
+        Iterator<TableIterator.TableEntry<NoDefaultConstructor, LSMTestValue>> iterator =
                 reader.getPairIterator(new byte[100]);
         Assertions.assertFalse(iterator.hasNext());
     }
@@ -164,8 +169,9 @@ public class SSTableReaderTest {
         file.createNewFile();
         Metadata<LSMTestKey> metadata = new Metadata<>();
         metadata.setPath(file.getAbsolutePath());
-        SSTableReader<LSMTestKey> reader = new SSTableReader<>(metadata, LSMTestKey.class);
-        Iterator<TableIterator.TableEntry<LSMTestKey, byte[]>> iterator =
+        SSTableReader<LSMTestKey, LSMTestValue> reader =
+                new SSTableReader<>(metadata, LSMTestKey.class, LSMTestValue.class);
+        Iterator<TableIterator.TableEntry<LSMTestKey, LSMTestValue>> iterator =
                 reader.getPairIterator(new byte[1]); // not enough data to deserialize
         Assertions.assertFalse(iterator.hasNext());
     }
@@ -213,13 +219,14 @@ public class SSTableReaderTest {
         fos.flush();
         fos.close();
 
-        SSTableReader<LSMTestKey> reader = new SSTableReader<>(metadata, LSMTestKey.class);
+        SSTableReader<LSMTestKey, LSMTestValue> reader =
+                new SSTableReader<>(metadata, LSMTestKey.class, LSMTestValue.class);
         for (int blockId = 0; blockId < BLOCK_COUNT; blockId++) {
             LSMTestKey expectedFirstKey = new LSMTestKey(blockId * ELEM_COUNT_PER_BLOCK);
-            Iterator<TableIterator.TableEntry<LSMTestKey, byte[]>> iter = reader.readBlock(expectedFirstKey);
+            Iterator<TableIterator.TableEntry<LSMTestKey, LSMTestValue>> iter = reader.readBlock(expectedFirstKey);
             // check the first key - we have tested the iterator content in testGetPairIterator()
             Assertions.assertTrue(iter.hasNext());
-            TableIterator.TableEntry<LSMTestKey, byte[]> firstEntry = iter.next();
+            TableIterator.TableEntry<LSMTestKey, LSMTestValue> firstEntry = iter.next();
             Assertions.assertEquals(expectedFirstKey, firstEntry.getKey());
         }
     }
@@ -230,7 +237,8 @@ public class SSTableReaderTest {
         f.createNewFile();
         Metadata<LSMTestKey> metadata = new Metadata<>();
         metadata.setPath(f.getAbsolutePath());
-        SSTableReader<LSMTestKey> reader = new SSTableReader<>(metadata, LSMTestKey.class);
+        SSTableReader<LSMTestKey, LSMTestValue> reader =
+                new SSTableReader<>(metadata, LSMTestKey.class, LSMTestValue.class);
         Assertions.assertThrows(IOException.class, () -> reader.readBlock(new LSMTestKey(1)));
     }
 }

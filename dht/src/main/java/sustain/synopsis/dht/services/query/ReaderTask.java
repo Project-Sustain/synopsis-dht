@@ -10,8 +10,6 @@ import sustain.synopsis.dht.store.services.TargetQueryResponse;
 import sustain.synopsis.storage.lsmtree.SSTableReader;
 import sustain.synopsis.storage.lsmtree.TableIterator;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -104,9 +102,10 @@ public class ReaderTask implements Runnable {
                 interval -> QueryUtil.temporalLookup(matchedSSTable.getMetadata().getBlockIndex(), interval.getFrom(),
                                                      interval.getTo(), false).keySet().stream())
                                                              .collect(Collectors.toSet());
-        SSTableReader<StrandStorageKey> reader = null;
+        SSTableReader<StrandStorageKey, StrandStorageValue> reader = null;
         try {
-            reader = new SSTableReader<>(matchedSSTable.getMetadata(), StrandStorageKey.class);
+            reader =
+                    new SSTableReader<>(matchedSSTable.getMetadata(), StrandStorageKey.class, StrandStorageValue.class);
             for (StrandStorageKey firstKey : matchingBlocks) {
                 appendToResponse(readBlock(reader, firstKey, matchedSSTable.getMatchedIntervals()));
             }
@@ -123,12 +122,12 @@ public class ReaderTask implements Runnable {
         }
     }
 
-    List<TableIterator.TableEntry<StrandStorageKey, byte[]>> readBlock(SSTableReader<StrandStorageKey> reader,
-                                                                       StrandStorageKey firstKey,
-                                                                       List<Interval> intervals) throws IOException {
+    List<TableIterator.TableEntry<StrandStorageKey, StrandStorageValue>> readBlock(
+            SSTableReader<StrandStorageKey, StrandStorageValue> reader, StrandStorageKey firstKey,
+            List<Interval> intervals) throws IOException {
         // read the block data and filter individual strands again
         long t1 = System.currentTimeMillis();
-        List<TableIterator.TableEntry<StrandStorageKey, byte[]>> result = StreamSupport
+        List<TableIterator.TableEntry<StrandStorageKey, StrandStorageValue>> result = StreamSupport
                 .stream(Spliterators.spliteratorUnknownSize(reader.readBlock(firstKey), Spliterator.ORDERED), false)
                 .filter(entry -> {
                     boolean include = false;
@@ -149,15 +148,10 @@ public class ReaderTask implements Runnable {
         return result;
     }
 
-    void appendToResponse(List<TableIterator.TableEntry<StrandStorageKey, byte[]>> entries) throws IOException {
-        for (TableIterator.TableEntry<StrandStorageKey, byte[]> entry : entries) {
-            try (ByteArrayInputStream bais = new ByteArrayInputStream(entry.getValue());
-                 DataInputStream dis = new DataInputStream(bais)) {
-                StrandStorageValue strandStorageValue = new StrandStorageValue();
-                strandStorageValue.deserialize(dis);
-                strandStorageValue.getProtoBuffSerializedStrands()
-                                  .forEach(responseWrapper::addProtoBuffSerializedStrand);
-            }
+    void appendToResponse(List<TableIterator.TableEntry<StrandStorageKey, StrandStorageValue>> entries)
+            throws IOException {
+        for (TableIterator.TableEntry<StrandStorageKey, StrandStorageValue> entry : entries) {
+            entry.getValue().getProtoBuffSerializedStrands().forEach(responseWrapper::addProtoBuffSerializedStrand);
         }
     }
 }

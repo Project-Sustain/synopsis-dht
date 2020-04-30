@@ -1,6 +1,5 @@
 package sustain.synopsis.dht.services.query;
 
-import io.grpc.stub.StreamObserver;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -9,7 +8,6 @@ import org.mockito.MockitoAnnotations;
 import sustain.synopsis.dht.store.entity.EntityStore;
 import sustain.synopsis.dht.store.node.NodeStore;
 import sustain.synopsis.dht.store.services.TargetQueryRequest;
-import sustain.synopsis.dht.store.services.TargetQueryResponse;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -35,7 +33,7 @@ public class DHTQueryProcessorTest {
     EntityStore entityStoreMock3;
 
     @Mock
-    StreamObserver<TargetQueryResponse> responseObserverMock;
+    QueryResponseHandler responseHandlerMock;
 
     @Test
     void testSchedulerWithNoMatchingEntityStores() throws ExecutionException, InterruptedException {
@@ -43,7 +41,7 @@ public class DHTQueryProcessorTest {
         TargetQueryRequest request = TargetQueryRequest.newBuilder().build();
         Mockito.when(nodeStore.getMatchingEntityStores(request)).thenReturn(Collections.emptySet());
         DHTQueryProcessor scheduler = new DHTQueryProcessor(nodeStore, executorServiceMock, 2);
-        CompletableFuture<Boolean> future = scheduler.process(request, responseObserverMock);
+        CompletableFuture<Boolean> future = scheduler.process(request, responseHandlerMock);
         // there should not be any reader tasks created
         Mockito.verify(executorServiceMock, Mockito.never()).submit(Mockito.any(ReaderTask.class));
         Assertions.assertTrue(future.get());
@@ -57,13 +55,13 @@ public class DHTQueryProcessorTest {
         Mockito.when(nodeStore.getMatchingEntityStores(request))
                .thenReturn(new HashSet<>(Collections.singletonList(entityStoreMock1)));
         DHTQueryProcessor scheduler = new DHTQueryProcessor(nodeStore, executorServiceMock, 2);
-        scheduler.process(request, responseObserverMock);
+        scheduler.process(request, responseHandlerMock);
         Mockito.verify(executorServiceMock, Mockito.times(1)).submit(Mockito.any(ReaderTask.class));
 
         Mockito.when(nodeStore.getMatchingEntityStores(request))
                .thenReturn(new HashSet<>(Arrays.asList(entityStoreMock1, entityStoreMock2, entityStoreMock3)));
         Mockito.reset(executorServiceMock);
-        scheduler.process(request, responseObserverMock);
+        scheduler.process(request, responseHandlerMock);
         Mockito.verify(executorServiceMock, Mockito.times(2)).submit(Mockito.any(ReaderTask.class));
     }
 }

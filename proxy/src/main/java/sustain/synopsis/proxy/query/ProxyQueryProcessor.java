@@ -7,6 +7,7 @@ import sustain.synopsis.dht.Context;
 import sustain.synopsis.dht.Ring;
 import sustain.synopsis.dht.services.query.QueryContainer;
 import sustain.synopsis.dht.services.query.QueryProcessor;
+import sustain.synopsis.dht.services.query.QueryResponseHandler;
 import sustain.synopsis.dht.store.services.TargetQueryRequest;
 import sustain.synopsis.dht.store.services.TargetQueryResponse;
 import sustain.synopsis.dht.store.services.TargetedQueryServiceGrpc;
@@ -27,12 +28,11 @@ public class ProxyQueryProcessor implements QueryProcessor {
     }
 
     @Override
-    public CompletableFuture<Boolean> process(TargetQueryRequest queryRequest,
-                                              StreamObserver<TargetQueryResponse> responseObserver) {
+    public CompletableFuture<Boolean> process(TargetQueryRequest queryRequest, QueryResponseHandler responseHandler) {
         Set<String> endpoints = ring.getUniqueEndpoints();
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         QueryContainer container =
-                new QueryContainer(new CountDownLatch(endpoints.size()), future, responseObserver, new HashSet<>(),
+                new QueryContainer(new CountDownLatch(endpoints.size()), future, responseHandler, new HashSet<>(),
                                    1024);
         container.startStreamPublisher();
         endpoints.forEach(endpoint -> {
@@ -44,7 +44,7 @@ public class ProxyQueryProcessor implements QueryProcessor {
 
                 @Override
                 public void onError(Throwable t) {
-                    responseObserver.onError(t);
+                    responseHandler.handleError(t);
                     container.reportReaderTaskComplete(false);
                 }
 

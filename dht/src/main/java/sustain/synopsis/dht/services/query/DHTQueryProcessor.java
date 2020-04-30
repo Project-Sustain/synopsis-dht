@@ -1,11 +1,9 @@
 package sustain.synopsis.dht.services.query;
 
-import io.grpc.stub.StreamObserver;
 import org.apache.log4j.Logger;
 import sustain.synopsis.dht.store.entity.EntityStore;
 import sustain.synopsis.dht.store.node.NodeStore;
 import sustain.synopsis.dht.store.services.TargetQueryRequest;
-import sustain.synopsis.dht.store.services.TargetQueryResponse;
 
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -33,8 +31,7 @@ public class DHTQueryProcessor implements QueryProcessor {
         this.readers = readers;
     }
 
-    public CompletableFuture<Boolean> process(TargetQueryRequest queryRequest,
-                                              StreamObserver<TargetQueryResponse> responseObserver) {
+    public CompletableFuture<Boolean> process(TargetQueryRequest queryRequest, QueryResponseHandler responseHandler) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         Set<EntityStore> matchingEntityStores = nodeStore.getMatchingEntityStores(queryRequest);
         if (logger.isDebugEnabled()) {
@@ -46,7 +43,7 @@ public class DHTQueryProcessor implements QueryProcessor {
         }
         int readerTaskCount = Math.min(matchingEntityStores.size(), readerCountPerQuery);
         QueryContainer container =
-                new QueryContainer(new CountDownLatch(readerTaskCount), future, responseObserver, matchingEntityStores,
+                new QueryContainer(new CountDownLatch(readerTaskCount), future, responseHandler, matchingEntityStores,
                                    QUERY_CONTAINER_BUFFER_SIZE);
         container.startStreamPublisher();
         IntStream.range(0, readerTaskCount).forEach(i -> readers.submit(new ReaderTask(queryRequest, container)));

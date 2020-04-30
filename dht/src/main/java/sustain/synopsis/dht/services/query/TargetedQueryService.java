@@ -16,7 +16,7 @@ public class TargetedQueryService extends TargetedQueryServiceGrpc.TargetedQuery
 
     @Override
     public void query(TargetQueryRequest request, StreamObserver<TargetQueryResponse> responseObserver) {
-        CompletableFuture<Boolean> future = processor.process(request, responseObserver);
+        CompletableFuture<Boolean> future = processor.process(request, new GrpcQueryResponseHandler(responseObserver));
         future.thenAccept(status -> {
             responseObserver.onCompleted();
         }).exceptionally(err -> {

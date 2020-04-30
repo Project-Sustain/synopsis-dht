@@ -1,13 +1,11 @@
 package sustain.synopsis.dht.services.query;
 
-import io.grpc.stub.StreamObserver;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.stubbing.Answer;
-import sustain.synopsis.dht.services.query.QueryContainer;
 import sustain.synopsis.dht.store.entity.EntityStore;
 import sustain.synopsis.dht.store.services.TargetQueryResponse;
 
@@ -22,7 +20,7 @@ import static org.mockito.Mockito.timeout;
 
 public class QueryContainerTest {
     @Mock
-    StreamObserver<TargetQueryResponse> responseObserverMock;
+    QueryResponseHandler responseHandlerMock;
 
     @Mock
     EntityStore entityStore1;
@@ -34,18 +32,18 @@ public class QueryContainerTest {
         Set<EntityStore> entityStores = new HashSet<>(Collections.singletonList(entityStore1));
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         QueryContainer container =
-                new QueryContainer(new CountDownLatch(1), future, responseObserverMock, entityStores, 32);
+                new QueryContainer(new CountDownLatch(1), future, responseHandlerMock, entityStores, 32);
         Assertions.assertEquals(entityStore1, container.getNextTask());
         Assertions.assertNull(container.getNextTask());
 
         // if there is an error, no new tasks should be issued.
         future = new CompletableFuture<>();
-        container = new QueryContainer(new CountDownLatch(1), future, responseObserverMock, entityStores, 32);
+        container = new QueryContainer(new CountDownLatch(1), future, responseHandlerMock, entityStores, 32);
         container.startStreamPublisher();
         TargetQueryResponse response = TargetQueryResponse.newBuilder().build();
         container.write(response);
         // this makes sure that the container thread has started
-        Mockito.verify(responseObserverMock, timeout(60000).times(1)).onNext(response);
+        Mockito.verify(responseHandlerMock, timeout(60000).times(1)).handleResponse(response);
         container.reportReaderTaskComplete(false);
         Assertions.assertFalse(future.get());
         Assertions.assertNull(container.getNextTask());
@@ -56,11 +54,11 @@ public class QueryContainerTest {
         MockitoAnnotations.initMocks(this);
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         QueryContainer container =
-                new QueryContainer(new CountDownLatch(1), future, responseObserverMock, new HashSet<>(), 32);
+                new QueryContainer(new CountDownLatch(1), future, responseHandlerMock, new HashSet<>(), 32);
         container.startStreamPublisher();
         TargetQueryResponse response = TargetQueryResponse.newBuilder().build();
         container.write(response);
-        Mockito.verify(responseObserverMock, timeout(60000).times(1)).onNext(response);
+        Mockito.verify(responseHandlerMock, timeout(60000).times(1)).handleResponse(response);
     }
 
     @Test
@@ -70,7 +68,7 @@ public class QueryContainerTest {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         // buffer size is set to 1
         QueryContainer container =
-                new QueryContainer(new CountDownLatch(1), future, responseObserverMock, new HashSet<>(), 1);
+                new QueryContainer(new CountDownLatch(1), future, responseHandlerMock, new HashSet<>(), 1);
         // now the buffer is full
         container.write(TargetQueryResponse.newBuilder().build());
         // following thread is blocked because the consumer thread has not started
@@ -93,17 +91,17 @@ public class QueryContainerTest {
         MockitoAnnotations.initMocks(this);
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         QueryContainer container =
-                new QueryContainer(new CountDownLatch(1), future, responseObserverMock, new HashSet<>(), 1);
+                new QueryContainer(new CountDownLatch(1), future, responseHandlerMock, new HashSet<>(), 1);
         container.startStreamPublisher();
         container.write(TargetQueryResponse.newBuilder().build());
         // verify that the consumer thread has started
-        Mockito.verify(responseObserverMock, timeout(60000).times(1)).onNext(Mockito.any());
+        Mockito.verify(responseHandlerMock, timeout(60000).times(1)).handleResponse(Mockito.any());
 
         // make the consumer thread very slow - onNext() call will not return for a long time
         Mockito.doAnswer((Answer<Void>) invocation -> {
             Thread.sleep(Integer.MAX_VALUE);
             return null;
-        }).when(responseObserverMock).onNext(Mockito.any());
+        }).when(responseHandlerMock).handleResponse(Mockito.any());
 
         CountDownLatch latch = new CountDownLatch(1);
         // start a new thread mimicking a reader task
@@ -131,11 +129,11 @@ public class QueryContainerTest {
         MockitoAnnotations.initMocks(this);
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         CountDownLatch latch = new CountDownLatch(1);
-        QueryContainer container = new QueryContainer(latch, future, responseObserverMock, new HashSet<>(), 1);
+        QueryContainer container = new QueryContainer(latch, future, responseHandlerMock, new HashSet<>(), 1);
         container.startStreamPublisher();
         TargetQueryResponse response = TargetQueryResponse.newBuilder().build();
         container.write(response);
-        Mockito.verify(responseObserverMock, timeout(60000).times(1)).onNext(response);
+        Mockito.verify(responseHandlerMock, timeout(60000).times(1)).handleResponse(response);
         container.reportReaderTaskComplete(true);
         Assertions.assertEquals(0, latch.getCount());
         Assertions.assertTrue(future.get());
@@ -147,11 +145,11 @@ public class QueryContainerTest {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         // buffer size is set to 1
         QueryContainer container =
-                new QueryContainer(new CountDownLatch(1), future, responseObserverMock, new HashSet<>(), 1);
+                new QueryContainer(new CountDownLatch(1), future, responseHandlerMock, new HashSet<>(), 1);
         container.startStreamPublisher();
         TargetQueryResponse response = TargetQueryResponse.newBuilder().build();
         container.write(response);
-        Mockito.verify(responseObserverMock, timeout(60000).times(1)).onNext(response);
+        Mockito.verify(responseHandlerMock, timeout(60000).times(1)).handleResponse(response);
         // simulate failure of a reader task
         container.reportReaderTaskComplete(false);
         Assertions.assertFalse(future.get());
@@ -162,14 +160,13 @@ public class QueryContainerTest {
         MockitoAnnotations.initMocks(this);
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         CountDownLatch latch = new CountDownLatch(2);
-        QueryContainer container =
-                new QueryContainer(latch, future, responseObserverMock, new HashSet<>(), 1);
+        QueryContainer container = new QueryContainer(latch, future, responseHandlerMock, new HashSet<>(), 1);
         container.startStreamPublisher();
         // make sure thread has started
         TargetQueryResponse response = TargetQueryResponse.newBuilder().build();
         container.write(response);
         // make sure that the reader task is started
-        Mockito.verify(responseObserverMock, timeout(60000).atLeastOnce()).onNext(response);
+        Mockito.verify(responseHandlerMock, timeout(60000).atLeastOnce()).handleResponse(response);
         latch.countDown();
         latch.countDown();
         Assertions.assertTrue(future.get());
@@ -180,7 +177,7 @@ public class QueryContainerTest {
         MockitoAnnotations.initMocks(this);
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         QueryContainer container =
-                new QueryContainer(new CountDownLatch(0), future, responseObserverMock, new HashSet<>(), 32);
+                new QueryContainer(new CountDownLatch(0), future, responseHandlerMock, new HashSet<>(), 32);
         // make sure thread has started
         TargetQueryResponse response = TargetQueryResponse.newBuilder().build();
         container.write(response);
@@ -188,7 +185,7 @@ public class QueryContainerTest {
         // make sure all messages are published even though the latch has count 0
         container.startStreamPublisher();
         // make sure that the reader task is started
-        Mockito.verify(responseObserverMock, timeout(60000).times(2)).onNext(response);
+        Mockito.verify(responseHandlerMock, timeout(60000).times(2)).handleResponse(response);
         Assertions.assertTrue(future.get());
     }
 }

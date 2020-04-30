@@ -1,6 +1,5 @@
 package sustain.synopsis.dht.services.query;
 
-import io.grpc.stub.StreamObserver;
 import org.apache.log4j.Logger;
 import sustain.synopsis.dht.store.entity.EntityStore;
 import sustain.synopsis.dht.store.services.TargetQueryResponse;
@@ -17,17 +16,16 @@ public class QueryContainer implements Runnable {
     private long totalSentStrands = 0;
     private final CountDownLatch latch;
     private final CompletableFuture<Boolean> future;
-    private final StreamObserver<TargetQueryResponse> responseObserver;
+    private final QueryResponseHandler responseHandler;
     private Thread streamWriter;
     private final Queue<EntityStore> pendingTasks;
     private final BlockingQueue<TargetQueryResponse> queue;
 
-    public QueryContainer(CountDownLatch latch, CompletableFuture<Boolean> future,
-                          StreamObserver<TargetQueryResponse> responseObserver, Set<EntityStore> entityStores,
-                          int bufferCapacity) {
+    public QueryContainer(CountDownLatch latch, CompletableFuture<Boolean> future, QueryResponseHandler responseHandler,
+                          Set<EntityStore> entityStores, int bufferCapacity) {
         this.latch = latch;
         this.future = future;
-        this.responseObserver = responseObserver;
+        this.responseHandler = responseHandler;
         this.streamWriter = new Thread(this);
         this.pendingTasks = new ConcurrentLinkedQueue<>(entityStores);
         this.queue = new LinkedBlockingDeque<>(bufferCapacity);
@@ -74,7 +72,7 @@ public class QueryContainer implements Runnable {
                 if (resp != null) {
                     totalSentBytes += resp.getSerializedSize();
                     totalSentStrands += resp.getStrandsCount();
-                    responseObserver.onNext(resp);
+                    responseHandler.handleResponse(resp);
                 }
             } catch (Throwable e) {
                 // Could be due to errors when writing to the stream or a reader task failure.
@@ -88,7 +86,8 @@ public class QueryContainer implements Runnable {
         future.complete(true);
         if (logger.isDebugEnabled()) {
             logger.debug("Publishing to stream is complete. Time elapsed (ms): " + (System.nanoTime() - startTS) / Math
-                    .pow(10d, 6) + ", Total data sent (Bytes): " + totalSentBytes + ", Total Strand Count: " + totalSentStrands);
+                    .pow(10d, 6) + ", Total data sent (Bytes): " + totalSentBytes + ", Total Strand Count: "
+                         + totalSentStrands);
         }
     }
 

@@ -10,6 +10,7 @@ import sustain.synopsis.proxy.ingestion.ProxyIngestionRequestProcessor;
 import sustain.synopsis.proxy.query.ProxyQueryProcessor;
 
 import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
 
 public class ProxyStarter {
 
@@ -41,7 +42,7 @@ public class ProxyStarter {
         Node node = new Node(ctx.getNodeConfig().getIngestionServicePort(),
                              new BindableService[]{new IngestionService(new ProxyIngestionRequestProcessor()),
                                      new TargetedQueryService(new ProxyQueryProcessor())});
-        node.start(false); // proxy servers should not register in ZK
+        node.start(false, new CountDownLatch(1)); // proxy servers should not register in ZK
     }
 }
 

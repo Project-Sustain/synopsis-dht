@@ -12,6 +12,7 @@ import sustain.synopsis.dht.zk.ZooKeeperAgent;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -29,7 +30,7 @@ public class Node {
         this.services = services;
     }
 
-    public void start(boolean registerInZK) {
+    public void start(boolean registerInZK, CountDownLatch latch) {
         try {
             logger.info("Trying to bind to port: " + this.port);
             // start gRPC services
@@ -61,6 +62,7 @@ public class Node {
                 }
             });
             logger.info("Server startup is complete..");
+            latch.countDown();
             server.awaitTermination();
         } catch (InterruptedException e) {
             logger.error("Error starting the node. ", e);

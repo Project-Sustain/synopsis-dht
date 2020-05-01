@@ -11,6 +11,7 @@ import sustain.synopsis.dht.store.node.NodeStore;
 import sustain.synopsis.dht.zk.ZKError;
 
 import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * @author Thilina Buddhika
@@ -44,7 +45,7 @@ public class DHTNodeStarter {
             Node node = new Node(ctx.getNodeConfig().getIngestionServicePort(), new BindableService[]{
                     new IngestionService(new DHTIngestionRequestProcessor(nodeStore)),
                     new TargetedQueryService(new DHTQueryProcessor(nodeStore))});
-            node.start(true);
+            node.start(true, new CountDownLatch(1));
         } catch (StorageException e) {
             logger.error("Error initializing the NodeStore.", e);
         }

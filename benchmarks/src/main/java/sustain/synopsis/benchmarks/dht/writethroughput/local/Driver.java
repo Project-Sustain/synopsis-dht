@@ -1,91 +1,100 @@
 package sustain.synopsis.benchmarks.dht.writethroughput.local;
 
 import com.google.protobuf.ByteString;
-import io.grpc.BindableService;
 import org.apache.log4j.Logger;
-import sustain.synopsis.dht.*;
-import sustain.synopsis.dht.services.ingestion.IngestionRequestProcessor;
+import sustain.synopsis.benchmarks.dht.BenchmarkBaseNode;
+import sustain.synopsis.common.CommonUtil;
 import sustain.synopsis.dht.services.ingestion.DHTIngestionRequestProcessor;
+import sustain.synopsis.dht.services.ingestion.IngestionRequestProcessor;
 import sustain.synopsis.dht.services.ingestion.IngestionService;
 import sustain.synopsis.dht.store.StorageException;
 import sustain.synopsis.dht.store.node.NodeStore;
 import sustain.synopsis.dht.store.services.IngestionRequest;
 import sustain.synopsis.dht.store.services.IngestionResponse;
 import sustain.synopsis.dht.store.services.Strand;
+import sustain.synopsis.dht.store.services.TerminateSessionRequest;
+import sustain.synopsis.sketch.dataset.feature.Feature;
+import sustain.synopsis.sketch.graph.DataContainer;
+import sustain.synopsis.sketch.graph.Path;
+import sustain.synopsis.sketch.stat.RunningStatisticsND;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-public class Driver {
+public class Driver extends BenchmarkBaseNode {
 
     private class LoadGenerator implements Runnable {
-
         private final String[] entities;
-        private final byte[] payload = new byte[2048];
         private final Random rnd = new Random(Thread.currentThread().getId());
+        private final long requestCount;
+        private final int id;
 
-        private LoadGenerator(String[] entities) {
+        private LoadGenerator(int id, String[] entities, long requestCount) {
+            this.id = id;
             this.entities = entities;
+            this.requestCount = requestCount;
         }
 
-        public IngestionRequest generateIngestRequest() {
-            int entityBatchSize = 50;
-            List<Strand> strandBatchList = new ArrayList<>(entityBatchSize);
-            for (int x = 0; x < entityBatchSize; x++) {
-                rnd.nextBytes(payload);
-                ByteString serializedStrand = ByteString.copyFrom(payload);
-                strandBatchList.set(x, Strand.newBuilder()
-                        .setEntityId(entities[rnd.nextInt(entities.length)])
-                        .setFromTs(x)
-                        .setToTs(x+1)
-                        .setBytes(serializedStrand)
-                        .build()
-                );
+        public IngestionRequest generateIngestRequest(long ts) {
+            List<Strand> strandBatchList = new ArrayList<>(BATCH_SIZE);
+            for (int x = 0; x < BATCH_SIZE; x++) {
+                strandBatchList.add(x, Strand.newBuilder().setEntityId(entities[rnd.nextInt(entities.length)])
+                                             .setFromTs(ts).setToTs(ts + 1)
+                                             .setBytes(payloads.get(rnd.nextInt(PRECALCULATED_PAYLOAD_COUNT))).build());
             }
-
-            return IngestionRequest.newBuilder()
-                            .setDatasetId("noaa")
-                            .setSessionId(1)
-                            .addAllStrand(strandBatchList)
-                            .build();
+            return IngestionRequest.newBuilder().setDatasetId("noaa").setSessionId(id).addAllStrand(strandBatchList)
+                                   .build();
         }
 
         @Override
         public void run() {
-            for (int i = 0; i < 200000000; i++) {
-                if ((submittedReqCount.get() - completedReqCount.get()) > 1000) { // a primitive throttling mechanism
-                    i--;
-                    continue;
+            try {
+                LOGGER.info("Request Count: " + requestCount);
+                for (long i = 0; i < requestCount; i++) {
+                    // a primitive throttling mechanism
+                    if ((submittedReqCount.get() - completedReqCount.get()) > 10000) {
+                        Thread.sleep(5);
+                        i--;
+                        continue;
+                    }
+                    IngestionRequest request = generateIngestRequest(i);
+                    CompletableFuture<IngestionResponse> future = dispatcher.process(request);
+                    future.thenAccept(
+                            ingestionResponse -> completedReqCount.getAndAdd(ingestionResponse.getStatus() ? 1 : 0));
+                    submittedReqCount.getAndIncrement();
                 }
-
-                IngestionRequest request = generateIngestRequest();
-
-                CompletableFuture<IngestionResponse> future = dispatcher.process(request);
-                future.thenAccept(ingestionResponse -> {
-                    completedReqCount.getAndAdd(ingestionResponse.getStatus() ? 1 : 0);
-                });
-                submittedReqCount.getAndIncrement();
+                System.out.println("Terminating session..");
+                dispatcher.process(TerminateSessionRequest.newBuilder().setDatasetId("noaa").setSessionId(id).build());
+            } catch (Throwable e) {
+                LOGGER.error("Error in load generator.", e);
             }
         }
     }
 
     private static Logger LOGGER = Logger.getLogger(Driver.class);
-
-    private final IngestionRequestProcessor dispatcher;
+    public static final int PRECALCULATED_PAYLOAD_COUNT = 50000;
+    public static final int BATCH_SIZE = 50;
+    private IngestionRequestProcessor dispatcher;
     private AtomicLong submittedReqCount = new AtomicLong(0);
     private AtomicLong completedReqCount = new AtomicLong(0);
     private ScheduledExecutorService statThread = Executors.newScheduledThreadPool(1);
+    // randomly pick a strand to reduce the effect of compaction
+    private final List<ByteString> payloads = generateRandomStrands(PRECALCULATED_PAYLOAD_COUNT, 20);
     private ExecutorService workers = Executors.newCachedThreadPool();
     private long lastReportedTS = -1;
     private long lastReportedCount = -1;
 
-    private Driver() throws StorageException {
+    private Driver(String configFilePath) {
+        super(configFilePath);
+    }
+
+    private void init() throws StorageException, InterruptedException {
+        super.initContext();
         NodeStore nodeStore = new NodeStore();
         nodeStore.init();
         dispatcher = new DHTIngestionRequestProcessor(nodeStore);
@@ -97,44 +106,56 @@ public class Driver {
             } else {
                 long elapased = System.currentTimeMillis() - lastReportedTS;
                 long reqCount = completedReqCount.get() - lastReportedCount;
-                LOGGER.info("Throughput (writes/s): " + reqCount * 1000 / (elapased * 1.0) + ", elapsed: " + elapased + ", " + "req.count: " + reqCount + ", completed: " + completedReqCount.get() + ", submitted: " + submittedReqCount.get());
+                LOGGER.info(
+                        "Throughput (writes/s): " + reqCount * 1000 / (elapased * 1.0) + ", elapsed: " + elapased + ", "
+                        + "req.count: " + reqCount + ", completed: " + completedReqCount.get() + ", submitted: "
+                        + submittedReqCount.get() + ", total written (GB): " + (BATCH_SIZE * completedReqCount.get() * payloads.get(0).size())/(1024 * 1024 * 1024D));
                 lastReportedCount = completedReqCount.get();
                 lastReportedTS = System.currentTimeMillis();
             }
         }, 5, 10, TimeUnit.SECONDS);
-    }
-
-    /**
-     * Launches a DHT node
-     *
-     * @throws InterruptedException Stat thread is interrupted
-     */
-    private void start() throws InterruptedException {
-        CountDownLatch latch = new CountDownLatch(1);
-        Thread serverT = new Thread(() -> {
-            int port = Context.getInstance().getNodeConfig().getIngestionServicePort();
-            BindableService[] services = new BindableService[]{new IngestionService(dispatcher)};
-            Node node = new Node(port, services);
-            node.start(true);
-        });
-        serverT.start();
-        try {
-            latch.await();
-        } catch (InterruptedException e) {
-            LOGGER.error("Error waiting till server to start.", e);
-            throw e;
-        }
+        start(new IngestionService(dispatcher));
     }
 
     private void runTestSuite(int workerCount) {
-        String[] entities = new String[]{"9x0", "9x1", "9x2", "9x3", "9x4"};
+        List<String> entities = IntStream.range(0, 10).mapToObj(i -> "9x" + i).collect(Collectors.toList());
+        // store 128 GB of data
+        long requestCount = Math.round(128 * 1024 * 1024 * 1024D)/(payloads.get(0).size() * BATCH_SIZE * workerCount);
         for (int i = 0; i < workerCount; i++) {
             int finalI = i;
             String[] customEntities =
-                    Arrays.stream(entities).map(s -> s+ "_" + finalI).collect(Collectors.toList()).toArray(new String[5]);
-            workers.submit(new LoadGenerator(customEntities));
+                    entities.stream().map(s -> s + finalI).collect(Collectors.toList()).toArray(new String[5]);
+            workers.submit(new LoadGenerator(i, customEntities, requestCount));
             LOGGER.info("Added a load generator.");
         }
+    }
+
+    private static List<ByteString> generateRandomStrands(int batchSize, int featureLength) {
+        Random random = new Random(12);
+        List<ByteString> strands = new ArrayList<>(batchSize);
+        for (int i = 0; i < batchSize; i++) {
+            Path path = new Path();
+            double[] values = new double[featureLength];
+            for (int j = 0; j < featureLength; j++) {
+                double v = random.nextDouble();
+                path.add(new Feature("feature_" + (i + 1), v));
+                values[j] = v;
+            }
+            RunningStatisticsND runningStats = new RunningStatisticsND(values);
+            DataContainer container = new DataContainer(runningStats);
+            path.get(path.size() - 1).setData(container);
+            // It is okay to use dummy values for geohash and timestamps here.
+            // The timestamps in the key are used for indexing
+            sustain.synopsis.common.Strand strand1 =
+                    new sustain.synopsis.common.Strand("dummy", System.currentTimeMillis(),
+                                                       System.currentTimeMillis() + 100, path);
+            sustain.synopsis.common.Strand strand2 =
+                    new sustain.synopsis.common.Strand("dummy", strand1.getFromTimeStamp(),
+                                                       strand1.getToTimestamp() + 100, path);
+            strand1.merge(strand2);
+            strands.add(CommonUtil.strandToProtoBuff(strand1).toByteString());
+        }
+        return strands;
     }
 
     public static void main(String[] args) {
@@ -145,25 +166,12 @@ public class Driver {
         String configFilePath = args[0];
         int workerCount = Integer.parseInt(args[1]);
         LOGGER.info("Using the configuration: " + configFilePath);
-        // initialize context
-        Context ctx = Context.getInstance();
         try {
-            ctx.initialize(configFilePath);
-        } catch (IOException e) {
-            LOGGER.error("Error initializing node config. Config file not found.", e);
-            return;
-        }
-        // set the hostname
-        ctx.setProperty(ServerConstants.HOSTNAME, Util.getHostname());
-        LOGGER.info("Successfully initialized node context.");
-        try {
-            Driver driver = new Driver();
-            driver.start();
-            Thread.sleep(30 * 1000);
-            LOGGER.info("Launching the test suite...");
+            Driver driver = new Driver(configFilePath);
+            driver.init();
             driver.runTestSuite(workerCount);
         } catch (StorageException | InterruptedException e) {
-            LOGGER.error("Error launching the benchmark.", e);
+            e.printStackTrace();
         }
     }
 }

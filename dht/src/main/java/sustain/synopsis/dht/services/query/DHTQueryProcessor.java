@@ -27,8 +27,8 @@ public class DHTQueryProcessor implements QueryProcessor {
     // used for unit testing with mock injection
     public DHTQueryProcessor(NodeStore nodeStore, ExecutorService readers, int defaultReaderCount) {
         this.nodeStore = nodeStore;
-        this.readerCountPerQuery = defaultReaderCount;
         this.readers = readers;
+        this.readerCountPerQuery = defaultReaderCount;
     }
 
     public CompletableFuture<Boolean> process(TargetQueryRequest queryRequest, QueryResponseHandler responseHandler) {

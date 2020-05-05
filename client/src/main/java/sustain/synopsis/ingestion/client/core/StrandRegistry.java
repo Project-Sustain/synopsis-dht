@@ -98,10 +98,10 @@ public class StrandRegistry {
             int endIdx = Math.min(i + publishBatchSize, strands.size());
             publish(strands.subList(i, endIdx));
         }
-        publisher.terminateSession();
         logger.info("[" + Thread.currentThread().getName() + "] Publishing all strands. Published strand count: " +
                 strandKeyMap.size());
 
+        publisher.terminateSession();
         return totalPublishedStrandCount;
     }
 

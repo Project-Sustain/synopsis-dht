@@ -8,9 +8,11 @@ import sustain.synopsis.ingestion.client.core.RecordCallbackHandler;
 import sustain.synopsis.ingestion.client.core.SessionSchema;
 import sustain.synopsis.sketch.dataset.Quantizer;
 
+import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.text.ParseException;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -18,9 +20,9 @@ import java.util.*;
 
 import static sustain.synopsis.samples.client.usgs.StreamFlowClient2.parseBackupDirectoryForMatchingFilePaths;
 
-public class StreamFlowBinCalculator2 {
+public class StreamFlowBinCalculator3 {
 
-    static Logger logger = Logger.getLogger(StreamFlowBinCalculator2.class);
+    static Logger logger = Logger.getLogger(StreamFlowBinCalculator3.class);
     private static Random random = new Random(1);
     public static final int GEOHASH_LENGTH = 5;
     public static final Duration TEMPORAL_BUCKET_LENGTH = Duration.ofHours(6);
@@ -36,6 +38,7 @@ public class StreamFlowBinCalculator2 {
         // proportion of records to be included
         int daysToSkip = Integer.parseInt((args[5]));
         double proportion = Double.parseDouble(args[6]);
+        String outFilePath = args[7];
 
         List<StreamFlowClient2.RemoteFile> remoteFiles = parseBackupDirectoryForMatchingFilePaths(backupDir);
         remoteFiles.sort(Comparator.comparing(StreamFlowClient2.RemoteFile::getId));
@@ -66,11 +69,38 @@ public class StreamFlowBinCalculator2 {
         List<Record> records = handler.getRecords();
         System.out.println(records.size());
 
+        writeRecordsToFile(outFilePath, records);
 
+//        String binConfiguration = new BinCalculator().getBinConfiguration(handler.getRecords());
+//        System.out.println(binConfiguration);
+    }
 
+    static void writeRecordsToFile(String filePath, List<Record> records) {
+        if (records.size() == 0) {
+            return;
+        }
 
-        String binConfiguration = new BinCalculator().getBinConfiguration(handler.getRecords());
-        System.out.println(binConfiguration);
+        List<String> features = new ArrayList<>(records.get(0).getFeatures().keySet());
+        features.sort(Comparator.naturalOrder());
+
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(new File(filePath)))) {
+            for (String feature : features) {
+                bw.write(feature+",");
+            }
+            bw.newLine();
+
+            for (Record record : records) {
+                for (String feature : features) {
+                    Float value = record.getFeatures().get(feature);
+                    String rep = value == null ? "null" : value.toString();
+                    bw.write(rep+",");
+                }
+                bw.newLine();
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private static class MyRecordCallbackHandler implements RecordCallbackHandler {

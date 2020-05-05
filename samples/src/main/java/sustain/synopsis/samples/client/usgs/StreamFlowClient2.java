@@ -3,6 +3,7 @@ package sustain.synopsis.samples.client.usgs;
 import com.opencsv.exceptions.CsvValidationException;
 import io.grpc.Channel;
 import io.grpc.ManagedChannelBuilder;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import sustain.fileshare.FileshareServiceGrpc;
 import sustain.fileshare.FileshareServiceGrpc.FileshareServiceBlockingStub;
@@ -99,6 +100,9 @@ public class StreamFlowClient2 {
 
 
     public static void main(String[] args) throws IOException, CsvValidationException, ParseException {
+
+        Logger.getRootLogger().setLevel(Level.INFO);
+
         if (args.length < 7) {
 //            System.out.println("Usage: dhtNodeAddress datasetId sessionId binConfigFile stationLocationFile baseDir beginDate endDate");
             System.out.println("Usage: dhtNodeAddress datasetId sessionId binConfigFile stationLocationFile masterBackupDirectory state");
@@ -127,8 +131,8 @@ public class StreamFlowClient2 {
         System.out.println("Num stations in stationLocationFile: " + stationMap.size());
         SessionSchema sessionSchema = new SessionSchema(Util.quantizerMapFromFile(binConfigPath), GEOHASH_LENGTH, TEMPORAL_BRACKET_LENGTH);
 
-        SimpleStrandPublisher publisher = new SimpleStrandPublisher(dhtNodeAddress, datasetId, sessionId);
-//        ConsoleStrandPublisher publisher = new ConsoleStrandPublisher();
+//        SimpleStrandPublisher publisher = new SimpleStrandPublisher(dhtNodeAddress, datasetId, sessionId);
+        ConsoleStrandPublisher publisher = new ConsoleStrandPublisher();
 
         StrandRegistry strandRegistry = new StrandRegistry(publisher, 10000, 100);
 

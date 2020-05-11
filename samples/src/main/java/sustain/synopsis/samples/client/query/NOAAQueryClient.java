@@ -5,15 +5,20 @@ import io.grpc.ManagedChannelBuilder;
 import sustain.synopsis.common.CommonUtil;
 import sustain.synopsis.common.ProtoBuffSerializedStrand;
 import sustain.synopsis.dht.store.services.*;
+import sustain.synopsis.sketch.serialization.SerializationOutputStream;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.util.Iterator;
 
 public class NOAAQueryClient {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         // initialize the stub
-        String host = "lattice-80.cs.colostate.edu";
+        String host = "lattice-185.cs.colostate.edu";
         int port = 9091;
         Channel channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
         TargetedQueryServiceGrpc.TargetedQueryServiceBlockingStub stub =
@@ -35,7 +40,11 @@ public class NOAAQueryClient {
                 Expression.newBuilder().setPredicate1(fromPredicate).setCombineOp(Expression.CombineOperator.AND)
                           .setPredicate2(toPredicate).build();
 
-        String[] geohashPrefixes = new String[]{"9y8b9", "9y8b", "9y8", "9y", "9"};
+        String[] geohashPrefixes = new String[]{"9x"};
+
+        File file = new File("2015_Jan_first_quarter_dataset");
+        FileOutputStream fileOutputStream = new FileOutputStream(file);
+        SerializationOutputStream serializationOutputStream = new SerializationOutputStream(fileOutputStream);
 
         // run queries for each of the geohashes
         for (String geohash : geohashPrefixes) {
@@ -63,6 +72,14 @@ public class NOAAQueryClient {
                         System.out.println("M2 values: " + strand.getM2List());
                         System.out.println("S2 values: " + strand.getS2List());
                     }
+
+                    // get the data points which are in the first quarter
+                    LocalDateTime dateTime = CommonUtil.epochToLocalDateTime(strand.getStartTS());
+                    if( dateTime.getHour() <= 6 )
+                    {
+                        sustain.synopsis.common.Strand s = CommonUtil.protoBuffToStrand(strand);
+                        s.serialize(serializationOutputStream);
+                    }
                 }
 
             }
@@ -70,6 +87,7 @@ public class NOAAQueryClient {
             System.out.println("Query is complete. Elapsed time (ms): " + (t2 - t1) + ", fetched data: " + fetchedData
                                + ", download rate (MB/s): " + fetchedData * 1000 / (1204 * 1024d * (t2 - t1)));
             System.out.println("\n-----------------\n");
+            serializationOutputStream.close();
         }
     }
 }

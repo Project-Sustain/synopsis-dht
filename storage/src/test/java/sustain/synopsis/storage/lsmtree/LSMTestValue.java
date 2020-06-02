@@ -22,6 +22,10 @@ public class LSMTestValue implements StreamSerializable, Mergeable<LSMTestValue>
         new Random().nextBytes(this.val);
     }
 
+    public byte[] getVal() {
+        return val;
+    }
+
     @Override
     public void serialize(DataOutputStream dataOutputStream) throws IOException {
         dataOutputStream.writeInt(this.val.length);

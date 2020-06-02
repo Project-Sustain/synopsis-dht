@@ -19,17 +19,19 @@ import static sustain.synopsis.storage.lsmtree.Util.readFully;
 /**
  * @param <K> Type of the key
  */
-public class SSTableReader<K extends Comparable<K> & StreamSerializable> {
+public class SSTableReader<K extends Comparable<K> & StreamSerializable, V extends StreamSerializable> {
 
     private final Logger logger = Logger.getLogger(SSTableReader.class);
     private final Metadata<K> metadata;
-    private final Class<K> clazz;
+    private final Class<K> kClazz;
+    private final Class<V> vClazz;
     private SeekableByteChannel channel;
     private final BlockCompressor compressor = new LZ4BlockCompressor();
 
-    public SSTableReader(Metadata<K> metadata, Class<K> kClazz) throws IOException {
+    public SSTableReader(Metadata<K> metadata, Class<K> kClazz, Class<V> vClazz) throws IOException {
         this.metadata = metadata;
-        this.clazz = kClazz;
+        this.kClazz = kClazz;
+        this.vClazz = vClazz;
         this.channel = FileChannel.open(new File(metadata.getPath()).toPath(), READ);
     }
 
@@ -40,7 +42,7 @@ public class SSTableReader<K extends Comparable<K> & StreamSerializable> {
      * @return An {@link Iterator<sustain.synopsis.storage.lsmtree.TableIterator.TableEntry>} of the block data
      * @throws IOException Error reading from disk
      */
-    public Iterator<TableIterator.TableEntry<K, byte[]>> readBlock(K key) throws IOException {
+    public Iterator<TableIterator.TableEntry<K, V>> readBlock(K key) throws IOException {
         Integer offset = metadata.getBlockIndex().get(key);
         if (offset == null) {
             throw new IOException("Invalid offset: " + offset);
@@ -50,11 +52,11 @@ public class SSTableReader<K extends Comparable<K> & StreamSerializable> {
         return getPairIterator(data);
     }
 
-    Iterator<TableIterator.TableEntry<K, byte[]>> getPairIterator(byte[] data) throws IOException {
+    Iterator<TableIterator.TableEntry<K, V>> getPairIterator(byte[] data) throws IOException {
         try (ByteArrayInputStream bais = new ByteArrayInputStream(data); DataInputStream dis =
                 new DataInputStream(bais)) {
-            return new Iterator<TableIterator.TableEntry<K, byte[]>>() {
-                private TableIterator.TableEntry<K, byte[]> nextElem = null;
+            return new Iterator<TableIterator.TableEntry<K, V>>() {
+                private TableIterator.TableEntry<K, V> nextElem = null;
 
                 @Override
                 public boolean hasNext() {
@@ -62,19 +64,19 @@ public class SSTableReader<K extends Comparable<K> & StreamSerializable> {
                 }
 
                 @Override
-                public TableIterator.TableEntry<K, byte[]> next() {
+                public TableIterator.TableEntry<K, V> next() {
                     return nextElem;
                 }
 
-                private TableIterator.TableEntry<K, byte[]> getNextElem() {
+                private TableIterator.TableEntry<K, V> getNextElem() {
                     try {
-                        K key = clazz.newInstance();
+                        K key = kClazz.newInstance();
                         key.deserialize(dis);
-                        byte[] value = new byte[dis.readInt()];
-                        dis.readFully(value);
+                        V value = vClazz.newInstance();
+                        value.deserialize(dis);
                         return new TableIterator.TableEntry<>(key, value);
                     } catch (InstantiationException | IllegalAccessException e) {
-                        logger.error("Reflection error when creating instance of " + clazz.getName(), e);
+                        logger.error("Reflection error when creating instance of " + kClazz.getName(), e);
                     } catch (IOException e) {
                         logger.error("Error reading from the block.", e);
                     }

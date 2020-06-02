@@ -13,6 +13,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class QueryContainer implements Runnable {
     private final Logger logger = Logger.getLogger(QueryContainer.class);
     private AtomicBoolean queryActive = new AtomicBoolean(true);
+    private long totalSentBytes = 0;
+    private long totalSentStrands = 0;
     private final CountDownLatch latch;
     private final CompletableFuture<Boolean> future;
     private final StreamObserver<TargetQueryResponse> responseObserver;
@@ -68,8 +70,10 @@ public class QueryContainer implements Runnable {
                 if (Thread.interrupted()) {
                     throw new Exception("A reader task has failed.");
                 }
-                TargetQueryResponse resp = queue.poll(3, TimeUnit.SECONDS);
+                TargetQueryResponse resp = queue.poll(5, TimeUnit.MILLISECONDS);
                 if (resp != null) {
+                    totalSentBytes += resp.getSerializedSize();
+                    totalSentStrands += resp.getStrandsCount();
                     responseObserver.onNext(resp);
                 }
             } catch (Throwable e) {
@@ -84,7 +88,7 @@ public class QueryContainer implements Runnable {
         future.complete(true);
         if (logger.isDebugEnabled()) {
             logger.debug("Publishing to stream is complete. Time elapsed (ms): " + (System.nanoTime() - startTS) / Math
-                    .pow(10d, 6));
+                    .pow(10d, 6) + ", Total data sent (Bytes): " + totalSentBytes + ", Total Strand Count: " + totalSentStrands);
         }
     }
 

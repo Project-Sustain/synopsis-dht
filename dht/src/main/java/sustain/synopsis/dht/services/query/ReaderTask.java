@@ -1,9 +1,9 @@
 package sustain.synopsis.dht.services.query;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.log4j.Logger;
 import sustain.synopsis.common.ProtoBuffSerializedStrand;
 import sustain.synopsis.dht.store.StrandStorageKey;
+import sustain.synopsis.dht.store.StrandStorageValue;
 import sustain.synopsis.dht.store.entity.EntityStore;
 import sustain.synopsis.dht.store.services.TargetQueryRequest;
 import sustain.synopsis.dht.store.services.TargetQueryResponse;
@@ -102,9 +102,10 @@ public class ReaderTask implements Runnable {
                 interval -> QueryUtil.temporalLookup(matchedSSTable.getMetadata().getBlockIndex(), interval.getFrom(),
                                                      interval.getTo(), false).keySet().stream())
                                                              .collect(Collectors.toSet());
-        SSTableReader<StrandStorageKey> reader = null;
+        SSTableReader<StrandStorageKey, StrandStorageValue> reader = null;
         try {
-            reader = new SSTableReader<>(matchedSSTable.getMetadata(), StrandStorageKey.class);
+            reader =
+                    new SSTableReader<>(matchedSSTable.getMetadata(), StrandStorageKey.class, StrandStorageValue.class);
             for (StrandStorageKey firstKey : matchingBlocks) {
                 appendToResponse(readBlock(reader, firstKey, matchedSSTable.getMatchedIntervals()));
             }
@@ -121,12 +122,12 @@ public class ReaderTask implements Runnable {
         }
     }
 
-    List<TableIterator.TableEntry<StrandStorageKey, byte[]>> readBlock(SSTableReader<StrandStorageKey> reader,
-                                                                       StrandStorageKey firstKey,
-                                                                       List<Interval> intervals) throws IOException {
+    List<TableIterator.TableEntry<StrandStorageKey, StrandStorageValue>> readBlock(
+            SSTableReader<StrandStorageKey, StrandStorageValue> reader, StrandStorageKey firstKey,
+            List<Interval> intervals) throws IOException {
         // read the block data and filter individual strands again
         long t1 = System.currentTimeMillis();
-        List<TableIterator.TableEntry<StrandStorageKey, byte[]>> result = StreamSupport
+        List<TableIterator.TableEntry<StrandStorageKey, StrandStorageValue>> result = StreamSupport
                 .stream(Spliterators.spliteratorUnknownSize(reader.readBlock(firstKey), Spliterator.ORDERED), false)
                 .filter(entry -> {
                     boolean include = false;
@@ -147,13 +148,10 @@ public class ReaderTask implements Runnable {
         return result;
     }
 
-    void appendToResponse(List<TableIterator.TableEntry<StrandStorageKey, byte[]>> entries)
-            throws InvalidProtocolBufferException {
-        ProtoBuffSerializedStrand.Builder strandBuilder = ProtoBuffSerializedStrand.newBuilder();
-        for (TableIterator.TableEntry<StrandStorageKey, byte[]> entry : entries) {
-            strandBuilder.mergeFrom(entry.getValue()).build();
-            responseWrapper.addProtoBuffSerializedStrand(strandBuilder.build());
-            strandBuilder.clear();
+    void appendToResponse(List<TableIterator.TableEntry<StrandStorageKey, StrandStorageValue>> entries)
+            throws IOException {
+        for (TableIterator.TableEntry<StrandStorageKey, StrandStorageValue> entry : entries) {
+            entry.getValue().getProtoBuffSerializedStrands().forEach(responseWrapper::addProtoBuffSerializedStrand);
         }
     }
 }

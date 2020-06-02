@@ -2,15 +2,17 @@ package sustain.synopsis.dht.store;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import sustain.synopsis.common.Strand;
 import sustain.synopsis.common.CommonUtil;
+import sustain.synopsis.common.ProtoBuffSerializedStrand;
+import sustain.synopsis.common.Strand;
 import sustain.synopsis.sketch.dataset.feature.Feature;
 import sustain.synopsis.sketch.graph.DataContainer;
 import sustain.synopsis.sketch.graph.Path;
 import sustain.synopsis.sketch.stat.RunningStatisticsND;
-import sustain.synopsis.storage.lsmtree.MergeError;
 
 import java.io.*;
+import java.util.Collections;
+import java.util.List;
 
 public class StrandStorageKeyValueTest {
     private long from = 1391216400000L;
@@ -73,20 +75,38 @@ public class StrandStorageKeyValueTest {
     }
 
     @Test
-    void testStrandStorageValueMerge() throws IOException, MergeError {
+    void testStrandStorageValueMerge() throws IOException {
         Strand strand1 = createStrand("9xa", from, to, 1.0, 2.0, 3.0);
+        ProtoBuffSerializedStrand protoBuffSerializedStrand1 = CommonUtil.strandToProtoBuff(strand1);
+
+        StrandStorageValue value1 = new StrandStorageValue(protoBuffSerializedStrand1.toByteArray());
+        Assertions.assertEquals(Collections.singletonList(strand1), value1.getStrands());
+        Assertions.assertEquals(Collections.singletonList(protoBuffSerializedStrand1), value1.getProtoBuffSerializedStrands());
+
+        // test merging
         Strand strand2 = createStrand("9xa", from, to, 1.0, 2.0, 3.0);
-        StrandStorageValue value1 = new StrandStorageValue(serializeStrand(strand1));
-        StrandStorageValue value2 = new StrandStorageValue(serializeStrand(strand2));
+        ProtoBuffSerializedStrand protoBuffSerializedStrand2 = CommonUtil.strandToProtoBuff(strand2);
+        StrandStorageValue value2 = new StrandStorageValue(protoBuffSerializedStrand2.toByteArray());
         value1.merge(value2);
-        strand1.merge(strand2);
-        Assertions.assertEquals(value1.getStrand(), strand1);
+
+        List<ProtoBuffSerializedStrand> returnedProtoBuffSerializedStrands = value1.getProtoBuffSerializedStrands();
+        Assertions.assertEquals(2, returnedProtoBuffSerializedStrands.size());
+        Assertions.assertTrue(returnedProtoBuffSerializedStrands.contains(protoBuffSerializedStrand1));
+        Assertions.assertTrue(returnedProtoBuffSerializedStrands.contains(protoBuffSerializedStrand2));
+
+        List<Strand> returnedStrands = value1.getStrands();
+        Assertions.assertEquals(2, returnedStrands.size());
+        Assertions.assertTrue(returnedStrands.contains(strand1));
+        Assertions.assertTrue(returnedStrands.contains(strand2));
     }
 
     @Test
     void testStrandStorageValueSerialization() throws IOException {
-        Strand strand = createStrand("9xa", from, to, 1.0, 2.0, 3.0);
-        StrandStorageValue val = new StrandStorageValue(serializeStrand(strand));
+        Strand strand1 = createStrand("9xa", from, to, 1.0, 2.0, 3.0);
+        Strand strand2 = createStrand("9xa", from, to, 1.0, 2.0, 3.0);
+        StrandStorageValue val = new StrandStorageValue(serializeStrand(strand1));
+        val.merge(new StrandStorageValue(serializeStrand(strand2)));
+
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream(baos);
         byte[] serializedData;
@@ -104,7 +124,10 @@ public class StrandStorageKeyValueTest {
         StrandStorageValue deserialized = new StrandStorageValue();
         try {
             deserialized.deserialize(dis);
-            Assertions.assertEquals(val.getStrand(), deserialized.getStrand());
+            List<Strand> returnedStrands = deserialized.getStrands();
+            Assertions.assertEquals(2, returnedStrands.size());
+            Assertions.assertTrue(returnedStrands.contains(strand1));
+            Assertions.assertTrue(returnedStrands.contains(strand2));
         } finally {
             bais.close();
             dis.close();

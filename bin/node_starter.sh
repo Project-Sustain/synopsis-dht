@@ -2,10 +2,10 @@
 
 if [[ $1 == "proxy" ]]; then
   MAIN_CLASS=sustain.synopsis.proxy.ProxyStarter
-  echo 'Starting a DHT node'
+  echo 'Starting a proxy node'
 else
   MAIN_CLASS=sustain.synopsis.dht.DHTNodeStarter
-  echo 'Starting a proxy node'
+  echo 'Starting a DHT node'
 fi
 
 total_m=$(awk '/MemTotal/{print $2}' /proc/meminfo | xargs -I {} echo "scale=4; {}/1024^2" | bc)

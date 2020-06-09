@@ -79,12 +79,12 @@ public class Util {
     }
 
 
-    static List<String> getAllStationIds(File dir) {
-        List<File> filesRecursive = getFilesRecursive(dir, 0);
-
+    static List<String> getAllStationIds(List<File> files) {
         Set<String> idSet = new HashSet<>();
-        for (File f : filesRecursive) {
+        for (File f : files) {
+            System.out.println(f.getName());
             getStationIdHelper(f, idSet);
+            System.out.println(idSet.size());
         }
 
         List<String> list = new ArrayList<>(idSet);
@@ -97,8 +97,11 @@ public class Util {
         File inputDir = new File(args[0]);
         File outFile = new File(args[1]);
 
-        List<String> allStationIds = getAllStationIds(inputDir);
-        System.out.println(allStationIds.size());
+        List<File> files = getFilesRecursive(inputDir, 0);
+        System.out.println("File list size: "+files.size());
+
+        List<String> allStationIds = getAllStationIds(files);
+        System.out.println("Complete");
 
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(outFile))) {
             for (String id : allStationIds) {

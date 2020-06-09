@@ -100,60 +100,60 @@ public class StreamFlowClient2 {
 
 
     public static void main(String[] args) throws IOException, CsvValidationException, ParseException {
-
-        Logger.getRootLogger().setLevel(Level.INFO);
-
-        if (args.length < 7) {
-//            System.out.println("Usage: dhtNodeAddress datasetId sessionId binConfigFile stationLocationFile baseDir beginDate endDate");
-            System.out.println("Usage: dhtNodeAddress datasetId sessionId binConfigFile stationLocationFile masterBackupDirectory state");
-
-            System.out.println("Dates in format yyyy_MM_dd");
-            return;
-        }
-
-        String dhtNodeAddress = args[0];
-        String datasetId = args[1];
-        long sessionId = Long.parseLong(args[2]);
-        String binConfigPath = args[3];
-        File stationLocationFile = new File(args[4]);
-        File backupDir = new File(args[5]);
-        state = args[6];
-        beginDate = LocalDate.parse(args[7], dateFormatter);
-        endDate = LocalDate.parse(args[8], dateFormatter);
-
-        List<RemoteFile> remoteFiles = parseBackupDirectoryForMatchingFilePaths(backupDir);
-        remoteFiles.sort(Comparator.comparing(RemoteFile::getId));
-
-
-        System.out.println("Total matching file count: " + remoteFiles.size());
-
-        Map<String, StationParser.Location> stationMap = StationParser.parseFile(stationLocationFile);
-        System.out.println("Num stations in stationLocationFile: " + stationMap.size());
-        SessionSchema sessionSchema = new SessionSchema(Util.quantizerMapFromFile(binConfigPath), GEOHASH_LENGTH, TEMPORAL_BRACKET_LENGTH);
-
-//        SimpleStrandPublisher publisher = new SimpleStrandPublisher(dhtNodeAddress, datasetId, sessionId);
-        ConsoleStrandPublisher publisher = new ConsoleStrandPublisher();
-
-        StrandRegistry strandRegistry = new StrandRegistry(publisher, 10000, 100);
-
-        TemporalQuantizer temporalQuantizer = new TemporalQuantizer(TEMPORAL_BRACKET_LENGTH);
-        StreamFlowRecordCallbackHandler handler = new StreamFlowRecordCallbackHandler(strandRegistry, sessionSchema, temporalQuantizer);
-
-        StreamFlowParser streamFlowFileParser = new StreamFlowParser(stationMap);
-        streamFlowFileParser.initWithSchemaAndHandler(sessionSchema, handler);
-
-        for (RemoteFile rf : remoteFiles) {
-            logger.info("parsing file with id: "+rf.id);
-            streamFlowFileParser.parse(rf.getInputStream());
-        }
-
-        strandRegistry.terminateSession();
-        handler.onTermination();
-
-        System.out.println("Total records: "+handler.totalRecordsHandled);
-        System.out.println("Total strands: "+publisher.getTotalStrandsPublished());
-        System.out.printf("Average records per strand: %.2f\n",(double)handler.totalRecordsHandled / publisher.getTotalStrandsPublished());
-        System.out.println("Stations missing location data count: " + streamFlowFileParser.missingStationIds.size());
+//
+//        Logger.getRootLogger().setLevel(Level.INFO);
+//
+//        if (args.length < 7) {
+////            System.out.println("Usage: dhtNodeAddress datasetId sessionId binConfigFile stationLocationFile baseDir beginDate endDate");
+//            System.out.println("Usage: dhtNodeAddress datasetId sessionId binConfigFile stationLocationFile masterBackupDirectory state");
+//
+//            System.out.println("Dates in format yyyy_MM_dd");
+//            return;
+//        }
+//
+//        String dhtNodeAddress = args[0];
+//        String datasetId = args[1];
+//        long sessionId = Long.parseLong(args[2]);
+//        String binConfigPath = args[3];
+//        File stationLocationFile = new File(args[4]);
+//        File backupDir = new File(args[5]);
+//        state = args[6];
+//        beginDate = LocalDate.parse(args[7], dateFormatter);
+//        endDate = LocalDate.parse(args[8], dateFormatter);
+//
+//        List<RemoteFile> remoteFiles = parseBackupDirectoryForMatchingFilePaths(backupDir);
+//        remoteFiles.sort(Comparator.comparing(RemoteFile::getId));
+//
+//
+//        System.out.println("Total matching file count: " + remoteFiles.size());
+//
+//        Map<String, StationParser.Location> stationMap = StationParser.parseFile(stationLocationFile);
+//        System.out.println("Num stations in stationLocationFile: " + stationMap.size());
+//        SessionSchema sessionSchema = new SessionSchema(Util.quantizerMapFromFile(binConfigPath), GEOHASH_LENGTH, TEMPORAL_BRACKET_LENGTH);
+//
+////        SimpleStrandPublisher publisher = new SimpleStrandPublisher(dhtNodeAddress, datasetId, sessionId);
+//        ConsoleStrandPublisher publisher = new ConsoleStrandPublisher();
+//
+//        StrandRegistry strandRegistry = new StrandRegistry(publisher, 10000, 100);
+//
+//        TemporalQuantizer temporalQuantizer = new TemporalQuantizer(TEMPORAL_BRACKET_LENGTH);
+//        StreamFlowRecordCallbackHandler handler = new StreamFlowRecordCallbackHandler(strandRegistry, sessionSchema, temporalQuantizer);
+//
+//        StreamFlowParser streamFlowFileParser = new StreamFlowParser(stationMap);
+//        streamFlowFileParser.initWithSchemaAndHandler(sessionSchema, handler);
+//
+//        for (RemoteFile rf : remoteFiles) {
+//            logger.info("parsing file with id: "+rf.id);
+//            streamFlowFileParser.parse(rf.getInputStream());
+//        }
+//
+//        strandRegistry.terminateSession();
+//        handler.onTermination();
+//
+//        System.out.println("Total records: "+handler.totalRecordsHandled);
+//        System.out.println("Total strands: "+publisher.getTotalStrandsPublished());
+//        System.out.printf("Average records per strand: %.2f\n",(double)handler.totalRecordsHandled / publisher.getTotalStrandsPublished());
+//        System.out.println("Stations missing location data count: " + streamFlowFileParser.missingStationIds.size());
     }
 
     static class RemoteFile {

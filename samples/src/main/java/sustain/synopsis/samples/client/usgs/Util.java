@@ -2,6 +2,7 @@ package sustain.synopsis.samples.client.usgs;
 
 import java.io.*;
 import java.util.*;
+import java.util.zip.GZIPInputStream;
 
 public class Util {
 
@@ -44,7 +45,7 @@ public class Util {
     }
 
     static void getStationIdHelper(File file, Set<String> set) {
-        try (FileReader fr = new FileReader(file); BufferedReader br = new BufferedReader(fr)) {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(file))))) {
 
             boolean inSiteData = false;
             while (br.ready()) {
@@ -81,10 +82,12 @@ public class Util {
 
     static List<String> getAllStationIds(List<File> files) {
         Set<String> idSet = new HashSet<>();
+        int finished = 0;
         for (File f : files) {
-            System.out.println(f.getName());
             getStationIdHelper(f, idSet);
-            System.out.println(idSet.size());
+            if (++finished % 100 == 0) {
+                System.out.println(finished+" "+f.getName()+" "+idSet.size());
+            }
         }
 
         List<String> list = new ArrayList<>(idSet);

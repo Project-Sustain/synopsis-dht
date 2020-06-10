@@ -43,7 +43,7 @@ public class StreamFlowBinCalculator {
                 e.printStackTrace();
             }
         }
-
+        System.out.println("Record count: "+handler.getRecords().size());
         return new BinCalculator().getBinConfiguration(handler.getRecords());
     }
 

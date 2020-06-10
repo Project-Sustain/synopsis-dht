@@ -1,68 +1,127 @@
 package sustain.synopsis.samples.client.usgs;
 
-import com.opencsv.exceptions.CsvValidationException;
-import sustain.synopsis.ingestion.client.core.*;
+import org.apache.log4j.Logger;
+import sustain.synopsis.ingestion.client.core.BinCalculator;
+import sustain.synopsis.ingestion.client.core.Record;
+import sustain.synopsis.ingestion.client.core.RecordCallbackHandler;
+import sustain.synopsis.ingestion.client.core.SessionSchema;
 import sustain.synopsis.sketch.dataset.Quantizer;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.text.ParseException;
+import java.io.*;
 import java.time.Duration;
 import java.util.*;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.zip.GZIPInputStream;
 
 public class StreamFlowBinCalculator {
 
-
+    static Logger logger = Logger.getLogger(StreamFlowBinCalculator.class);
     private static Random random = new Random(1);
-    public static final int GEOHASH_LENGTH = 5;
+    public static final int GEOHASH_LENGTH = 6;
     public static final Duration TEMPORAL_BUCKET_LENGTH = Duration.ofHours(6);
 
-    public static void main(String[] args) throws ParseException, IOException, CsvValidationException {
 
-        File baseDir = new File(args[0]);
+    static File outputFile;
+    static double proportion;
+    static Set<String> features;
+    static Map<String, StationParser.Location> locationMap;
+    static Map<String, Quantizer> quantizerMap;
+    static List<File> allFiles;
+    static int yearStart;
+    static int yearEnd;
+
+    static String getBinConfiguration(List<File> files) {
+        MyRecordCallbackHandler handler = new MyRecordCallbackHandler(features, proportion);
+        StreamFlowParser streamFlowParser = new StreamFlowParser(locationMap);
+        streamFlowParser.initWithSchemaAndHandler(new SessionSchema(quantizerMap, GEOHASH_LENGTH, TEMPORAL_BUCKET_LENGTH), handler);
+
+        for (File f : files) {
+            try {
+                streamFlowParser.parse(new GZIPInputStream(new FileInputStream(f)));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return new BinCalculator().getBinConfiguration(handler.getRecords());
+    }
+
+    static void init(String[] args) throws IOException {
+        File inputDir = new File(args[0]);
         File stationsFile = new File(args[1]);
-        Date beginDate = StreamFlowClient.dateFormat.parse(args[2]);
-        Date endDate = StreamFlowClient.dateFormat.parse(args[3]);
-        int beginYear = Integer.parseInt(args[2].substring(0,4));
-        int endYear =  Integer.parseInt(args[3].substring(0,4));
+        outputFile = new File(args[2]);
         // proportion of records to be included
-        int daysToSkip = Integer.parseInt((args[4]));
-        double proportion = Double.parseDouble(args[5]);
+        int daysToSkip = Integer.parseInt((args[3]));
+        proportion = Double.parseDouble(args[4]);
+        String featureArg = args[5];
+        yearStart = Integer.parseInt(args[6]);
+        yearEnd = Integer.parseInt(args[7]);
 
 
-        List<File> inputFiles = StreamFlowClient.getMatchingFiles(baseDir.listFiles(), beginDate, endDate, beginYear, endYear);
-        inputFiles.sort(Comparator.comparing(File::getName));
-        System.out.println("Total matching file count: " + inputFiles.size());
-
-
-        Set<String> features = new HashSet<>();
-        if (args[6].contains("t")) {
+        features = new HashSet<>();
+        if (featureArg.contains("t")) {
             features.add(StreamFlowClient.TEMPERATURE_FEATURE);
         }
-        if (args[6].contains("d")) {
+        if (featureArg.contains("d")) {
             features.add(StreamFlowClient.DISCHARGE_FEATURE);
         }
+        locationMap = StationParser.parseFile(stationsFile);
 
         Map<String, Quantizer> quantizerMap = new HashMap<>();
         for (String s : features) {
             quantizerMap.put(s, new Quantizer());
         }
 
-        MyRecordCallbackHandler handler = new MyRecordCallbackHandler(features, proportion);
-        StreamFlowParser fileParser = new StreamFlowParser(StationParser.parseFile(stationsFile));
-        fileParser.initWithSchemaAndHandler(new SessionSchema(quantizerMap, GEOHASH_LENGTH, TEMPORAL_BUCKET_LENGTH), handler);
+        allFiles = Util.getFilesRecursive(inputDir, daysToSkip);
+    }
 
-        for (int i = 0; i < inputFiles.size(); i += daysToSkip) {
-            fileParser.parse(new FileInputStream(inputFiles.get(i)));
+    public static void main(String[] args) throws IOException {
+        init(args);
+
+        System.out.println("All file count: " + allFiles.size());
+
+        Map<String, String> binConfigs = new HashMap<>();
+
+        for (State state : State.values()) {
+            List<File> files = allFiles.stream()
+                    .filter(new FilePredicate(state.getANSIAbbreviation(), yearStart, yearEnd))
+                    .sorted().collect(Collectors.toList());
+
+            System.out.println("Matching file count for "+state.getANSIAbbreviation()+": " + files.size());
+            String binConfig = getBinConfiguration(files);
+            binConfigs.put(state.getANSIAbbreviation(), binConfig);
+            System.out.println(binConfig);
         }
 
-        List<Record> records = handler.getRecords();
-        System.out.println(records.size());
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile))) {
+            for (String key : binConfigs.keySet().stream().sorted().collect(Collectors.toList())) {
+                bw.write(key+"\n");
+                bw.write(binConfigs.get(key)+"\n");
+            }
+        }
+    }
 
-        String binConfiguration = new BinCalculator().getBinConfiguration(handler.getRecords());
-        System.out.println(binConfiguration);
+    private static class FilePredicate implements Predicate<File> {
 
+        final String state;
+        final int yearStart;
+        final int yearEnd;
+
+        public FilePredicate(String state, int yearStart, int yearEnd) {
+            this.state = state;
+            this.yearStart = yearStart;
+            this.yearEnd = yearEnd;
+        }
+
+        @Override
+        public boolean test(File file) {
+            int year = Integer.parseInt(file.getName().substring(3, 7));
+            boolean yearMatches = year >= yearStart && year <= yearEnd;
+            boolean stateMatches = file.getName().startsWith(state);
+
+            return stateMatches && yearMatches;
+        }
     }
 
     private static class MyRecordCallbackHandler implements RecordCallbackHandler {
@@ -107,6 +166,7 @@ public class StreamFlowBinCalculator {
         public List<Record> getRecords() {
             return records;
         }
+
     }
 
 }

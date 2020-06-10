@@ -79,7 +79,6 @@ public class Util {
 
     }
 
-
     static List<String> getAllStationIds(List<File> files) {
         Set<String> idSet = new HashSet<>();
         int finished = 0;

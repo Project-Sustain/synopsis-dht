@@ -25,7 +25,7 @@ public class StreamFlowParser {
     }
 
     public void parse(InputStream is) {
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(new GZIPInputStream(is)))) {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
 
             parseHeader(br);
             StreamFlowSiteDataParser siteDataParser;

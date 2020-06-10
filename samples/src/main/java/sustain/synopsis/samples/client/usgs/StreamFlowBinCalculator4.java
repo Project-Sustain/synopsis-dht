@@ -27,22 +27,19 @@ public class StreamFlowBinCalculator4 {
 
         File inputDir = new File(args[0]);
         File stationsFile = new File(args[1]);
-        StreamFlowClient2.state = args[2];
-        StreamFlowClient2.beginDate = LocalDate.parse(args[3], StreamFlowClient2.dateFormatter);
-        StreamFlowClient2.endDate = LocalDate.parse(args[4], StreamFlowClient2.dateFormatter);
-
         // proportion of records to be included
-        int daysToSkip = Integer.parseInt((args[5]));
-        double proportion = Double.parseDouble(args[6]);
+        int daysToSkip = Integer.parseInt((args[2]));
+        double proportion = Double.parseDouble(args[3]);
 
         List<File> files = Util.getFilesRecursive(inputDir, daysToSkip);
+        files.sort(Comparator.comparing(File::getName));
         System.out.println("Total matching file count: " + files.size());
 
         Set<String> features = new HashSet<>();
-        if (args[7].contains("t")) {
+        if (args[4].contains("t")) {
             features.add(StreamFlowClient.TEMPERATURE_FEATURE);
         }
-        if (args[7].contains("d")) {
+        if (args[4].contains("d")) {
             features.add(StreamFlowClient.DISCHARGE_FEATURE);
         }
 

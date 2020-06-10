@@ -84,13 +84,14 @@ public class StreamFlowBinCalculator {
         Map<String, String> binConfigs = new HashMap<>();
 
         for (State state : State.values()) {
+            String stateAbbr = state.getANSIAbbreviation().toLowerCase();
             List<File> files = allFiles.stream()
-                    .filter(new FilePredicate(state.getANSIAbbreviation(), yearStart, yearEnd))
+                    .filter(new FilePredicate(stateAbbr, yearStart, yearEnd))
                     .sorted().collect(Collectors.toList());
 
-            System.out.println("Matching file count for "+state.getANSIAbbreviation()+": " + files.size());
+            System.out.println("Matching file count for "+stateAbbr+": " + files.size());
             String binConfig = getBinConfiguration(files);
-            binConfigs.put(state.getANSIAbbreviation(), binConfig);
+            binConfigs.put(stateAbbr, binConfig);
             System.out.println(binConfig);
         }
 

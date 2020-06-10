@@ -91,14 +91,37 @@ public class BinCalculator {
         return calculateBins(sample, 0.025, 5, 50);
     }
 
-    public String getBinConfiguration(List<Record> records) {
+    public List<Feature> calculateBins(List<Feature> sample, int tickCount) {
+        Quantizer quantizer = AutoQuantizer.fromList(sample, tickCount);
+        double discError = evaluate(sample, quantizer);
+        System.out.println("Algorithm: oKDE, tick count: " + tickCount + ", discretization error: " + discError);
+        return quantizer.getTicks();
+    }
+
+    public String getBinConfiguration(List<Record> records, int tickCount) {
         Map<String, List<Feature>> featureListMap = getFeatureListMapFromRecordList(records);
-        Map<String, List<Feature>> binConfigurationMap = getBinConfigurationMapFromFeatureListMap(featureListMap);
-        String binConfiguration = getStringForBinConfigurationMap(binConfigurationMap);
+        Map<String, List<Feature>> binConfigurationMap = getBinConfigurationMapFromFeatureListMap(featureListMap, tickCount);
+        String binConfiguration = binConfigurationMapToString(binConfigurationMap);
         return binConfiguration;
     }
 
-    private String getStringForBinConfigurationMap(Map<String, List<Feature>> binConfigurationMap) {
+
+
+
+
+    public String getBinConfiguration(List<Record> records) {
+        Map<String, List<Feature>> featureListMap = getFeatureListMapFromRecordList(records);
+        Map<String, List<Feature>> binConfigurationMap = getBinConfigurationMapFromFeatureListMap(featureListMap);
+        String binConfiguration = binConfigurationMapToString(binConfigurationMap);
+        return binConfiguration;
+    }
+
+
+
+
+
+
+    private String binConfigurationMapToString(Map<String, List<Feature>> binConfigurationMap) {
         StringBuilder sb = new StringBuilder();
         for (String featureName : binConfigurationMap.keySet()) {
             sb.append(featureName);
@@ -110,6 +133,8 @@ public class BinCalculator {
         return sb.toString();
     }
 
+
+
     private Map<String, List<Feature>> getBinConfigurationMapFromFeatureListMap(Map<String,List<Feature>> featureListMap) {
         Map<String,List<Feature>> binConfigurationMap = new HashMap<>();
         for (String featureName : featureListMap.keySet()) {
@@ -118,17 +143,31 @@ public class BinCalculator {
         return binConfigurationMap;
     }
 
+    private Map<String, List<Feature>> getBinConfigurationMapFromFeatureListMap(Map<String,List<Feature>> featureListMap, int tickCount) {
+        Map<String,List<Feature>> binConfigurationMap = new HashMap<>();
+        for (String featureName : featureListMap.keySet()) {
+            binConfigurationMap.put(featureName, calculateBins(featureListMap.get(featureName), tickCount));
+        }
+        return binConfigurationMap;
+    }
+
+
+
     private Map<String, List<Feature>> getFeatureListMapFromRecordList(List<Record> recordList) {
         Map<String,List<Feature>> featureListMap = new HashMap<>();
         for (Record r : recordList) {
             Map<String, Float> features = r.getFeatures();
             for (String featureName : features.keySet()) {
-                featureListMap.putIfAbsent(featureName, new ArrayList<>());
-                featureListMap.get(featureName).add(new Feature(featureName, features.get(featureName)));
+                featureListMap.computeIfAbsent(featureName, k -> new ArrayList<>())
+                        .add(new Feature(featureName, features.get(featureName)));
             }
         }
         return featureListMap;
     }
+
+
+
+
 
     private double evaluate(List<Feature> sample, Quantizer q) {
         List<Feature> quantized = new ArrayList<>();

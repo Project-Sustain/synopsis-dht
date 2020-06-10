@@ -20,7 +20,7 @@ public class StreamFlowBinCalculator {
     private static Random random = new Random(1);
     public static final int GEOHASH_LENGTH = 6;
     public static final Duration TEMPORAL_BUCKET_LENGTH = Duration.ofHours(6);
-
+    public static final int binConfigurationTickCount = 16;
 
     static File outputFile;
     static double proportion;
@@ -44,7 +44,7 @@ public class StreamFlowBinCalculator {
             }
         }
         System.out.println("Record count: "+handler.getRecords().size());
-        return new BinCalculator().getBinConfiguration(handler.getRecords());
+        return new BinCalculator().getBinConfiguration(handler.getRecords(), binConfigurationTickCount);
     }
 
     static void init(String[] args) throws IOException {

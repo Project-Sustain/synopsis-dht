@@ -68,7 +68,7 @@ public class StreamFlowBinCalculator {
         }
         locationMap = StationParser.parseFile(stationsFile);
 
-        Map<String, Quantizer> quantizerMap = new HashMap<>();
+        quantizerMap = new HashMap<>();
         for (String s : features) {
             quantizerMap.put(s, new Quantizer());
         }

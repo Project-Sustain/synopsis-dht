@@ -95,7 +95,30 @@ public class Util {
         return list;
     }
 
-    public static void main(String[] args) {
+    static void copySampleToNewDir(String[] args) {
+        File inputDir = new File(args[0]);
+        File outputDir = new File(args[1]);
+
+        List<File> filesRecursive = getFilesRecursive(inputDir, 30);
+        for (File f : filesRecursive) {
+            try {
+                InputStream is = new FileInputStream(f);
+                byte[] buf = new byte[is.available()];
+                is.read(buf);
+                is.close();
+
+                File out = new File(outputDir.getPath()+"/"+f.getName());
+                OutputStream os = new FileOutputStream(out);
+                os.write(buf);
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+
+    static void writeStationIds(String[] args) {
         File inputDir = new File(args[0]);
         File outFile = new File(args[1]);
 
@@ -112,6 +135,10 @@ public class Util {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public static void main(String[] args) {
+        copySampleToNewDir(args);
     }
 
 }

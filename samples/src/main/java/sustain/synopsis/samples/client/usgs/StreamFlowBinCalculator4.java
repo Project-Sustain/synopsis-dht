@@ -8,10 +8,7 @@ import sustain.synopsis.ingestion.client.core.RecordCallbackHandler;
 import sustain.synopsis.ingestion.client.core.SessionSchema;
 import sustain.synopsis.sketch.dataset.Quantizer;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.text.ParseException;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -26,9 +23,9 @@ public class StreamFlowBinCalculator4 {
     public static final int GEOHASH_LENGTH = 5;
     public static final Duration TEMPORAL_BUCKET_LENGTH = Duration.ofHours(6);
 
-    public static void main(String[] args) throws IOException, CsvValidationException {
+    public static void main(String[] args) throws IOException {
 
-        File backupDir = new File(args[0]);
+        File inputDir = new File(args[0]);
         File stationsFile = new File(args[1]);
         StreamFlowClient2.state = args[2];
         StreamFlowClient2.beginDate = LocalDate.parse(args[3], StreamFlowClient2.dateFormatter);
@@ -38,9 +35,8 @@ public class StreamFlowBinCalculator4 {
         int daysToSkip = Integer.parseInt((args[5]));
         double proportion = Double.parseDouble(args[6]);
 
-        List<StreamFlowClient2.RemoteFile> remoteFiles = parseBackupDirectoryForMatchingFilePaths(backupDir);
-        remoteFiles.sort(Comparator.comparing(StreamFlowClient2.RemoteFile::getId));
-        System.out.println("Total matching file count: " + remoteFiles.size());
+        List<File> files = Util.getFilesRecursive(inputDir, daysToSkip);
+        System.out.println("Total matching file count: " + files.size());
 
         Set<String> features = new HashSet<>();
         if (args[7].contains("t")) {
@@ -59,8 +55,8 @@ public class StreamFlowBinCalculator4 {
         StreamFlowParser streamFlowParser = new StreamFlowParser(StationParser.parseFile(stationsFile));
         streamFlowParser.initWithSchemaAndHandler(new SessionSchema(quantizerMap, GEOHASH_LENGTH, TEMPORAL_BUCKET_LENGTH), handler);
 
-        for (int i = 0; i < remoteFiles.size(); i += daysToSkip) {
-            streamFlowParser.parse(remoteFiles.get(i).getInputStream());
+        for (File f : files) {
+            streamFlowParser.parse(new FileInputStream(f));
         }
 
         String binConfiguration = new BinCalculator().getBinConfiguration(handler.getRecords());
@@ -109,6 +105,7 @@ public class StreamFlowBinCalculator4 {
         public List<Record> getRecords() {
             return records;
         }
+
     }
 
 }

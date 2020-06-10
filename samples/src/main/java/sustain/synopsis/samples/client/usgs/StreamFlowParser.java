@@ -50,20 +50,12 @@ public class StreamFlowParser {
         reader.readLine();
     }
 
-    final HashSet<String> missingStationIds = new HashSet<>();
-
     private StreamFlowSiteDataParser getSiteParser(BufferedReader reader) throws IOException {
         String line = reader.readLine();
         if (line == null) {
             return null;
         }
 
-        String stationId = line.substring("# Data provided for site ".length());
-        StationParser.Location location = stationMap.get(stationId);
-        if (location == null) {
-            missingStationIds.add(stationId);
-            return StreamFlowSiteDataParser.NO_OP_PARSER;
-        }
         reader.readLine();
 
         Map<String, String>  dataCodesMap = new HashMap<>();
@@ -94,9 +86,10 @@ public class StreamFlowParser {
 
         return new StreamFlowSiteDataParser(
                 headerMap,
-                GeoHash.encode(location.latitude, location.longitude, schema.getGeohashLength()),
+                stationMap,
                 dataCodesMap.values(),
-                recordCallbackHandler
+                recordCallbackHandler,
+                schema.getGeohashLength()
         );
     }
 

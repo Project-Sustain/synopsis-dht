@@ -13,6 +13,7 @@ import java.text.ParseException;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.zip.GZIPInputStream;
 
 import static sustain.synopsis.samples.client.usgs.StreamFlowClient2.parseBackupDirectoryForMatchingFilePaths;
 
@@ -53,7 +54,7 @@ public class StreamFlowBinCalculator4 {
         streamFlowParser.initWithSchemaAndHandler(new SessionSchema(quantizerMap, GEOHASH_LENGTH, TEMPORAL_BUCKET_LENGTH), handler);
 
         for (File f : files) {
-            streamFlowParser.parse(new FileInputStream(f));
+            streamFlowParser.parse(new GZIPInputStream(new FileInputStream(f)));
         }
 
         String binConfiguration = new BinCalculator().getBinConfiguration(handler.getRecords());

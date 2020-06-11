@@ -1,1 +1,2 @@
+rootProject.name = "sustain-dht"
 include 'common', 'storage', 'dht', 'client', 'distribution', 'samples', 'tools', 'benchmarks', 'proxy'

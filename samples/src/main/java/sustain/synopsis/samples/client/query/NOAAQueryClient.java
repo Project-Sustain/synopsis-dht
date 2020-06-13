@@ -12,9 +12,14 @@ import java.util.Iterator;
 
 public class NOAAQueryClient {
     public static void main(String[] args) {
+        if (args.length < 1) {
+            System.err.println("Usage: NOAAQueryClient proxy_url");
+            return;
+        }
         // initialize the stub
-        String host = "lattice-80.cs.colostate.edu";
-        int port = 9091;
+        System.out.println("Using proxy url: " + args[0]);
+        String host = args[0].split(":")[0];
+        int port = Integer.parseInt(args[0].split(":")[1]);
         Channel channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
         TargetedQueryServiceGrpc.TargetedQueryServiceBlockingStub stub =
                 TargetedQueryServiceGrpc.newBlockingStub(channel);
@@ -26,11 +31,11 @@ public class NOAAQueryClient {
                          .setIntegerValue(
                                  CommonUtil.localDateTimeToEpoch(LocalDateTime.of(2015, Month.JANUARY, 1, 0, 0)))
                          .build();
-        // t < 12:00 Jan 03, 2015
+        // t < 23:59 Jan 31, 2015
         Predicate toPredicate = Predicate.newBuilder().setComparisonOp(Predicate.ComparisonOperator.LESS_THAN)
                                          .setIntegerValue(CommonUtil.localDateTimeToEpoch(
                                                  LocalDateTime.of(2015, Month.JANUARY, 31, 23, 59))).build();
-        // combine both predicates such that 00:00 Jan 01, 2015 =< t < 12:00 Jan 03, 2015
+        // combine both predicates such that 00:00 Jan 01, 2015 =< t < 23:59 Jan 31, 2015
         Expression temporalExp =
                 Expression.newBuilder().setPredicate1(fromPredicate).setCombineOp(Expression.CombineOperator.AND)
                           .setPredicate2(toPredicate).build();
@@ -42,7 +47,8 @@ public class NOAAQueryClient {
             Predicate spatialPredicate = Predicate.newBuilder().setStringValue(geohash).build();
             // I've set the dataset id to be noaa_2015_jan during ingestion.
             TargetQueryRequest targetQueryRequest =
-                    TargetQueryRequest.newBuilder().setDataset("noaa_2015_jan").addSpatialScope(spatialPredicate).setTemporalScope(temporalExp).build();
+                    TargetQueryRequest.newBuilder().setDataset("noaa_2015_jan").addSpatialScope(spatialPredicate)
+                                      .setTemporalScope(temporalExp).build();
 
             long fetchedData = 0;
             long t1 = System.currentTimeMillis();
@@ -64,7 +70,6 @@ public class NOAAQueryClient {
                         System.out.println("S2 values: " + strand.getS2List());
                     }
                 }
-
             }
             long t2 = System.currentTimeMillis();
             System.out.println("Query is complete. Elapsed time (ms): " + (t2 - t1) + ", fetched data: " + fetchedData

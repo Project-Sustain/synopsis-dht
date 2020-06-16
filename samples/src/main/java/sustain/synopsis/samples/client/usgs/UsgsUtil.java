@@ -4,6 +4,7 @@ import sustain.synopsis.samples.client.common.Util;
 
 import java.io.*;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.zip.GZIPInputStream;
 
 public class UsgsUtil {
@@ -75,6 +76,28 @@ public class UsgsUtil {
             }
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    static class FilePredicate implements Predicate<File> {
+
+        final String state;
+        final int yearStart;
+        final int yearEnd;
+
+        public FilePredicate(String state, int yearStart, int yearEnd) {
+            this.state = state;
+            this.yearStart = yearStart;
+            this.yearEnd = yearEnd;
+        }
+
+        @Override
+        public boolean test(File file) {
+            int year = Integer.parseInt(file.getName().substring(3, 7));
+            boolean yearMatches = year >= yearStart && year <= yearEnd;
+            boolean stateMatches = file.getName().startsWith(state);
+
+            return stateMatches && yearMatches;
         }
     }
 

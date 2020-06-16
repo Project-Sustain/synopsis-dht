@@ -36,7 +36,7 @@ public class StreamFlowBinCalculator {
 
     static String getBinConfiguration(List<File> allFiles, String stateAbbr, int yearStart, int yearEnd) {
         List<File> files = allFiles.stream()
-                .filter(new FilePredicate(stateAbbr, yearStart, yearEnd))
+                .filter(new UsgsUtil.FilePredicate(stateAbbr, yearStart, yearEnd))
                 .sorted().collect(Collectors.toList());
 
 
@@ -101,28 +101,6 @@ public class StreamFlowBinCalculator {
                 bw.write(key+"\t");
                 bw.write(binConfigs.get(key)+"\n");
             }
-        }
-    }
-
-    private static class FilePredicate implements Predicate<File> {
-
-        final String state;
-        final int yearStart;
-        final int yearEnd;
-
-        public FilePredicate(String state, int yearStart, int yearEnd) {
-            this.state = state;
-            this.yearStart = yearStart;
-            this.yearEnd = yearEnd;
-        }
-
-        @Override
-        public boolean test(File file) {
-            int year = Integer.parseInt(file.getName().substring(3, 7));
-            boolean yearMatches = year >= yearStart && year <= yearEnd;
-            boolean stateMatches = file.getName().startsWith(state);
-
-            return stateMatches && yearMatches;
         }
     }
 

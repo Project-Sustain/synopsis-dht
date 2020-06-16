@@ -85,8 +85,8 @@ public class StreamFlowClient {
 
     public static void main(String[] args) throws IOException {
         File inputDir = new File(args[0]);
-        binConfigMap = getBinConfigMap(new File(args[1]));
-        stationMap = StationParser.parseFile(new File(args[2]));
+        stationMap = StationParser.parseFile(new File(args[1]));
+        binConfigMap = getBinConfigMap(new File(args[2]));
         dhtNodeAddress = args[3];
         datasetId = args[4];
         int beginYear = Integer.parseInt(args[5].substring(0,4));

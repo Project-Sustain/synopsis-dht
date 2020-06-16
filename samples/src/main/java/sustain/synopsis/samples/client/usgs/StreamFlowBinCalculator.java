@@ -5,6 +5,9 @@ import sustain.synopsis.ingestion.client.core.BinCalculator;
 import sustain.synopsis.ingestion.client.core.Record;
 import sustain.synopsis.ingestion.client.core.RecordCallbackHandler;
 import sustain.synopsis.ingestion.client.core.SessionSchema;
+import sustain.synopsis.samples.client.common.Location;
+import sustain.synopsis.samples.client.common.State;
+import sustain.synopsis.samples.client.common.Util;
 import sustain.synopsis.sketch.dataset.Quantizer;
 
 import java.io.*;
@@ -25,13 +28,18 @@ public class StreamFlowBinCalculator {
     static File outputFile;
     static double proportion;
     static Set<String> features;
-    static Map<String, StationParser.Location> locationMap;
+    static Map<String, Location> locationMap;
     static Map<String, Quantizer> quantizerMap;
-    static List<File> allFiles;
-    static int yearStart;
+//    static List<File> allFiles;
+    static int yearBegin;
     static int yearEnd;
 
-    static String getBinConfiguration(List<File> files) {
+    static String getBinConfiguration(List<File> allFiles, String stateAbbr, int yearStart, int yearEnd) {
+        List<File> files = allFiles.stream()
+                .filter(new FilePredicate(stateAbbr, yearStart, yearEnd))
+                .sorted().collect(Collectors.toList());
+
+
         MyRecordCallbackHandler handler = new MyRecordCallbackHandler(features, proportion);
         StreamFlowParser streamFlowParser = new StreamFlowParser(locationMap);
         streamFlowParser.initWithSchemaAndHandler(new SessionSchema(quantizerMap, GEOHASH_LENGTH, TEMPORAL_BUCKET_LENGTH), handler);
@@ -43,21 +51,22 @@ public class StreamFlowBinCalculator {
                 e.printStackTrace();
             }
         }
-        System.out.println("Record count: "+handler.getRecords().size());
+
+//        System.out.println("Record count: "+handler.getRecords().size());
         return new BinCalculator().getBinConfiguration(handler.getRecords(), binConfigurationTickCount);
     }
 
-    static void init(String[] args) throws IOException {
+
+    public static void main(String[] args) throws IOException {
         File inputDir = new File(args[0]);
         File stationsFile = new File(args[1]);
         outputFile = new File(args[2]);
         // proportion of records to be included
-        int daysToSkip = Integer.parseInt((args[3]));
+        int filesToSkip = Integer.parseInt((args[3]));
         proportion = Double.parseDouble(args[4]);
         String featureArg = args[5];
-        yearStart = Integer.parseInt(args[6]);
+        yearBegin = Integer.parseInt(args[6]);
         yearEnd = Integer.parseInt(args[7]);
-
 
         features = new HashSet<>();
         if (featureArg.contains("t")) {
@@ -73,31 +82,23 @@ public class StreamFlowBinCalculator {
             quantizerMap.put(s, new Quantizer());
         }
 
-        allFiles = Util.getFilesRecursive(inputDir, daysToSkip);
-    }
-
-    public static void main(String[] args) throws IOException {
-        init(args);
-
-        System.out.println("All file count: " + allFiles.size());
+        List<File> allFiles = Util.getFilesRecursive(inputDir, filesToSkip);
 
         Map<String, String> binConfigs = new HashMap<>();
-
         for (State state : State.values()) {
             String stateAbbr = state.getANSIAbbreviation().toLowerCase();
-            List<File> files = allFiles.stream()
-                    .filter(new FilePredicate(stateAbbr, yearStart, yearEnd))
-                    .sorted().collect(Collectors.toList());
 
-            System.out.println("Matching file count for "+stateAbbr+": " + files.size());
-            String binConfig = getBinConfiguration(files);
-            binConfigs.put(stateAbbr, binConfig);
-            System.out.println(binConfig);
+            for (int year = yearBegin; year <= yearEnd; year++) {
+                String key = stateAbbr+year;
+                String binConfig = getBinConfiguration(allFiles, stateAbbr, year, year);
+                binConfigs.put(key, binConfig);
+                logger.info(key);
+            }
         }
 
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile))) {
             for (String key : binConfigs.keySet().stream().sorted().collect(Collectors.toList())) {
-                bw.write(key+"\n");
+                bw.write(key+"\t");
                 bw.write(binConfigs.get(key)+"\n");
             }
         }

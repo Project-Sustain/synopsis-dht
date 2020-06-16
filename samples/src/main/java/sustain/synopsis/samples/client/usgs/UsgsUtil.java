@@ -1,48 +1,12 @@
 package sustain.synopsis.samples.client.usgs;
 
+import sustain.synopsis.samples.client.common.Util;
+
 import java.io.*;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
 
-public class Util {
-
-    static List<File> getFilesRecursive(File dir, int skipCount) {
-        List<File> ret = new ArrayList<>();
-        File[] files = dir.listFiles();
-        int curSkipped = skipCount;
-        for (int i = 0; i < files.length; i++) {
-            File file = files[i];
-            if (file.isDirectory()) {
-                ret.addAll(getFilesRecursive(file, skipCount));
-            } else if (curSkipped >= skipCount) {
-                ret.add(file);
-                curSkipped = 0;
-            } else {
-                curSkipped++;
-            }
-        }
-
-        return ret;
-    }
-
-    static void getFilenamesRecursiveHelper(File dir, Set<String> set) {
-        for (File f : dir.listFiles()) {
-            if (f.isDirectory()) {
-                getFilenamesRecursiveHelper(f, set);
-            } else {
-                set.add(f.getName());
-            }
-        }
-    }
-
-    public static Set<String> getFileNamesFromDirectoryRecursive(String dirPath) {
-        Set<String> fileNames = new HashSet<>();
-        File dir = new File(dirPath);
-        if (dir.exists() && dir.isDirectory()) {
-            getFilenamesRecursiveHelper(dir, fileNames);
-        }
-        return fileNames;
-    }
+public class UsgsUtil {
 
     static void getStationIdHelper(File file, Set<String> set) {
         try (BufferedReader br = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(file))))) {
@@ -95,34 +59,11 @@ public class Util {
         return list;
     }
 
-    static void copySampleToNewDir(String[] args) {
-        File inputDir = new File(args[0]);
-        File outputDir = new File(args[1]);
-
-        List<File> filesRecursive = getFilesRecursive(inputDir, 30);
-        for (File f : filesRecursive) {
-            try {
-                InputStream is = new FileInputStream(f);
-                byte[] buf = new byte[is.available()];
-                is.read(buf);
-                is.close();
-
-                File out = new File(outputDir.getPath()+"/"+f.getName());
-                OutputStream os = new FileOutputStream(out);
-                os.write(buf);
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-    }
-
     static void writeStationIds(String[] args) {
         File inputDir = new File(args[0]);
         File outFile = new File(args[1]);
 
-        List<File> files = getFilesRecursive(inputDir, 0);
+        List<File> files = Util.getFilesRecursive(inputDir, 0);
         System.out.println("File list size: "+files.size());
 
         List<String> allStationIds = getAllStationIds(files);
@@ -138,7 +79,5 @@ public class Util {
     }
 
     public static void main(String[] args) {
-        copySampleToNewDir(args);
     }
-
 }

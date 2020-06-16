@@ -3,22 +3,12 @@ package sustain.synopsis.samples.client.usgs;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 import sustain.synopsis.ingestion.client.geohash.GeoHash;
-import sustain.synopsis.sketch.util.Geohash;
+import sustain.synopsis.samples.client.common.Location;
 
 import java.io.*;
 import java.util.*;
 
 public class StationParser {
-
-    static class Location {
-        float latitude;
-        float longitude;
-
-        public Location(float latitude, float longitude) {
-            this.latitude = latitude;
-            this.longitude = longitude;
-        }
-    }
 
     public static Map<String, Location> parseFile(File file) throws IOException {
         Map<String, Location> stationMap = new HashMap<>();

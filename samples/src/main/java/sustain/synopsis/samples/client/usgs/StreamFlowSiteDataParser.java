@@ -3,6 +3,7 @@ package sustain.synopsis.samples.client.usgs;
 import sustain.synopsis.ingestion.client.core.Record;
 import sustain.synopsis.ingestion.client.core.RecordCallbackHandler;
 import sustain.synopsis.ingestion.client.geohash.GeoHash;
+import sustain.synopsis.samples.client.common.Location;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -38,7 +39,7 @@ public class StreamFlowSiteDataParser {
     Map<String, Integer> headerMap;
     Collection<String> dataCodes;
     RecordCallbackHandler callbackHandler;
-    Map<String, StationParser.Location> locationMap;
+    Map<String, Location> locationMap;
     int geohashLength;
     boolean valid;
     long exceptionLineCount = 0;
@@ -49,7 +50,7 @@ public class StreamFlowSiteDataParser {
         valid = false;
     }
 
-    public StreamFlowSiteDataParser(Map<String, Integer> headerMap, Map<String, StationParser.Location> locationMap, Collection<String> dataCodes, RecordCallbackHandler callbackHandler, int geohashLength) {
+    public StreamFlowSiteDataParser(Map<String, Integer> headerMap, Map<String, Location> locationMap, Collection<String> dataCodes, RecordCallbackHandler callbackHandler, int geohashLength) {
         this.headerMap = headerMap;
         this.locationMap = locationMap;
         this.dataCodes = dataCodes;
@@ -70,7 +71,7 @@ public class StreamFlowSiteDataParser {
                 String org = splits[0];
                 String site_no = splits[1];
                 String id = org+"-"+site_no;
-                StationParser.Location location = locationMap.get(id);
+                Location location = locationMap.get(id);
                 this.geohash = GeoHash.encode(location.latitude, location.longitude, geohashLength);
             }
 

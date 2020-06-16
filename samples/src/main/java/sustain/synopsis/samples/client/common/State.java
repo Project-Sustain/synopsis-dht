@@ -1,4 +1,4 @@
-package sustain.synopsis.samples.client.usgs;
+package sustain.synopsis.samples.client.common;
 
 import java.util.HashMap;
 import java.util.Map;

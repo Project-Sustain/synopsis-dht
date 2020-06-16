@@ -4,6 +4,7 @@ import sustain.synopsis.ingestion.client.connectors.file.FileParser;
 import sustain.synopsis.ingestion.client.core.RecordCallbackHandler;
 import sustain.synopsis.ingestion.client.core.SessionSchema;
 import sustain.synopsis.ingestion.client.geohash.GeoHash;
+import sustain.synopsis.samples.client.common.Location;
 
 import java.io.*;
 import java.util.*;
@@ -13,9 +14,9 @@ public class StreamFlowParser {
 
     private SessionSchema schema;
     RecordCallbackHandler recordCallbackHandler;
-    final Map<String, StationParser.Location> stationMap;
+    final Map<String, Location> stationMap;
 
-    public StreamFlowParser(Map<String, StationParser.Location> stationMap) {
+    public StreamFlowParser(Map<String, Location> stationMap) {
         this.stationMap = stationMap;
     }
 

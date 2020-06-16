@@ -6,10 +6,8 @@ import sustain.synopsis.sketch.dataset.feature.Feature;
 import sustain.synopsis.sketch.dataset.feature.FeatureType;
 import sustain.synopsis.sketch.stat.SquaredError;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Calculates the bin configuration for a given feature based on a sample.
@@ -92,10 +90,31 @@ public class BinCalculator {
     }
 
     public List<Feature> calculateBins(List<Feature> sample, int tickCount) {
-        Quantizer quantizer = AutoQuantizer.fromList(sample, tickCount);
-        double discError = evaluate(sample, quantizer);
-        System.out.println("Algorithm: oKDE, tick count: " + tickCount + ", discretization error: " + discError);
-        return quantizer.getTicks();
+        List<Float> floats = sample.stream().map(Feature::getFloat).sorted().collect(Collectors.toList());
+        float min = floats.get(0);
+        float max = floats.get(floats.size()-1);
+//        float median = floats.get(floats.size()/2);
+//
+//        double avg = 0;
+//        for (Float f : floats) {
+//            avg += (double) f / floats.size();
+//        }
+//        System.out.printf("min: %f max: %f avg: %f median %f\n", min, max, avg, median);
+
+        double discError;
+        Quantizer quantizer = null;
+        try {
+            quantizer = AutoQuantizer.fromList(sample, tickCount);
+            discError = evaluate(sample, quantizer);
+        } catch (Exception e) {
+            discError = 1.0;
+        }
+
+        Quantizer evenIntervalQuantizer = calculateGlobalEvenQuantizer(min, max, tickCount);
+        double discError2 = evaluate(sample, evenIntervalQuantizer);
+//        System.out.println("Algorithm: evenInterval, tick count: " + tickCount + ", discretization error: " + discError2);
+
+        return discError < discError2 ? quantizer.getTicks() : evenIntervalQuantizer.getTicks();
     }
 
     public String getBinConfiguration(List<Record> records, int tickCount) {
@@ -106,19 +125,12 @@ public class BinCalculator {
     }
 
 
-
-
-
     public String getBinConfiguration(List<Record> records) {
         Map<String, List<Feature>> featureListMap = getFeatureListMapFromRecordList(records);
         Map<String, List<Feature>> binConfigurationMap = getBinConfigurationMapFromFeatureListMap(featureListMap);
         String binConfiguration = binConfigurationMapToString(binConfigurationMap);
         return binConfiguration;
     }
-
-
-
-
 
 
     private String binConfigurationMapToString(Map<String, List<Feature>> binConfigurationMap) {
@@ -132,8 +144,6 @@ public class BinCalculator {
         }
         return sb.toString();
     }
-
-
 
     private Map<String, List<Feature>> getBinConfigurationMapFromFeatureListMap(Map<String,List<Feature>> featureListMap) {
         Map<String,List<Feature>> binConfigurationMap = new HashMap<>();
@@ -151,8 +161,6 @@ public class BinCalculator {
         return binConfigurationMap;
     }
 
-
-
     private Map<String, List<Feature>> getFeatureListMapFromRecordList(List<Record> recordList) {
         Map<String,List<Feature>> featureListMap = new HashMap<>();
         for (Record r : recordList) {
@@ -164,10 +172,6 @@ public class BinCalculator {
         }
         return featureListMap;
     }
-
-
-
-
 
     private double evaluate(List<Feature> sample, Quantizer q) {
         List<Feature> quantized = new ArrayList<>();
@@ -198,4 +202,5 @@ public class BinCalculator {
         }
         return new Quantizer(features);
     }
+
 }

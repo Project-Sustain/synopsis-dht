@@ -99,7 +99,7 @@ public class StrandRegistry {
             publish(strands.subList(i, endIdx));
         }
         logger.info("[" + Thread.currentThread().getName() + "] Publishing all strands. Published strand count: " +
-                strandKeyMap.size());
+                totalPublishedStrandCount);
 
         publisher.terminateSession();
         return totalPublishedStrandCount;

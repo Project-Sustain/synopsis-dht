@@ -4,7 +4,9 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.grpc.Channel;
+import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import org.apache.log4j.Logger;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 import sustain.synopsis.common.Strand;
 import sustain.synopsis.dht.store.services.*;
@@ -14,11 +16,13 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 public class DHTStrandPublisher implements StrandPublisher {
 
     public static final int channelSendLimit = 4;
 
+    private final Logger logger = Logger.getLogger(DHTStrandPublisher.class);
     private final ExecutorService responseExecutorService = Executors.newSingleThreadExecutor();
     final String datasetId;
     final long sessionId;
@@ -53,11 +57,12 @@ public class DHTStrandPublisher implements StrandPublisher {
     class MyChannel {
         Semaphore limiter = new Semaphore(channelSendLimit);
         IngestionServiceFutureStub futureStub;
+        ManagedChannel channel;
 
         public MyChannel(String address) {
             String host = address.split(":")[0];
             int port = Integer.parseInt(address.split(":")[1]);
-            Channel channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
+            channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
             this.futureStub = IngestionServiceGrpc.newFutureStub(channel);
         }
 
@@ -96,7 +101,27 @@ public class DHTStrandPublisher implements StrandPublisher {
                     .setSessionId(sessionId)
                     .build();
 
-            futureStub.terminateSession(request);
+            ListenableFuture<TerminateSessionResponse> terminateSessionResponseListenableFuture = futureStub.terminateSession(request);
+            Futures.addCallback(terminateSessionResponseListenableFuture, new FutureCallback<TerminateSessionResponse>() {
+                @Override
+                public void onSuccess(@NullableDecl TerminateSessionResponse result) {
+                    logger.info("termination status: "+result.getStatus());
+
+                }
+
+                @Override
+                public void onFailure(Throwable t) {
+                    logger.info("termination failure: "+t.getMessage());
+                }
+            }, responseExecutorService);
+
+            try {
+                channel.shutdown();
+                channel.awaitTermination(10, TimeUnit.MINUTES);
+
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
 
     }

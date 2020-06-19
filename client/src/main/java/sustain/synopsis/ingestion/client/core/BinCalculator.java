@@ -24,19 +24,26 @@ public class BinCalculator {
         ANY
     }
 
+    public enum BinConfigSelectionPreference {
+        MIN_BINS,
+        MIN_ERROR
+    }
+
     final int minTicks;
     final int maxTicks;
     final double discErrorThreshold;
     final BinConfigTypePreference typePreference;
+    final BinConfigSelectionPreference selectionPreference;
 
-    private BinCalculator(int minTicks, int maxTicks, double discErrorThreshold, BinConfigTypePreference typePreference) {
+    private BinCalculator(int minTicks, int maxTicks, double discErrorThreshold, BinConfigTypePreference typePreference, BinConfigSelectionPreference selectionPreference) {
         this.minTicks = minTicks;
         this.maxTicks = maxTicks;
         this.discErrorThreshold = discErrorThreshold;
         this.typePreference = typePreference;
+        this.selectionPreference = selectionPreference;
     }
 
-    public final static BinCalculator DEFAULT_BIN_CALCULATOR = new BinCalculator(5, 50, 0.025, BinConfigTypePreference.ANY);
+    public final static BinCalculator DEFAULT_BIN_CALCULATOR = new BinCalculator(5, 50, 0.025, BinConfigTypePreference.ANY, BinConfigSelectionPreference.MIN_BINS);
 
     public static BinCalculatorBuilder newBuilder() {
         return new BinCalculatorBuilder();
@@ -47,7 +54,7 @@ public class BinCalculator {
         int maxTicks = 50;
         double discErrorThreshold = 0.025;
         BinConfigTypePreference typePreference = BinConfigTypePreference.ANY;
-
+        BinConfigSelectionPreference selectionPreference = BinConfigSelectionPreference.MIN_BINS;
 
         public BinCalculatorBuilder setMinTicks(int minTicks) {
             this.minTicks = minTicks;
@@ -69,8 +76,13 @@ public class BinCalculator {
             return this;
         }
 
+        public BinCalculatorBuilder setSelectionPreference(BinConfigSelectionPreference selectionPreference) {
+            this.selectionPreference = selectionPreference;
+            return this;
+        }
+
         public BinCalculator build() {
-            return new BinCalculator(minTicks, maxTicks, discErrorThreshold, typePreference);
+            return new BinCalculator(minTicks, maxTicks, discErrorThreshold, typePreference, selectionPreference);
         }
     }
 
@@ -83,12 +95,14 @@ public class BinCalculator {
         final String featureName;
         final BinConfigType type;
         final double rmse;
+        final List<Feature> sample;
         final Quantizer quantizer;
 
-        public BinResult(String featureName, BinConfigType type, double rmse, Quantizer quantizer) {
+        public BinResult(String featureName, BinConfigType type, double rmse, List<Feature> sample, Quantizer quantizer) {
             this.featureName = featureName;
             this.type = type;
             this.rmse = rmse;
+            this.sample = sample;
             this.quantizer = quantizer;
         }
 
@@ -112,6 +126,10 @@ public class BinCalculator {
 
         public double getRmse() {
             return rmse;
+        }
+
+        public List<Feature> getSample() {
+            return sample;
         }
 
         public Quantizer getQuantizer() {
@@ -167,11 +185,19 @@ public class BinCalculator {
         Map<String, List<Feature>> featureMap = featureMapFromRecords(recordList);
         List<BinResult> binResults = new ArrayList<>();
         for (Map.Entry<String, List<Feature>> entry : featureMap.entrySet()) {
-            BinResult result = calculateFirstUnderThreshold(entry.getValue(), entry.getKey());
-            if (result == null) {
+
+            BinResult res = null;
+            switch (selectionPreference) {
+                case MIN_BINS:
+                    res = calculateFirstUnderThreshold(entry.getValue(), entry.getKey());
+                case MIN_ERROR:
+                    res = calculateLowestError(entry.getValue(), entry.getKey());
+            }
+
+            if (res == null) {
                 return null;
             }
-            binResults.add(result);
+            binResults.add(res);
         }
         return new BinCalculatorResult(binResults);
     }
@@ -186,13 +212,8 @@ public class BinCalculator {
                     res = calculateEvenWidthBinConfig(sample, featureName, ticks);
                 case ANY:
                 default:
-                    BinResult okde = calculateOkdeBinConfig(sample, featureName, ticks);
-                    BinResult even = calculateEvenWidthBinConfig(sample, featureName, ticks);
-                    if (okde != null && okde.getRmse() < even.getRmse()) {
-                        res = okde;
-                    } else {
-                        res = even;
-                    }
+                    res = calculateBestBinConfig(sample, featureName, ticks);
+
             }
             if (res.getRmse() < discErrorThreshold) {
                 return res;
@@ -201,11 +222,42 @@ public class BinCalculator {
         return null;
     }
 
+    BinResult calculateLowestError(List<Feature> sample, String featureName) {
+        BinResult best = null;
+        for (int ticks = minTicks; ticks <= maxTicks; ticks++) {
+            BinResult res;
+            switch (typePreference) {
+                case OKDE:
+                    res = calculateOkdeBinConfig(sample, featureName, ticks);
+                case EVEN_WIDTH:
+                    res = calculateEvenWidthBinConfig(sample, featureName, ticks);
+                case ANY:
+                default:
+                    res = calculateBestBinConfig(sample, featureName, ticks);
+
+            }
+            if (res.getRmse() < discErrorThreshold && (best == null || res.getRmse() < best.getRmse())) {
+                best = res;
+            }
+        }
+        return best;
+    }
+
+    public static BinResult calculateBestBinConfig(List<Feature> sample, String featureName, int binCount) {
+        BinResult okde = calculateOkdeBinConfig(sample, featureName, binCount);
+        BinResult even = calculateEvenWidthBinConfig(sample, featureName, binCount);
+        if (okde != null && okde.getRmse() < even.getRmse()) {
+            return okde;
+        } else {
+            return even;
+        }
+    }
+
     public static BinResult calculateOkdeBinConfig(List<Feature> sample, String featureName, int binCount) {
         try {
             Quantizer quantizer = AutoQuantizer.fromList(sample, binCount);
             double rmse = evaluate(sample, quantizer);
-            return new BinResult(featureName, BinConfigType.OKDE, rmse, quantizer);
+            return new BinResult(featureName, BinConfigType.OKDE, rmse, sample, quantizer);
         } catch (Exception e) {
             return null;
         }
@@ -226,7 +278,7 @@ public class BinCalculator {
         Quantizer quantizer = calculateGlobalEvenQuantizer(min, max, binCount);
         double rmse = evaluate(sample, quantizer);
 
-        return new BinResult(featureName, BinConfigType.EVEN_WIDTH, rmse, quantizer);
+        return new BinResult(featureName, BinConfigType.EVEN_WIDTH, rmse, sample, quantizer);
     }
 
     public static Map<String, List<Feature>> featureMapFromRecords(List<Record> recordList) {
@@ -237,6 +289,10 @@ public class BinCalculator {
                 featureListMap.computeIfAbsent(featureName, k -> new ArrayList<>())
                         .add(new Feature(featureName, features.get(featureName)));
             }
+        }
+
+        for (List<Feature> list : featureListMap.values()) {
+            list.sort(Comparator.comparing(Feature::getDouble));
         }
         return featureListMap;
     }

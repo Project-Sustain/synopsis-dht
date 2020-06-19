@@ -2,9 +2,12 @@ package sustain.synopsis.samples.client.usgs;
 
 import com.opencsv.exceptions.CsvValidationException;
 import org.apache.log4j.Logger;
+import sustain.synopsis.common.Strand;
 import sustain.synopsis.ingestion.client.core.*;
+import sustain.synopsis.ingestion.client.publishing.ConsoleStrandPublisher;
 import sustain.synopsis.ingestion.client.publishing.DHTStrandPublisher;
 import sustain.synopsis.ingestion.client.publishing.SimpleStrandPublisher;
+import sustain.synopsis.ingestion.client.publishing.StrandPublisher;
 import sustain.synopsis.samples.client.common.Location;
 import sustain.synopsis.samples.client.common.State;
 
@@ -47,7 +50,9 @@ public class StreamFlowClient {
                 .sorted().collect(Collectors.toList());
 
         SessionSchema sessionSchema = new SessionSchema(Util.quantizerMapFromString(binConfig), GEOHASH_LENGTH, TEMPORAL_BRACKET_LENGTH);
-        DHTStrandPublisher publisher = new DHTStrandPublisher(dhtNodeAddress, datasetId, sessionId);
+//        DHTStrandPublisher publisher = new DHTStrandPublisher(dhtNodeAddress, datasetId, sessionId);
+        StrandPublisher publisher = new MyStrandPublisher();
+
         StrandRegistry strandRegistry = new StrandRegistry(publisher, 10000, 100);
         TemporalQuantizer temporalQuantizer = new TemporalQuantizer(TEMPORAL_BRACKET_LENGTH);
         StrandConverterRecordCallBackHandler handler = new StrandConverterRecordCallBackHandler(strandRegistry, sessionSchema, temporalQuantizer);
@@ -103,5 +108,27 @@ public class StreamFlowClient {
         }
 
     }
+
+    static class MyStrandPublisher implements StrandPublisher {
+
+        int count = 0;
+
+        @Override
+        public void publish(long messageId, Iterable<Strand> strands) {
+            count++;
+        }
+
+        @Override
+        public void terminateSession() {
+
+        }
+
+        @Override
+        public long getTotalStrandsPublished() {
+            return count;
+        }
+
+    }
+
 
 }

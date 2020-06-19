@@ -23,7 +23,9 @@ public class StreamFlowBinCalculator {
     private static Random random = new Random(1);
     public static final int GEOHASH_LENGTH = 6;
     public static final Duration TEMPORAL_BUCKET_LENGTH = Duration.ofHours(6);
-    public static final int binConfigurationTickCount = 16;
+    public static final BinCalculator binCalculator = BinCalculator.newBuilder()
+            .setTypePreference(BinCalculator.BinConfigTypePreference.OKDE)
+            .build();
 
     static File outputFile;
     static double proportion;
@@ -34,7 +36,7 @@ public class StreamFlowBinCalculator {
     static int yearBegin;
     static int yearEnd;
 
-    static String getBinConfiguration(List<File> allFiles, String stateAbbr, int yearStart, int yearEnd) {
+    static BinCalculator.BinCalculatorResult getBinConfiguration(List<File> allFiles, String stateAbbr, int yearStart, int yearEnd) {
         List<File> files = allFiles.stream()
                 .filter(new UsgsUtil.FilePredicate(stateAbbr, yearStart, yearEnd))
                 .sorted().collect(Collectors.toList());
@@ -53,7 +55,8 @@ public class StreamFlowBinCalculator {
         }
 
 //        System.out.println("Record count: "+handler.getRecords().size());
-        return new BinCalculator().getBinConfiguration(handler.getRecords(), binConfigurationTickCount);
+        BinCalculator.BinCalculatorResult result = binCalculator.calculateBins(handler.getRecords());
+        return result;
     }
 
 
@@ -84,13 +87,13 @@ public class StreamFlowBinCalculator {
 
         List<File> allFiles = Util.getFilesRecursive(inputDir, filesToSkip);
 
-        Map<String, String> binConfigs = new HashMap<>();
+        Map<String, BinCalculator.BinCalculatorResult> binConfigs = new HashMap<>();
         for (State state : State.values()) {
             String stateAbbr = state.getANSIAbbreviation().toLowerCase();
 
             for (int year = yearBegin; year <= yearEnd; year++) {
                 String key = stateAbbr+year;
-                String binConfig = getBinConfiguration(allFiles, stateAbbr, year, year);
+                BinCalculator.BinCalculatorResult binConfig = getBinConfiguration(allFiles, stateAbbr, year, year);
                 binConfigs.put(key, binConfig);
                 logger.info(key);
             }
@@ -98,17 +101,19 @@ public class StreamFlowBinCalculator {
 
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile))) {
             for (String key : binConfigs.keySet().stream().sorted().collect(Collectors.toList())) {
-                bw.write(key+"\t");
-                bw.write(binConfigs.get(key)+"\n");
+                if (binConfigs.get(key) != null) {
+                    bw.write(key+"\n");
+                    bw.write(binConfigs.get(key)+"\n");
+                }
             }
         }
     }
 
-    private static class MyRecordCallbackHandler implements RecordCallbackHandler {
+    static class MyRecordCallbackHandler implements RecordCallbackHandler {
 
-        private Set<String> requiredFeatures;
-        private List<Record> records = new ArrayList<>();
-        private double proportion;
+        Set<String> requiredFeatures;
+        List<Record> records = new ArrayList<>();
+        final double proportion;
 
         public MyRecordCallbackHandler(Set<String> features, double proportion) {
             this.requiredFeatures = features;

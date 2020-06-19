@@ -9,5 +9,5 @@ public interface StrandPublisher {
 
     default void terminateSession(){ }
 
-    long getStrandsPublishedCount();
+    default long getStrandsPublishedCount(){return 0;}
 }

@@ -106,7 +106,6 @@ public class DHTStrandPublisher implements StrandPublisher {
                 @Override
                 public void onSuccess(@NullableDecl TerminateSessionResponse result) {
                     logger.info("termination status: "+result.getStatus());
-
                 }
 
                 @Override

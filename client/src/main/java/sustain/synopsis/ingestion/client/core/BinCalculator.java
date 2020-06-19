@@ -7,7 +7,6 @@ import sustain.synopsis.sketch.dataset.feature.FeatureType;
 import sustain.synopsis.sketch.stat.SquaredError;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Calculates the bin configuration for a given feature based on a sample.
@@ -18,150 +17,219 @@ import java.util.stream.Collectors;
  * widths.
  */
 public class BinCalculator {
-    /**
-     * Generate a bin configuration within the given constraints on tick count and the discretization error.
-     * Starts with the minimum number of ticks and generates a bin configuration. Then the discretization error of
-     * the bin configuration is calculated w.r.t. to the sample. If it is higher than the given threshold, increments
-     * the number of ticks and repeats the same process.
-     * First it is attempted to generate a bin config. using the oKDE. If it fails to produce a bin config. after
-     * reaching the maximum tick count, switch to even-width bin calculation.
-     *
-     * @param sample             Sample of the feature values. Minimum - 1000 elements
-     * @param discErrorThreshold Discretization error threshold as NRMSE. The value should be less than < 1.0
-     * @param minTicks           Minimum number of ticks allowed in a bin config.
-     * @param maxTicks           Maximum number of ticks allowed in a bin config.
-     * @return List of ticks comprises the bin configuration. It may return <code>null</code> if it fails to
-     * generate a bin config within the given constraints
-     */
-    public List<Feature> calculateBins(List<Feature> sample, double discErrorThreshold, int minTicks, int maxTicks) {
-        if (sample.size() < 1000) {
-            throw new IllegalArgumentException("Sample size should be atleast 1000 elements.");
-        }
-        if (discErrorThreshold >= 1.0) {
-            throw new IllegalArgumentException("Discretization error should be less than 1.0");
-        }
-        if (minTicks <= 0) {
-            throw new IllegalArgumentException("Min tick count should be greater than 0");
-        }
-        if (minTicks >= maxTicks) {
-            throw new IllegalArgumentException("Min tick count should be less than the max tick count.");
 
+    public enum BinConfigTypePreference {
+        OKDE,
+        EVEN_WIDTH,
+        ANY
+    }
+
+    final int minTicks;
+    final int maxTicks;
+    final double discErrorThreshold;
+    final BinConfigTypePreference typePreference;
+
+    private BinCalculator(int minTicks, int maxTicks, double discErrorThreshold, BinConfigTypePreference typePreference) {
+        this.minTicks = minTicks;
+        this.maxTicks = maxTicks;
+        this.discErrorThreshold = discErrorThreshold;
+        this.typePreference = typePreference;
+    }
+
+    public final static BinCalculator DEFAULT_BIN_CALCULATOR = new BinCalculator(5, 50, 0.025, BinConfigTypePreference.ANY);
+
+    public static BinCalculatorBuilder newBuilder() {
+        return new BinCalculatorBuilder();
+    }
+
+    public static class BinCalculatorBuilder {
+        int minTicks = 5;
+        int maxTicks = 50;
+        double discErrorThreshold = 0.025;
+        BinConfigTypePreference typePreference = BinConfigTypePreference.ANY;
+
+
+        public BinCalculatorBuilder setMinTicks(int minTicks) {
+            this.minTicks = minTicks;
+            return this;
         }
-        Quantizer quantizer = null;
-        // try using oKDE based quantizer generation first
-        for (int tickCount = minTicks; tickCount <= maxTicks; tickCount++) {
-            try {
-                quantizer = AutoQuantizer.fromList(sample, tickCount);
-                double discError = evaluate(sample, quantizer);
-                System.out.println("Algorithm: oKDE, tick count: " + tickCount + ", discretization error: " + discError);
-                if (discError <= discErrorThreshold) {
-                    System.out.println("Found a bin configuration.");
-                    return quantizer.getTicks();
+
+        public BinCalculatorBuilder setMaxTicks(int maxTicks) {
+            this.maxTicks = maxTicks;
+            return this;
+        }
+
+        public BinCalculatorBuilder setDiscErrorThreshold(double discErrorThreshold) {
+            this.discErrorThreshold = discErrorThreshold;
+            return this;
+        }
+
+        public BinCalculatorBuilder setTypePreference(BinConfigTypePreference typePreference) {
+            this.typePreference = typePreference;
+            return this;
+        }
+
+        public BinCalculator build() {
+            return new BinCalculator(minTicks, maxTicks, discErrorThreshold, typePreference);
+        }
+    }
+
+    public enum BinConfigType {
+        OKDE,
+        EVEN_WIDTH
+    };
+
+    public static class BinResult {
+        final String featureName;
+        final BinConfigType type;
+        final double rmse;
+        final Quantizer quantizer;
+
+        public BinResult(String featureName, BinConfigType type, double rmse, Quantizer quantizer) {
+            this.featureName = featureName;
+            this.type = type;
+            this.rmse = rmse;
+            this.quantizer = quantizer;
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            sb.append(featureName);
+            for (Feature f : quantizer.getTicks()) {
+                sb.append(","+f);
+            }
+            return sb.toString();
+        }
+
+        public String getFeatureName() {
+            return featureName;
+        }
+
+        public BinConfigType getType() {
+            return type;
+        }
+
+        public double getRmse() {
+            return rmse;
+        }
+
+        public Quantizer getQuantizer() {
+            return quantizer;
+        }
+
+    }
+
+    public static class BinCalculatorResult {
+        final List<BinResult> binResults;
+
+        public BinCalculatorResult(List<BinResult> binResults) {
+            this.binResults = new ArrayList<>(binResults);
+            this.binResults.sort(Comparator.comparing(BinResult::getFeatureName));
+        }
+
+        public BinResult getBinResultForFeature(String featureName) {
+            for (BinResult b : binResults) {
+                if (b.featureName.equals(featureName)) {
+                    return b;
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
+            }
+            return null;
+        }
+
+        public List<BinResult> getBinResults() {
+            return binResults;
+        }
+
+        public double getMaxRmse() {
+            double max = 0;
+            for (BinResult binResult : binResults) {
+                if (binResult.getRmse() > max) {
+                    max = binResult.getRmse();
+                }
+            }
+            return max;
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            for (BinResult b : binResults) {
+                sb.append(b);
+                sb.append("\n");
+            }
+            return sb.toString();
+        }
+
+    }
+
+    public BinCalculatorResult calculateBins(List<Record> recordList) {
+        Map<String, List<Feature>> featureMap = featureMapFromRecords(recordList);
+        List<BinResult> binResults = new ArrayList<>();
+        for (Map.Entry<String, List<Feature>> entry : featureMap.entrySet()) {
+            BinResult result = calculateFirstUnderThreshold(entry.getValue(), entry.getKey());
+            if (result == null) {
+                return null;
+            }
+            binResults.add(result);
+        }
+        return new BinCalculatorResult(binResults);
+    }
+
+    BinResult calculateFirstUnderThreshold(List<Feature> sample, String featureName) {
+        for (int ticks = minTicks; ticks <= maxTicks; ticks++) {
+            BinResult res;
+            switch (typePreference) {
+                case OKDE:
+                    res = calculateOkdeBinConfig(sample, featureName, ticks);
+                case EVEN_WIDTH:
+                    res = calculateEvenWidthBinConfig(sample, featureName, ticks);
+                case ANY:
+                default:
+                    BinResult okde = calculateOkdeBinConfig(sample, featureName, ticks);
+                    BinResult even = calculateEvenWidthBinConfig(sample, featureName, ticks);
+                    if (okde != null && okde.getRmse() < even.getRmse()) {
+                        res = okde;
+                    } else {
+                        res = even;
+                    }
+            }
+            if (res.getRmse() < discErrorThreshold) {
+                return res;
             }
         }
-        System.out.println("oKDE failed to produce a bin config. Switching to even width bin configuration.");
-        // oKDE based quantizer generation has not produced a quantizer. Switching to even spaced quantizer generation
-        List<Feature> oKDETicks = quantizer.getTicks();
-        double min = oKDETicks.get(0).getDouble();
-        double max = oKDETicks.get(oKDETicks.size() - 1).getDouble();
-        for (int tickCount = minTicks; tickCount <= maxTicks; tickCount++) {
-            Quantizer evenIntervalQuantizer = calculateGlobalEvenQuantizer(min, max, tickCount);
-            double discError = evaluate(sample, evenIntervalQuantizer);
-            System.out.println("Algorithm: even-width, tick count: " + tickCount + ", discretization error: " + discError);
-            if (discError <= discErrorThreshold) {
-                System.out.println("Found a bin configuration.");
-                return evenIntervalQuantizer.getTicks();
-            }
-        }
-        System.err.println("Failed to produce a bin configuration within the given constraints.");
         return null;
     }
 
-    /**
-     * Overloaded version of the previous method with commonly used defaults.
-     * @param sample Sample of feature values.
-     * @return List of ticks comprising a bin configuration
-     */
-    public List<Feature> calculateBins(List<Feature> sample){
-        return calculateBins(sample, 0.025, 5, 50);
-    }
-
-    public List<Feature> calculateBins(List<Feature> sample, int tickCount) {
-        List<Float> floats = sample.stream().map(Feature::getFloat).sorted().collect(Collectors.toList());
-        float min = floats.get(0);
-        float max = floats.get(floats.size()-1);
-//        float median = floats.get(floats.size()/2);
-//
-//        double avg = 0;
-//        for (Float f : floats) {
-//            avg += (double) f / floats.size();
-//        }
-//        System.out.printf("min: %f max: %f avg: %f median %f\n", min, max, avg, median);
-
-        double discError;
-        Quantizer quantizer = null;
+    public static BinResult calculateOkdeBinConfig(List<Feature> sample, String featureName, int binCount) {
         try {
-            quantizer = AutoQuantizer.fromList(sample, tickCount);
-            discError = evaluate(sample, quantizer);
+            Quantizer quantizer = AutoQuantizer.fromList(sample, binCount);
+            double rmse = evaluate(sample, quantizer);
+            return new BinResult(featureName, BinConfigType.OKDE, rmse, quantizer);
         } catch (Exception e) {
-            discError = 1.0;
+            return null;
         }
-
-        Quantizer evenIntervalQuantizer = calculateGlobalEvenQuantizer(min, max, tickCount);
-        double discError2 = evaluate(sample, evenIntervalQuantizer);
-//        System.out.println("Algorithm: evenInterval, tick count: " + tickCount + ", discretization error: " + discError2);
-
-        return discError < discError2 ? quantizer.getTicks() : evenIntervalQuantizer.getTicks();
     }
 
-    public String getBinConfiguration(List<Record> records, int tickCount) {
-        Map<String, List<Feature>> featureListMap = getFeatureListMapFromRecordList(records);
-        Map<String, List<Feature>> binConfigurationMap = getBinConfigurationMapFromFeatureListMap(featureListMap, tickCount);
-        String binConfiguration = binConfigurationMapToString(binConfigurationMap);
-        return binConfiguration;
-    }
-
-
-    public String getBinConfiguration(List<Record> records) {
-        Map<String, List<Feature>> featureListMap = getFeatureListMapFromRecordList(records);
-        Map<String, List<Feature>> binConfigurationMap = getBinConfigurationMapFromFeatureListMap(featureListMap);
-        String binConfiguration = binConfigurationMapToString(binConfigurationMap);
-        return binConfiguration;
-    }
-
-
-    private String binConfigurationMapToString(Map<String, List<Feature>> binConfigurationMap) {
-        StringBuilder sb = new StringBuilder();
-        for (String featureName : binConfigurationMap.keySet()) {
-            sb.append(featureName);
-            for (Feature f : binConfigurationMap.get(featureName)) {
-                sb.append(","+f.getDouble());
+    public static BinResult calculateEvenWidthBinConfig(List<Feature> sample, String featureName, int binCount) {
+        double min = Double.MAX_VALUE;
+        double max = Double.MIN_VALUE;
+        for (Feature f : sample) {
+            if (f.getDouble() < min) {
+                min = f.getDouble();
             }
-            sb.append("\n");
+            if (f.getDouble() > max) {
+                max = f.getDouble();
+            }
         }
-        return sb.toString();
+
+        Quantizer quantizer = calculateGlobalEvenQuantizer(min, max, binCount);
+        double rmse = evaluate(sample, quantizer);
+
+        return new BinResult(featureName, BinConfigType.EVEN_WIDTH, rmse, quantizer);
     }
 
-    private Map<String, List<Feature>> getBinConfigurationMapFromFeatureListMap(Map<String,List<Feature>> featureListMap) {
-        Map<String,List<Feature>> binConfigurationMap = new HashMap<>();
-        for (String featureName : featureListMap.keySet()) {
-            binConfigurationMap.put(featureName, calculateBins(featureListMap.get(featureName)));
-        }
-        return binConfigurationMap;
-    }
-
-    private Map<String, List<Feature>> getBinConfigurationMapFromFeatureListMap(Map<String,List<Feature>> featureListMap, int tickCount) {
-        Map<String,List<Feature>> binConfigurationMap = new HashMap<>();
-        for (String featureName : featureListMap.keySet()) {
-            binConfigurationMap.put(featureName, calculateBins(featureListMap.get(featureName), tickCount));
-        }
-        return binConfigurationMap;
-    }
-
-    private Map<String, List<Feature>> getFeatureListMapFromRecordList(List<Record> recordList) {
+    public static Map<String, List<Feature>> featureMapFromRecords(List<Record> recordList) {
         Map<String,List<Feature>> featureListMap = new HashMap<>();
         for (Record r : recordList) {
             Map<String, Float> features = r.getFeatures();
@@ -173,7 +241,17 @@ public class BinCalculator {
         return featureListMap;
     }
 
-    private double evaluate(List<Feature> sample, Quantizer q) {
+    static Quantizer calculateGlobalEvenQuantizer(double min, double max, int tickCount) {
+        double range = max - min;
+        double stepSize = range / (tickCount - 1);
+        List<Feature> features = new ArrayList<>(tickCount);
+        for (int i = 0; i < tickCount; i++) {
+            features.add(new Feature(min + i * stepSize));
+        }
+        return new Quantizer(features);
+    }
+
+    static double evaluate(List<Feature> sample, Quantizer q) {
         List<Feature> quantized = new ArrayList<>();
         for (Feature f : sample) {
             /* Find the midpoint */
@@ -191,16 +269,6 @@ public class BinCalculator {
         SquaredError se = new SquaredError(sample, quantized);
         //System.out.println(se.RMSE() + "," + se.NRMSE() + "," + se.CVRMSE());
         return se.NRMSE();
-    }
-
-    private Quantizer calculateGlobalEvenQuantizer(double min, double max, int tickCount) {
-        double range = max - min;
-        double stepSize = range / (tickCount - 1);
-        List<Feature> features = new ArrayList<>(tickCount);
-        for (int i = 0; i < tickCount; i++) {
-            features.add(new Feature(min + i * stepSize));
-        }
-        return new Quantizer(features);
     }
 
 }

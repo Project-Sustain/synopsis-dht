@@ -1,10 +1,17 @@
 package sustain.synopsis.samples.client.usgs;
 
+import sustain.synopsis.ingestion.client.core.BinCalculator;
+import sustain.synopsis.ingestion.client.core.Record;
+import sustain.synopsis.ingestion.client.core.RecordCallbackHandler;
+import sustain.synopsis.ingestion.client.core.SessionSchema;
+import sustain.synopsis.samples.client.common.Location;
 import sustain.synopsis.samples.client.common.Util;
+import sustain.synopsis.sketch.dataset.Quantizer;
 
 import java.io.*;
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 
 public class UsgsUtil {
@@ -79,6 +86,61 @@ public class UsgsUtil {
         }
     }
 
+    static void writeSample(String[] args) throws IOException {
+        File inputFile = new File(args[0]);
+        File locationMapFile = new File(args[1]);
+        File outputFile = new File(args[2]);
+
+        Map<String, Location> locationMap = StationParser.parseFile(locationMapFile);
+        Map<String, Quantizer> quantizerMap = new HashMap<>();
+        quantizerMap.put(StreamFlowClient.DISCHARGE_FEATURE, new Quantizer());
+
+        Set<String> features = new HashSet<>();
+        features.add(StreamFlowClient.DISCHARGE_FEATURE);
+        StreamFlowBinCalculator.MyRecordCallbackHandler handler = new StreamFlowBinCalculator.MyRecordCallbackHandler( features, 1d/20);
+//        MyRecordCallbackHandler handler = new MyRecordCallbackHandler();
+        StreamFlowParser streamFlowParser = new StreamFlowParser(locationMap);
+        streamFlowParser.initWithSchemaAndHandler(new SessionSchema(quantizerMap, StreamFlowClient.GEOHASH_LENGTH, StreamFlowClient.TEMPORAL_BRACKET_LENGTH), handler);
+
+        streamFlowParser.parse(new GZIPInputStream(new FileInputStream(inputFile)));
+        System.out.println("records size: "+handler.records.size());
+        List<Float> floats = handler.records.stream()
+                .map(record -> record.getFeatures().get(StreamFlowClient.DISCHARGE_FEATURE))
+                .collect(Collectors.toList());
+        floats.sort(Comparator.naturalOrder());
+        System.out.printf("min %f max %f\n", floats.get(0), floats.get(floats.size()-1));
+
+        BinCalculator binCalculator = BinCalculator.newBuilder()
+                .setTypePreference(BinCalculator.BinConfigTypePreference.OKDE)
+                .setMaxTicks(20)
+                .build();
+
+        BinCalculator.BinCalculatorResult binCalculatorResult = binCalculator.calculateBins(handler.getRecords());
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile))) {
+            bw.write(inputFile.getName()+"\n");
+            bw.write(binCalculatorResult.toString());
+            for (Float f : floats) {
+                bw.write(f+"\n");
+            }
+        }
+    }
+
+    static class MyRecordCallbackHandler implements RecordCallbackHandler {
+
+        List<Record> records = new ArrayList<>();
+        @Override
+        public boolean onRecordAvailability(Record record) {
+            records.add(record);
+            return true;
+        }
+
+        @Override
+        public void onTermination() {
+
+        }
+    }
+
+
     static class FilePredicate implements Predicate<File> {
 
         final String state;
@@ -101,6 +163,7 @@ public class UsgsUtil {
         }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
+        writeSample(args);
     }
 }

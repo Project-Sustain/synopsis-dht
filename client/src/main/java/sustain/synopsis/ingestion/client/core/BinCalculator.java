@@ -208,8 +208,10 @@ public class BinCalculator {
             switch (typePreference) {
                 case OKDE:
                     res = calculateOkdeBinConfig(sample, featureName, ticks);
+                    break;
                 case EVEN_WIDTH:
                     res = calculateEvenWidthBinConfig(sample, featureName, ticks);
+                    break;
                 case ANY:
                 default:
                     res = calculateBestBinConfig(sample, featureName, ticks);
@@ -229,8 +231,10 @@ public class BinCalculator {
             switch (typePreference) {
                 case OKDE:
                     res = calculateOkdeBinConfig(sample, featureName, ticks);
+                    break;
                 case EVEN_WIDTH:
                     res = calculateEvenWidthBinConfig(sample, featureName, ticks);
+                    break;
                 case ANY:
                 default:
                     res = calculateBestBinConfig(sample, featureName, ticks);
@@ -264,20 +268,10 @@ public class BinCalculator {
     }
 
     public static BinResult calculateEvenWidthBinConfig(List<Feature> sample, String featureName, int binCount) {
-        double min = Double.MAX_VALUE;
-        double max = Double.MIN_VALUE;
-        for (Feature f : sample) {
-            if (f.getDouble() < min) {
-                min = f.getDouble();
-            }
-            if (f.getDouble() > max) {
-                max = f.getDouble();
-            }
-        }
-
+        double min = sample.get(0).getDouble();
+        double max = sample.get(sample.size()-1).getDouble();
         Quantizer quantizer = calculateGlobalEvenQuantizer(min, max, binCount);
         double rmse = evaluate(sample, quantizer);
-
         return new BinResult(featureName, BinConfigType.EVEN_WIDTH, rmse, sample, quantizer);
     }
 

@@ -49,7 +49,7 @@ public class ConsoleStrandPublisher implements StrandPublisher {
     }
 
     @Override
-    public long getTotalStrandsPublished() {
+    public long getStrandsPublishedCount() {
         return totalPublished;
     }
 }

@@ -45,6 +45,11 @@ public class DHTStrandPublisher implements StrandPublisher {
         defaultMyChannel.terminateSession();
     }
 
+    @Override
+    public long getStrandsPublishedCount() {
+        return 0;
+    }
+
     class MyChannel {
         Semaphore limiter = new Semaphore(channelSendLimit);
         IngestionServiceFutureStub futureStub;

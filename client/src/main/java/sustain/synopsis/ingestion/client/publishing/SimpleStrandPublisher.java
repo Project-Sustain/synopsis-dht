@@ -36,7 +36,7 @@ public class SimpleStrandPublisher implements StrandPublisher {
         return IngestionServiceGrpc.newBlockingStub(channel);
     }
 
-    public long getTotalStrandsPublished() {
+    public long getStrandsPublishedCount() {
         return totalStrandsPublished;
     }
 

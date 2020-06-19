@@ -20,11 +20,10 @@ public class DHTStrandPublisher implements StrandPublisher {
     public static final int channelSendLimit = 4;
 
     private final ExecutorService responseExecutorService = Executors.newSingleThreadExecutor();
-
     final String datasetId;
     final long sessionId;
-
     final MyChannel defaultMyChannel;
+    long publishedStrandCount = 0;
 
     public DHTStrandPublisher(String initialAddress, String datasetId, long sessionId) {
         this.datasetId = datasetId;
@@ -38,6 +37,7 @@ public class DHTStrandPublisher implements StrandPublisher {
         List<sustain.synopsis.dht.store.services.Strand> strandsList = new ArrayList<>();
         strands.forEach(s -> strandsList.add(convertStrand(s)));
         defaultMyChannel.publish(messageId, strandsList);
+        publishedStrandCount += strandsList.size();
     }
 
     @Override
@@ -47,7 +47,7 @@ public class DHTStrandPublisher implements StrandPublisher {
 
     @Override
     public long getStrandsPublishedCount() {
-        return 0;
+        return publishedStrandCount;
     }
 
     class MyChannel {
@@ -100,7 +100,6 @@ public class DHTStrandPublisher implements StrandPublisher {
         }
 
     }
-
 
     static sustain.synopsis.dht.store.services.Strand convertStrand(Strand strand) {
         return sustain.synopsis.dht.store.services.Strand.newBuilder().setEntityId(strand.getGeohash())

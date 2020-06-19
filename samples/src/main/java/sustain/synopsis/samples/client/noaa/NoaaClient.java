@@ -2,6 +2,7 @@ package sustain.synopsis.samples.client.noaa;
 
 import sustain.synopsis.common.Strand;
 import sustain.synopsis.ingestion.client.core.*;
+import sustain.synopsis.ingestion.client.publishing.DHTStrandPublisher;
 import sustain.synopsis.ingestion.client.publishing.SimpleStrandPublisher;
 import sustain.synopsis.ingestion.client.publishing.StrandPublisher;
 
@@ -63,7 +64,7 @@ public class NoaaClient {
             SessionSchema sessionSchema =
                     new SessionSchema(Util.quantizerMapFromFile(binConfig), GEOHASH_LENGTH, TEMPORAL_BRACKET_LENGTH);
 
-            StrandPublisher strandPublisher = new SimpleStrandPublisher(dhtNodeAddress, datasetId, sessionId + i);
+            StrandPublisher strandPublisher = new DHTStrandPublisher(dhtNodeAddress, datasetId, sessionId + i);
 //        StrandPublisher strandPublisher = new DHTStrandPublisher(dhtNodeAddress, datasetId, sessionId);
 //        StrandPublisher strandPublisher = new ConsoleStrandPublisher();
 

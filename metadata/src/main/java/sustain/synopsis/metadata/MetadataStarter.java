@@ -1,22 +1,16 @@
-package sustain.synopsis.proxy;
+package sustain.synopsis.metadata;
 
 import io.grpc.BindableService;
 import org.apache.log4j.Logger;
 import sustain.synopsis.dht.*;
-import sustain.synopsis.dht.services.ingestion.IngestionService;
-import sustain.synopsis.dht.services.query.TargetedQueryService;
 import sustain.synopsis.dht.zk.ZKError;
-import sustain.synopsis.metadata.MetadataService;
-import sustain.synopsis.metadata.MetadataServiceRequestProcessor;
-import sustain.synopsis.proxy.ingestion.ProxyIngestionRequestProcessor;
-import sustain.synopsis.proxy.metadata.ProxyMetadataRequestProcessor;
-import sustain.synopsis.proxy.query.ProxyQueryProcessor;
+
 
 import java.io.IOException;
 
-public class ProxyStarter {
+public class MetadataStarter {
 
-    public static Logger logger = Logger.getLogger(ProxyStarter.class);
+    public static Logger logger = Logger.getLogger(MetadataStarter.class);
 
     public static void main(String[] args) {
         if (args.length == 0) {
@@ -25,6 +19,8 @@ public class ProxyStarter {
         }
         String configFilePath = args[0];
         logger.info("Using the configuration: " + configFilePath);
+
+
         // initialize context
         Context ctx = Context.getInstance();
         try {
@@ -41,13 +37,14 @@ public class ProxyStarter {
         ctx.setProperty(ServerConstants.HOSTNAME, Util.getHostname());
         logger.info("Successfully initialized node context.");
 
-        Node node = new Node(ctx.getNodeConfig().getIngestionServicePort(),
-                             new BindableService[]{
-                                     new IngestionService(new ProxyIngestionRequestProcessor()),
-                                     new TargetedQueryService(new ProxyQueryProcessor()),
-                                     new MetadataService(new ProxyMetadataRequestProcessor())}
-                                     );
+        Node node = new Node(
+                ctx.getNodeConfig().getMetadataServicePort(),
+                new BindableService[]{
+                        new MetadataService(new MetadataServiceRequestProcessor(ctx.getNodeConfig().getMetadataJournalLoc()))
+                }
+            );
         node.start(false); // proxy servers should not register in ZK
     }
+
 }
 

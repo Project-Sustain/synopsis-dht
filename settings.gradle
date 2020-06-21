@@ -1,1 +1,1 @@
-include 'common', 'storage', 'dht', 'client', 'distribution', 'samples', 'tools', 'benchmarks', 'proxy'
+include 'common', 'storage', 'dht', 'client', 'distribution', 'samples', 'tools', 'benchmarks', 'proxy', 'metadata'

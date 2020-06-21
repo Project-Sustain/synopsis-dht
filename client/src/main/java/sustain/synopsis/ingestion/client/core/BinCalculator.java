@@ -172,9 +172,12 @@ public class BinCalculator {
         @Override
         public String toString() {
             StringBuilder sb = new StringBuilder();
-            for (BinResult b : binResults) {
-                sb.append(b);
-                sb.append("\n");
+            for (int i = 0; i < binResults.size()-1; i++) {
+                sb.append(binResults.get(i));
+                sb.append("\t");
+            }
+            if (binResults.size() > 0) {
+                sb.append(binResults.get(binResults.size()-1));
             }
             return sb.toString();
         }

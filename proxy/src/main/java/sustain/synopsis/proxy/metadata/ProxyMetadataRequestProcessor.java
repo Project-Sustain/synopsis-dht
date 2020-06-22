@@ -18,15 +18,15 @@ public class ProxyMetadataRequestProcessor implements MetadataRequestProcessor {
     private ExecutorService responseExecutorService = Executors.newFixedThreadPool(4);
 
     @Override
-    public CompletableFuture<BinConfigurationResponse> process(BinConfigurationRequest getRequest) {
-        CompletableFuture<BinConfigurationResponse> future = new CompletableFuture<>();
+    public CompletableFuture<GetMetadataResponse> process(GetMetadataRequest getRequest) {
+        CompletableFuture<GetMetadataResponse> future = new CompletableFuture<>();
 
-        ListenableFuture<BinConfigurationResponse> listenableFuture =
-                getMetadataStub().getBinConfigurationRequest(getRequest);
+        ListenableFuture<GetMetadataResponse> listenableFuture =
+                getMetadataStub().getMetadata(getRequest);
 
         listenableFuture.addListener(() -> {
             try {
-                BinConfigurationResponse response = listenableFuture.get();
+                GetMetadataResponse response = listenableFuture.get();
                 future.complete(response);
 
             } catch (Exception e) {
@@ -38,15 +38,15 @@ public class ProxyMetadataRequestProcessor implements MetadataRequestProcessor {
     }
 
     @Override
-    public CompletableFuture<PublishBinConfigurationResponse> process(PublishBinConfigurationRequest publishRequest) {
-        CompletableFuture<PublishBinConfigurationResponse> future = new CompletableFuture<>();
+    public CompletableFuture<PublishMetadataResponse> process(PublishMetadataRequest publishRequest) {
+        CompletableFuture<PublishMetadataResponse> future = new CompletableFuture<>();
 
-        ListenableFuture<PublishBinConfigurationResponse> listenableFuture =
-                getMetadataStub().publishBinConfiguration(publishRequest);
+        ListenableFuture<PublishMetadataResponse> listenableFuture =
+                getMetadataStub().publishMetadata(publishRequest);
 
         listenableFuture.addListener(() -> {
             try {
-                PublishBinConfigurationResponse response = listenableFuture.get();
+                PublishMetadataResponse response = listenableFuture.get();
                 future.complete(response);
 
             } catch (Exception e) {

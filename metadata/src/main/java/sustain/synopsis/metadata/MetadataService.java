@@ -13,7 +13,7 @@ public class MetadataService extends MetadataServiceGrpc.MetadataServiceImplBase
     }
 
     @Override
-    public void publishBinConfiguration(PublishBinConfigurationRequest request, StreamObserver<PublishBinConfigurationResponse> responseObserver) {
+    public void publishMetadata(PublishMetadataRequest request, StreamObserver<PublishMetadataResponse> responseObserver) {
         dispatcher.process(request).thenAccept(resp -> {
             responseObserver.onNext(resp);
             responseObserver.onCompleted();
@@ -25,7 +25,7 @@ public class MetadataService extends MetadataServiceGrpc.MetadataServiceImplBase
     }
 
     @Override
-    public void getBinConfigurationRequest(BinConfigurationRequest request, StreamObserver<BinConfigurationResponse> responseObserver) {
+    public void getMetadata(GetMetadataRequest request, StreamObserver<GetMetadataResponse> responseObserver) {
         dispatcher.process(request).thenAccept(resp -> {
             responseObserver.onNext(resp);
             responseObserver.onCompleted();

@@ -4,12 +4,8 @@ option java_multiple_files = true;
 option java_package = "sustain.synopsis.metadata";
 
 service MetadataService {
-    rpc PublishBinConfiguration (PublishBinConfigurationRequest) returns (PublishBinConfigurationResponse);
-    rpc GetBinConfigurationRequest (BinConfigurationRequest) returns (BinConfigurationResponse);
-}
-
-message BinConfigurationRequest {
-    repeated DatasetSessions datasetSession = 1;
+    rpc PublishMetadata (PublishMetadataRequest) returns (PublishMetadataResponse);
+    rpc GetMetadata (GetMetadataRequest) returns (GetMetadataResponse);
 }
 
 message DatasetSessions {
@@ -17,26 +13,35 @@ message DatasetSessions {
     repeated int64 sessionId = 2;
 }
 
-message DatasetBins {
+message ProtoBuffSerializedDatasetMetadata {
     string datasetId = 1;
-    repeated BinConfiguration binConfigurations = 2;
+    repeated ProtoBuffSerializedSessionMetadata sessionMetadata = 2;
 }
 
-message BinConfiguration {
+message ProtoBuffSerializedSessionMetadata {
     int64 sessionId = 1;
-    string binConfiguration = 2;
+    repeated ProtoBuffSerializedBinConfiguration binConfiguration = 2;
 }
 
-message BinConfigurationResponse {
-    repeated DatasetBins datasetBins = 1;
+message ProtoBuffSerializedBinConfiguration {
+    string featureName = 1;
+    repeated float values = 2;
 }
 
-message PublishBinConfigurationRequest {
+
+message GetMetadataRequest {
+    repeated DatasetSessions datasetSessions = 1;
+}
+
+message GetMetadataResponse {
+    repeated ProtoBuffSerializedDatasetMetadata datasetMetadata = 1;
+}
+
+message PublishMetadataRequest {
     string datasetId = 1;
-    int64 sessionId = 2;
-    string binConfiguration = 3;
+    ProtoBuffSerializedSessionMetadata sessionMetadata = 2;
 }
 
-message PublishBinConfigurationResponse {
+message PublishMetadataResponse {
     bool status = 1;
 }

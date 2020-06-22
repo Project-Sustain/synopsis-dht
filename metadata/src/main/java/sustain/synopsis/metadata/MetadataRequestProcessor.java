@@ -4,7 +4,7 @@ import java.util.concurrent.CompletableFuture;
 
 public interface MetadataRequestProcessor {
 
-    CompletableFuture<BinConfigurationResponse>  process(BinConfigurationRequest getRequest);
-    CompletableFuture<PublishBinConfigurationResponse> process(PublishBinConfigurationRequest publishRequest);
+    CompletableFuture<GetMetadataResponse>  process(GetMetadataRequest getRequest);
+    CompletableFuture<PublishMetadataResponse> process(PublishMetadataRequest publishRequest);
 
 }

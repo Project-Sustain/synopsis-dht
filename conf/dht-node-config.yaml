@@ -29,4 +29,9 @@ metadataStoreDir: '/tmp/'
 
 # writer pool size
 writerPoolSize: 10
+
+metadataServicePort: 9092
+metadataHost: 'lattice-7'
+metadataJournalLoc: '/s/parsons/b/others/sustain/sustain/metadata-journal.mlog'
+
 ...

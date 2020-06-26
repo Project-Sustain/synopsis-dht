@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package sustain.fileshare;
+
+service FileshareService {
+    rpc requestFile(FileRequest) returns (FileResponse);
+}
+
+message FileRequest {
+    string path = 1;
+}
+
+message FileResponse {
+    bytes data = 1;
+}

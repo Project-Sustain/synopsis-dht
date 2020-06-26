@@ -6,10 +6,13 @@ import sustain.synopsis.common.Strand;
 import sustain.synopsis.dht.store.services.*;
 import sustain.synopsis.dht.store.services.IngestionServiceGrpc.IngestionServiceBlockingStub;
 
+import java.util.ArrayList;
 import java.util.List;
+import org.apache.log4j.Logger;
 
 public class SimpleStrandPublisher implements StrandPublisher {
 
+    Logger logger = Logger.getLogger(SimpleStrandPublisher.class);
     private final String datasetId;
     private final long sessionId;
 
@@ -34,13 +37,13 @@ public class SimpleStrandPublisher implements StrandPublisher {
         return IngestionServiceGrpc.newBlockingStub(channel);
     }
 
-    public long getTotalStrandsPublished() {
+    public long getStrandsPublishedCount() {
         return totalStrandsPublished;
     }
 
     @Override
     public void publish(long messageId, Iterable<Strand> strands) {
-        List<sustain.synopsis.dht.store.services.Strand> convertedStrandList = SimpleAsynchronousStrandPublisher.getConvertedStrandList(strands);
+        List<sustain.synopsis.dht.store.services.Strand> convertedStrandList = getConvertedStrandList(strands);
         totalStrandsPublished += convertedStrandList.size();
 
         IngestionRequest request = IngestionRequest.newBuilder()
@@ -51,6 +54,7 @@ public class SimpleStrandPublisher implements StrandPublisher {
                 .build();
 
         IngestionResponse response = stub.ingest(request);
+        logger.info("published "+convertedStrandList.size()+" strands with status "+response.getStatus());
     }
 
     @Override
@@ -60,6 +64,14 @@ public class SimpleStrandPublisher implements StrandPublisher {
                         setDatasetId(datasetId).
                         setSessionId(sessionId).
                         build());
+    }
+
+    static List<sustain.synopsis.dht.store.services.Strand> getConvertedStrandList(Iterable<Strand> strands) {
+        List<sustain.synopsis.dht.store.services.Strand> convertedStrands = new ArrayList<>();
+        for (Strand s : strands) {
+            convertedStrands.add(DHTStrandPublisher.convertStrand(s));
+        }
+        return convertedStrands;
     }
 
 }

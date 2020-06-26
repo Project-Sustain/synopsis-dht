@@ -1,4 +1,4 @@
-package sustain.synopsis.samples.client.usgs;
+package sustain.synopsis.ingestion.client.core;
 
 import sustain.synopsis.common.Strand;
 import sustain.synopsis.ingestion.client.core.*;
@@ -10,7 +10,7 @@ import sustain.synopsis.sketch.stat.RunningStatisticsND;
 
 import java.util.Set;
 
-public class StreamFlowRecordCallbackHandler implements RecordCallbackHandler {
+public class StrandConverterRecordCallBackHandler implements RecordCallbackHandler {
 
     final StrandRegistry strandRegistry;
     final SessionSchema sessionSchema;
@@ -18,7 +18,7 @@ public class StreamFlowRecordCallbackHandler implements RecordCallbackHandler {
 
     long totalRecordsHandled = 0;
 
-    public StreamFlowRecordCallbackHandler(StrandRegistry strandRegistry, SessionSchema sessionSchema, TemporalQuantizer temporalQuantizer) {
+    public StrandConverterRecordCallBackHandler(StrandRegistry strandRegistry, SessionSchema sessionSchema, TemporalQuantizer temporalQuantizer) {
         this.strandRegistry = strandRegistry;
         this.sessionSchema = sessionSchema;
         this.temporalQuantizer = temporalQuantizer;
@@ -59,7 +59,7 @@ public class StreamFlowRecordCallbackHandler implements RecordCallbackHandler {
             Feature feature = new Feature(featureKey, featureValue);
             Feature quantizedVal = quantizer.quantize(feature);
             values[i++] = featureValue;
-            path.add(new Feature(StreamFlowClient.DISCHARGE_FEATURE, quantizedVal));
+            path.add(new Feature(featureKey, quantizedVal));
         }
 
         // create the data container and set as the data of the last vertex

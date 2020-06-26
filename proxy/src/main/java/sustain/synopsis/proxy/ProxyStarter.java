@@ -6,7 +6,10 @@ import sustain.synopsis.dht.*;
 import sustain.synopsis.dht.services.ingestion.IngestionService;
 import sustain.synopsis.dht.services.query.TargetedQueryService;
 import sustain.synopsis.dht.zk.ZKError;
+import sustain.synopsis.metadata.MetadataService;
+import sustain.synopsis.metadata.MetadataServiceRequestProcessor;
 import sustain.synopsis.proxy.ingestion.ProxyIngestionRequestProcessor;
+import sustain.synopsis.proxy.metadata.ProxyMetadataRequestProcessor;
 import sustain.synopsis.proxy.query.ProxyQueryProcessor;
 
 import java.io.IOException;
@@ -39,8 +42,11 @@ public class ProxyStarter {
         logger.info("Successfully initialized node context.");
 
         Node node = new Node(ctx.getNodeConfig().getIngestionServicePort(),
-                             new BindableService[]{new IngestionService(new ProxyIngestionRequestProcessor()),
-                                     new TargetedQueryService(new ProxyQueryProcessor())});
+                             new BindableService[]{
+                                     new IngestionService(new ProxyIngestionRequestProcessor()),
+                                     new TargetedQueryService(new ProxyQueryProcessor()),
+                                     new MetadataService(new ProxyMetadataRequestProcessor())}
+                                     );
         node.start(false); // proxy servers should not register in ZK
     }
 }

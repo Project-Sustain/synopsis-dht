@@ -7,5 +7,7 @@ import java.util.Collection;
 public interface StrandPublisher {
     void publish(long messageId, Iterable<Strand> strands);
 
-    default void terminateSession(){};
+    default void terminateSession(){ }
+
+    default long getStrandsPublishedCount(){return 0;}
 }

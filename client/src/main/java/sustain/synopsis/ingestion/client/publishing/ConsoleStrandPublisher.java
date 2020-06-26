@@ -15,12 +15,27 @@ public class ConsoleStrandPublisher implements StrandPublisher {
 
     private final Logger logger = Logger.getLogger(ConsoleStrandPublisher.class);
 
-    @Override
+    long totalPublished = 0;
+
     public void publish(long messageId, Iterable<Strand> strands) {
+
         for(Strand strand : strands) {
-            logger.info("Published strand. Geohash: " + strand.getGeohash() +
-                        ", from: " + CommonUtil.epochToLocalDateTime(strand.getFromTimeStamp()) +
-                        ", to: " + CommonUtil.epochToLocalDateTime(strand.getToTimestamp()));
+//            logger.info("Published strand. Geohash: " + strand.getGeohash() +
+//                        ", from: " + CommonUtil.epochToLocalDateTime(strand.getFromTimeStamp()) +
+//                        ", to: " + CommonUtil.epochToLocalDateTime(strand.getToTimestamp()));
+//            StringBuilder stringBuilder = new StringBuilder();
+//            Path path = strand.getPath();
+//            for(Vertex v : path){
+//                stringBuilder.append(v.getLabel().getName() + "=" + v.getLabel().getDouble()).append(",");
+//            }
+//            DataContainer container = path.get(path.size()-1).getData();
+//            stringBuilder.append("count=").append(container.statistics.count());
+//            logger.info("Path: " + stringBuilder.toString());
+//            totalPublished++;
+
+            System.out.print("Published strand. Geohash: " + strand.getGeohash() +
+                    ", from: " + CommonUtil.epochToLocalDateTime(strand.getFromTimeStamp()) +
+                    ", to: " + CommonUtil.epochToLocalDateTime(strand.getToTimestamp()));
             StringBuilder stringBuilder = new StringBuilder();
             Path path = strand.getPath();
             for(Vertex v : path){
@@ -28,7 +43,13 @@ public class ConsoleStrandPublisher implements StrandPublisher {
             }
             DataContainer container = path.get(path.size()-1).getData();
             stringBuilder.append("count=").append(container.statistics.count());
-            logger.info("Path: " + stringBuilder.toString());
+            System.out.println(" Path: " + stringBuilder.toString());
+            totalPublished++;
         }
+    }
+
+    @Override
+    public long getStrandsPublishedCount() {
+        return totalPublished;
     }
 }

@@ -2,6 +2,9 @@ package sustain.synopsis.samples.client.usgs;
 
 import sustain.synopsis.ingestion.client.core.Record;
 import sustain.synopsis.ingestion.client.core.RecordCallbackHandler;
+import sustain.synopsis.ingestion.client.geohash.GeoHash;
+import sustain.synopsis.samples.client.common.Location;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -19,13 +22,25 @@ public class StreamFlowSiteDataParser {
     final static Map<String, ZoneId> timeZoneMap = new HashMap<>();
 
     static {
-        timeZoneMap.put("MST", ZoneId.of("America/Denver"));
+        timeZoneMap.put("PDT", ZoneId.of("US/Pacific-New"));
+        timeZoneMap.put("PST", ZoneId.of("US/Pacific-New"));
+
+        timeZoneMap.put("MDT", ZoneId.of("US/Mountain"));
+        timeZoneMap.put("MST", ZoneId.of("US/Mountain"));
+
+        timeZoneMap.put("CST", ZoneId.of("US/Central"));
+        timeZoneMap.put("CDT", ZoneId.of("US/Central"));
+
+        timeZoneMap.put("EST", ZoneId.of("US/Eastern"));
+        timeZoneMap.put("EDT", ZoneId.of("US/Eastern"));
     }
 
+    String geohash = null;
     Map<String, Integer> headerMap;
-    String geohash;
     Collection<String> dataCodes;
     RecordCallbackHandler callbackHandler;
+    Map<String, Location> locationMap;
+    int geohashLength;
     boolean valid;
     long exceptionLineCount = 0;
 
@@ -35,11 +50,12 @@ public class StreamFlowSiteDataParser {
         valid = false;
     }
 
-    public StreamFlowSiteDataParser(Map<String, Integer> headerMap, String geohash, Collection<String> dataCodes, RecordCallbackHandler callbackHandler) {
+    public StreamFlowSiteDataParser(Map<String, Integer> headerMap, Map<String, Location> locationMap, Collection<String> dataCodes, RecordCallbackHandler callbackHandler, int geohashLength) {
         this.headerMap = headerMap;
-        this.geohash = geohash;
+        this.locationMap = locationMap;
         this.dataCodes = dataCodes;
         this.callbackHandler = callbackHandler;
+        this.geohashLength = geohashLength;
         this.valid = true;
     }
 
@@ -51,6 +67,14 @@ public class StreamFlowSiteDataParser {
         }
 
         try {
+            if (geohash == null) {
+                String org = splits[0];
+                String site_no = splits[1];
+                String id = org+"-"+site_no;
+                Location location = locationMap.get(id);
+                this.geohash = GeoHash.encode(location.latitude, location.longitude, geohashLength);
+            }
+
             Record record = new Record();
             for (String dataCode : dataCodes) {
                 if (dataCode.contains("00060")) {

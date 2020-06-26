@@ -1,5 +1,6 @@
+apply plugin: 'java-library'
+
 dependencies {
     implementation project(':common')
     implementation project(':dht')
-    implementation project(':metadata')
 }

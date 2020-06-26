@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sustain.synopsis.metadata";
+
+service MetadataService {
+    rpc PublishMetadata (PublishMetadataRequest) returns (PublishMetadataResponse);
+    rpc GetMetadata (GetMetadataRequest) returns (GetMetadataResponse);
+}
+
+message DatasetSessions {
+    string datasetId = 1;
+    repeated int64 sessionId = 2;
+}
+
+message ProtoBuffSerializedDatasetMetadata {
+    string datasetId = 1;
+    repeated ProtoBuffSerializedSessionMetadata sessionMetadata = 2;
+}
+
+message ProtoBuffSerializedSessionMetadata {
+    int64 sessionId = 1;
+    repeated ProtoBuffSerializedBinConfiguration binConfiguration = 2;
+}
+
+message ProtoBuffSerializedBinConfiguration {
+    string featureName = 1;
+    repeated float values = 2;
+}
+
+
+message GetMetadataRequest {
+    repeated DatasetSessions datasetSessions = 1;
+}
+
+message GetMetadataResponse {
+    repeated ProtoBuffSerializedDatasetMetadata datasetMetadata = 1;
+}
+
+message PublishMetadataRequest {
+    string datasetId = 1;
+    ProtoBuffSerializedSessionMetadata sessionMetadata = 2;
+}
+
+message PublishMetadataResponse {
+    bool status = 1;
+}

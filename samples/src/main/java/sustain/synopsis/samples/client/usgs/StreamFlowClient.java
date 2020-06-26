@@ -1,132 +1,106 @@
 package sustain.synopsis.samples.client.usgs;
 
-import com.opencsv.exceptions.CsvValidationException;
+import org.apache.log4j.Logger;
+import sustain.synopsis.common.Strand;
 import sustain.synopsis.ingestion.client.core.*;
-import sustain.synopsis.ingestion.client.publishing.SimpleStrandPublisher;
+import sustain.synopsis.ingestion.client.publishing.DHTStrandPublisher;
+import sustain.synopsis.ingestion.client.publishing.StrandPublisher;
+import sustain.synopsis.samples.client.common.Location;
+import sustain.synopsis.samples.client.common.State;
 
-import java.io.File;
-import java.io.IOException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.io.*;
 import java.time.Duration;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.zip.GZIPInputStream;
 
 public class StreamFlowClient {
 
+    static Logger logger = Logger.getLogger(StreamFlowClient.class);
     public static final String TEMPERATURE_FEATURE = "temperature_water_degrees_celsius";
     public static final String DISCHARGE_FEATURE = "discharge_cubic_feet_per_second";
     public static final String GAGE_HEIGHT_FEATURE = "gage_height_feet";
     public static final String SPECIFIC_CONDUCTANCE_FEATURE = "specific_conductance_water_unfiltered_microsiemens_per_centimeter_at_25_degrees_celsius";
 
-    public static final int GEOHASH_LENGTH = 5;
+    public static final int GEOHASH_LENGTH = 6;
     public static final Duration TEMPORAL_BRACKET_LENGTH = Duration.ofHours(6);
 
-    public final static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd");
-    public final static Pattern datePattern = Pattern.compile("\\d\\d\\d\\d_\\d\\d_\\d\\d");
-    public static boolean isFileInDateRange(String fileName, Date beginDate, Date endDate) {
-        Matcher matcher = datePattern.matcher(fileName);
-        try {
-            if (!matcher.find()) {
-                return false;
-            }
-            Date date1 = dateFormat.parse(matcher.group());
-            if (!matcher.find()) {
-                return false;
-            }
-            Date date2 = dateFormat.parse(matcher.group());
-            return date1.compareTo(beginDate) >= 0 && date2.compareTo(endDate) <= 0;
+    static Map<String, String> binConfigMap = new HashMap<>();
+    static String dhtNodeAddress;
+    static String datasetId;
+    static Map<String, Location> stationMap;
 
-        } catch (ParseException e) {
-            return false;
-        }
-    }
+    static void ingest(List<File> allFiles, String stateAbbr, int year, long sessionId) {
+        String key = stateAbbr+year;
+        String binConfig = binConfigMap.get(key);
+        logger.info(key);
 
-    static boolean dateRangeContainsYear(int year, int beginYear, int endYear) {
-        boolean outOfRange = beginYear > year || endYear < year;
-        return !outOfRange;
-    }
-
-
-    // TODO make cleaner solution to filtering directories based on year
-    static ArrayList<File> getMatchingFiles(File[] files, Date beginDate, Date endDate, int beginYear, int endYear) {
-        ArrayList<File> fileList = new ArrayList<>();
-        for (File f : files) {
-            if (f.isDirectory()) {
-                int year = Integer.parseInt(f.getName());
-                if (dateRangeContainsYear(year, beginYear, endYear)) {
-                    fileList.addAll(getMatchingFiles(f.listFiles(), beginDate, endDate, beginYear, endYear));
-                }
-            } else {
-                boolean fileMatches = f.getName().startsWith("stream_flow")
-                        && f.getName().endsWith(".gz")
-                        && isFileInDateRange(f.getName(), beginDate, endDate);
-                if (fileMatches) {
-                    fileList.add(f);
-                }
-            }
-        }
-        return fileList;
-    }
-
-    // example command line args:
-    // localhost:9099
-    // stream-flow-dataset
-    // 1
-    // /s/lattice-1/b/nobackup/galileo/stream-flow-data/stream_flow_bin_configuration.csv
-    // /s/lattice-1/b/nobackup/galileo/stream-flow-data/stream_flow_co_stations.csv
-    // /s/lattice-1/b/nobackup/galileo/stream-flow-data/co
-    // 2016_01_01
-    // 2020_01_01
-
-    public static void main(String[] args) throws IOException, CsvValidationException, ParseException {
-        if (args.length < 7) {
-            System.out.println("Usage: dhtNodeAddress datasetId sessionId binConfigFile stationLocationFile baseDir beginDate endDate");
-            System.out.println("Dates in format yyyy_MM_dd");
+        if (binConfig == null) {
+            logger.info("skipping "+key+", bin config null");
             return;
         }
 
-        String dhtNodeAddress = args[0];
-        String datasetId = args[1];
-        long sessionId = Long.parseLong(args[2]);
-        String binConfigPath = args[3];
-        File stationLocationFile = new File(args[4]);
-        File baseDir = new File(args[5]);
-        Date beginDate = dateFormat.parse(args[6]);
-        Date endDate = dateFormat.parse(args[7]);
-        int beginYear = Integer.parseInt(args[6].substring(0,4));
-        int endYear =  Integer.parseInt(args[7].substring(0,4));
+        List<File> files = allFiles.stream()
+                .filter(new UsgsUtil.FilePredicate(stateAbbr, year, year))
+                .sorted().collect(Collectors.toList());
 
-        List<File> inputFiles = getMatchingFiles(baseDir.listFiles(), beginDate, endDate, beginYear, endYear);
-        inputFiles.sort(Comparator.comparing(File::getName));
-        System.out.println("Total matching file count: " + inputFiles.size());
+        SessionSchema sessionSchema = new SessionSchema(Util.quantizerMapFromString(binConfig), GEOHASH_LENGTH, TEMPORAL_BRACKET_LENGTH);
+        DHTStrandPublisher publisher = new DHTStrandPublisher(dhtNodeAddress, datasetId, sessionId);
+//        StrandPublisher publisher = new MyStrandPublisher();
 
-        Map<String, StationParser.Location> stationMap = StationParser.parseFile(stationLocationFile);
-        System.out.println("Num stations in stationLocationFile: " + stationMap.size());
-        SessionSchema sessionSchema = new SessionSchema(Util.quantizerMapFromFile(binConfigPath), GEOHASH_LENGTH, TEMPORAL_BRACKET_LENGTH);
-
-        SimpleStrandPublisher publisher = new SimpleStrandPublisher(dhtNodeAddress, datasetId, sessionId);
         StrandRegistry strandRegistry = new StrandRegistry(publisher, 10000, 100);
-
         TemporalQuantizer temporalQuantizer = new TemporalQuantizer(TEMPORAL_BRACKET_LENGTH);
-        StreamFlowRecordCallbackHandler handler = new StreamFlowRecordCallbackHandler(strandRegistry, sessionSchema, temporalQuantizer);
+        StrandConverterRecordCallBackHandler handler = new StrandConverterRecordCallBackHandler(strandRegistry, sessionSchema, temporalQuantizer);
+        StreamFlowParser streamFlowParser = new StreamFlowParser(stationMap);
+        streamFlowParser.initWithSchemaAndHandler(sessionSchema, handler);
 
-        StreamFlowFileParser streamFlowFileParser = new StreamFlowFileParser(stationMap);
-        streamFlowFileParser.initWithSchemaAndHandler(sessionSchema, handler);
-
-        for (File f : inputFiles) {
-            streamFlowFileParser.parse(f);
+        for (File f : files) {
+            try {
+                streamFlowParser.parse(new GZIPInputStream(new FileInputStream(f)));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         strandRegistry.terminateSession();
         handler.onTermination();
-        publisher.terminateSession();
 
-        System.out.println("Total records: "+handler.totalRecordsHandled);
-        System.out.println("Total strands: "+publisher.getTotalStrandsPublished());
-        System.out.printf("Average records per strand: %.2f\n",(double)handler.totalRecordsHandled / publisher.getTotalStrandsPublished());
-        System.out.println("Stations missing location data count: " + streamFlowFileParser.missingStationIds.size());
+        logger.info("Total strands: "+publisher.getStrandsPublishedCount());
+    }
+
+    static Map<String, String> getBinConfigMap(File f) throws IOException {
+        Map<String, String> ret = new HashMap<>();
+        try (BufferedReader br = new BufferedReader(new FileReader(f))) {
+            br.lines().forEach(line -> {
+                String[] splits = line.split("\t");
+                if (splits.length < 2) {
+                    ret.put(line, null);
+                } else  {
+                    ret.put(splits[0], splits[1]);
+                }
+            });
+        }
+        return ret;
+    }
+
+    public static void main(String[] args) throws IOException {
+        File inputDir = new File(args[0]);
+        stationMap = StationParser.parseFile(new File(args[1]));
+        binConfigMap = getBinConfigMap(new File(args[2]));
+        dhtNodeAddress = args[3];
+        datasetId = args[4];
+        int beginYear = Integer.parseInt(args[5].substring(0,4));
+        int endYear =  Integer.parseInt(args[6].substring(0,4));
+        List<File> allFiles = sustain.synopsis.samples.client.common.Util.getFilesRecursive(inputDir, 0);
+
+        long sessionId = 0;
+        for (State s : State.values()) {
+            String stateAbbr = s.getANSIAbbreviation().toLowerCase();
+            for (int year = beginYear; year <= endYear; year++) {
+                ingest(allFiles, stateAbbr, year, sessionId++);
+            }
+        }
+
     }
 
 }

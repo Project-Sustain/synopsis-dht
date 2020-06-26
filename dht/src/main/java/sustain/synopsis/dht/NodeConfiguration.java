@@ -30,8 +30,11 @@ public class NodeConfiguration {
     private int blockSize;
     private String metadataStoreDir;
     private int writerPoolSize;
+    private int metadataServicePort;
+    private String metadataHost;
+    private String metadataJournalLoc;
 
-    static NodeConfiguration fromYamlFile(String filePath) throws IOException {
+    public static NodeConfiguration fromYamlFile(String filePath) throws IOException {
         try (FileInputStream fis = new FileInputStream(filePath)) {
             Yaml yaml = new Yaml(new Constructor(NodeConfiguration.class));
             return yaml.load(fis);
@@ -109,6 +112,30 @@ public class NodeConfiguration {
 
     public void setZkEnsemble(List<String> zkEnsemble) {
         this.zkEnsemble = zkEnsemble;
+    }
+
+    public int getMetadataServicePort() {
+        return metadataServicePort;
+    }
+
+    public void setMetadataServicePort(int metadataServicePort) {
+        this.metadataServicePort = metadataServicePort;
+    }
+
+    public String getMetadataHost() {
+        return metadataHost;
+    }
+
+    public void  setMetadataHost(String metadataHost) {
+        this.metadataHost = metadataHost;
+    }
+
+    public String getMetadataJournalLoc() {
+        return metadataJournalLoc;
+    }
+
+    public void setMetadataJournalLoc(String metadataJournalLoc) {
+        this.metadataJournalLoc = metadataJournalLoc;
     }
 
     @Override

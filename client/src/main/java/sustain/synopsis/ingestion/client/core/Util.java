@@ -30,20 +30,25 @@ public class Util {
         }
     }
 
-    public static Map<String, Quantizer> quantizerMapFromString(String s) throws IOException {
+    public static Map<String, Quantizer> quantizerMapFromString(String s) {
         BufferedReader bfr = new BufferedReader(new StringReader(s));
         Map<String, Quantizer> quantizers = new HashMap<>();
 
-        String line;
-        while ((line = bfr.readLine()) != null) {
-            String[] segments = line.split(",");
-            String fName = segments[0];
-            Feature[] ticks = new Feature[segments.length - 4];
-            for (int i = 4; i < segments.length; i++) {
-                ticks[i - 4] = new Feature(Float.parseFloat(segments[i]));
-            }
-            Quantizer q = new Quantizer(ticks);
-            quantizers.put(fName, q);
+        try {
+            String line;
+            while (true) {
+                    if ((line = bfr.readLine()) == null) break;
+                    String[] segments = line.split(",");
+                    String fName = segments[0];
+                    Feature[] ticks = new Feature[segments.length - 4];
+                    for (int i = 4; i < segments.length; i++) {
+                        ticks[i - 4] = new Feature(Float.parseFloat(segments[i]));
+                    }
+                    Quantizer q = new Quantizer(ticks);
+                    quantizers.put(fName, q);
+                }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
         return quantizers;
     }

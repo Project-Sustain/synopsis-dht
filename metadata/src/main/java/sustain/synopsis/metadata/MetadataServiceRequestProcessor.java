@@ -105,7 +105,7 @@ public class MetadataServiceRequestProcessor implements MetadataRequestProcessor
         return future;
     }
 
-    private static String getStringForBinConfig(ProtoBuffSerializedBinConfiguration binConfig) {
+    public static String getStringForBinConfig(ProtoBuffSerializedBinConfiguration binConfig) {
         StringBuilder sb = new StringBuilder();
         sb.append(binConfig.getFeatureName());
         for (float value : binConfig.getValuesList()) {
@@ -114,7 +114,7 @@ public class MetadataServiceRequestProcessor implements MetadataRequestProcessor
         return sb.toString();
     }
 
-    private static String getStringForEntry(String datasetId, ProtoBuffSerializedSessionMetadata sessionMetadata) {
+    public static String getStringForEntry(String datasetId, ProtoBuffSerializedSessionMetadata sessionMetadata) {
         StringBuilder sb = new StringBuilder();
         sb.append(datasetId).append("\t").append(sessionMetadata.getSessionId()).append("\t");
 

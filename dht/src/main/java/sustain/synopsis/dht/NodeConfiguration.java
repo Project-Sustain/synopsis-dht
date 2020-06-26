@@ -34,7 +34,7 @@ public class NodeConfiguration {
     private String metadataHost;
     private String metadataJournalLoc;
 
-    static NodeConfiguration fromYamlFile(String filePath) throws IOException {
+    public static NodeConfiguration fromYamlFile(String filePath) throws IOException {
         try (FileInputStream fis = new FileInputStream(filePath)) {
             Yaml yaml = new Yaml(new Constructor(NodeConfiguration.class));
             return yaml.load(fis);
@@ -118,27 +118,24 @@ public class NodeConfiguration {
         return metadataServicePort;
     }
 
-    public NodeConfiguration setMetadataServicePort(int metadataServicePort) {
+    public void setMetadataServicePort(int metadataServicePort) {
         this.metadataServicePort = metadataServicePort;
-        return this;
     }
 
     public String getMetadataHost() {
         return metadataHost;
     }
 
-    public NodeConfiguration setMetadataHost(String metadataHost) {
+    public void  setMetadataHost(String metadataHost) {
         this.metadataHost = metadataHost;
-        return this;
     }
 
     public String getMetadataJournalLoc() {
         return metadataJournalLoc;
     }
 
-    public NodeConfiguration setMetadataJournalLoc(String metadataJournalLoc) {
+    public void setMetadataJournalLoc(String metadataJournalLoc) {
         this.metadataJournalLoc = metadataJournalLoc;
-        return this;
     }
 
     @Override

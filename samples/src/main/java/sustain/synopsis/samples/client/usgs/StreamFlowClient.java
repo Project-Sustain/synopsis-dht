@@ -135,11 +135,10 @@ public class StreamFlowClient {
         for (State s : State.values()) {
             String stateAbbr = s.getANSIAbbreviation().toLowerCase();
             int comp = s.getANSIAbbreviation().toLowerCase().compareTo(startState);
-            ++sessionId;
 
             int year;
             if (comp < 0) {
-                continue;
+                year = 0;
             } else if (comp == 0) {
                 year = startYear;
             } else {
@@ -147,6 +146,10 @@ public class StreamFlowClient {
             }
 
             for (; year <= endYear; year++) {
+                ++sessionId;
+                if (comp == 0) {
+                    continue;
+                }
                 try {
                     ingest(allFiles, stateAbbr, year, sessionId);
                 } catch (Exception e) {

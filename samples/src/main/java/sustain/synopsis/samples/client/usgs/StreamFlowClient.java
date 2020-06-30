@@ -125,14 +125,30 @@ public class StreamFlowClient {
         datasetId = args[5];
         int beginYear = Integer.parseInt(args[6].substring(0,4));
         int endYear =  Integer.parseInt(args[7].substring(0,4));
+
+        String startState = args[8].toLowerCase();
+        int startYear = Integer.parseInt(args[9]);
+
         List<File> allFiles = sustain.synopsis.samples.client.common.Util.getFilesRecursive(inputDir, 0);
 
-        long sessionId = 0;
+        long sessionId = -1;
         for (State s : State.values()) {
             String stateAbbr = s.getANSIAbbreviation().toLowerCase();
-            for (int year = beginYear; year <= endYear; year++) {
+            int comp = s.getANSIAbbreviation().toLowerCase().compareTo(startState);
+            ++sessionId;
+
+            int year;
+            if (comp < 0) {
+                continue;
+            } else if (comp == 0) {
+                year = startYear;
+            } else {
+                year = beginYear;
+            }
+
+            for (; year <= endYear; year++) {
                 try {
-                    ingest(allFiles, stateAbbr, year, sessionId++);
+                    ingest(allFiles, stateAbbr, year, sessionId);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

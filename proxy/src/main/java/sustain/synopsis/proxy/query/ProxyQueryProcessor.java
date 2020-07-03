@@ -3,6 +3,7 @@ package sustain.synopsis.proxy.query;
 import io.grpc.Channel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
+import org.apache.log4j.Logger;
 import sustain.synopsis.dht.Context;
 import sustain.synopsis.dht.Ring;
 import sustain.synopsis.dht.services.query.QueryContainer;
@@ -19,8 +20,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
 public class ProxyQueryProcessor implements QueryProcessor {
+
+    private static final Logger logger = Logger.getLogger(ProxyQueryProcessor.class);
     private Map<String, TargetedQueryServiceGrpc.TargetedQueryServiceStub> stubs = new ConcurrentHashMap<>();
     private final Ring ring;
+    private long queryId = 0;
+
 
     public ProxyQueryProcessor() {
         this.ring = Context.getInstance().getRing();
@@ -29,7 +34,12 @@ public class ProxyQueryProcessor implements QueryProcessor {
     @Override
     public CompletableFuture<Boolean> process(TargetQueryRequest queryRequest,
                                               StreamObserver<TargetQueryResponse> responseObserver) {
+
+        logger.info("Starting of query "+queryId++);
+        logger.info(queryRequest.toString());
+
         Set<String> endpoints = ring.getUniqueEndpoints();
+        logger.info("endpoints: "+endpoints.stream().reduce("", (subRes, elem) -> subRes + elem));
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         QueryContainer container =
                 new QueryContainer(new CountDownLatch(endpoints.size()), future, responseObserver, new HashSet<>(),
@@ -44,6 +54,7 @@ public class ProxyQueryProcessor implements QueryProcessor {
 
                 @Override
                 public void onError(Throwable t) {
+                    logger.error(t);
                     responseObserver.onError(t);
                     container.reportReaderTaskComplete(false);
                 }
@@ -54,6 +65,7 @@ public class ProxyQueryProcessor implements QueryProcessor {
                 }
             });
         });
+        logger.info("End of query "+queryId);
         return future;
     }
 

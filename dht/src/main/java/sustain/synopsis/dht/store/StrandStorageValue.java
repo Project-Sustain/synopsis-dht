@@ -68,4 +68,14 @@ public class StrandStorageValue implements Mergeable<StrandStorageValue>, Stream
         }
         return protoBuffSerializedStrands;
     }
+
+    public List<ProtoBuffSerializedStrand> getProtoBuffSerializedStrands(long sessionId) throws InvalidProtocolBufferException {
+        List<ProtoBuffSerializedStrand> protoBuffSerializedStrands = new ArrayList<>(this.strands.size());
+        for (byte[] serializedStrand : strands) {
+            protoBuffSerializedStrands.add(ProtoBuffSerializedStrand.newBuilder()
+                    .mergeFrom(serializedStrand).setSessionId(sessionId)
+                    .build());
+        }
+        return protoBuffSerializedStrands;
+    }
 }

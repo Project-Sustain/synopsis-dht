@@ -24,4 +24,6 @@ message ProtoBuffSerializedStrand {
     repeated double min = 7;
     repeated double max = 8;
     repeated double s2 = 9;
+
+    int64 sessionId = 10;
 }

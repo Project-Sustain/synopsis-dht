@@ -1,19 +1,6 @@
 #!/bin/bash
 
-# Finds a process corresponding to Sustain Node and kills it.
-
-# First use JPS to locate the DHT process.
-r_pid=`jps | grep 'DHTNodeStarter' | cut -d' ' -f1`
-
-# If there is no DHT process, look for proxy process.
-if [ -z ${r_pid} ]; then
-    r_pid=`jps | grep 'ProxyStarter' | cut -d' ' -f1`
-fi
-
-# If JPS fails, use ps and grep
-if [ -z ${r_pid} ]; then 
-    r_pid=`ps -ef | grep 'java' | grep ${USER} | grep 'synopsis' | cut -d' ' -f2`
-fi
+r_pid=`ps -ef | grep 'java' | grep ${USER} | grep 'synopsis' | cut -d ' ' -f4`
 
 if [ -z ${r_pid} ]; then
     echo 'No Sustain process found!'

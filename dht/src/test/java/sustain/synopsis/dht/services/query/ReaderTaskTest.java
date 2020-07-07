@@ -100,7 +100,7 @@ public class ReaderTaskTest {
         task.appendToResponse(Collections.singletonList(new TableIterator.TableEntry<>(new StrandStorageKey(1000, 2000),
                                                                                        new StrandStorageValue(
                                                                                                serializedStrand
-                                                                                                       .toByteArray()))));
+                                                                                                       .toByteArray()))), 1);
         Mockito.verify(containerMock, Mockito.times(1)).write(targetQueryResponse);
     }
 
@@ -118,7 +118,7 @@ public class ReaderTaskTest {
         StrandStorageValue strandStorageValue = new StrandStorageValue(strand1.toByteArray(), strand2.toByteArray());
         List<TableIterator.TableEntry<StrandStorageKey, StrandStorageValue>> matchingBlockData = Collections
                 .singletonList(new TableIterator.TableEntry<>(new StrandStorageKey(1000, 2000), strandStorageValue));
-        task.appendToResponse(matchingBlockData);
+        task.appendToResponse(matchingBlockData, 1);
         Mockito.verify(containerMock, Mockito.times(1))
                .write(TargetQueryResponse.newBuilder().addStrands(strand1).build());
         Mockito.verify(containerMock, Mockito.times(1))
@@ -141,7 +141,7 @@ public class ReaderTaskTest {
                 IntStream.range(0, messageCount).mapToObj(
                         i -> new TableIterator.TableEntry<>(new StrandStorageKey(i, i + 1), strandStorageValue))
                          .collect(Collectors.toList());
-        task.appendToResponse(matchingStrands);
+        task.appendToResponse(matchingStrands, 1);
         Mockito.verify(containerMock, Mockito.times(2)).write(Mockito.any());
     }
 

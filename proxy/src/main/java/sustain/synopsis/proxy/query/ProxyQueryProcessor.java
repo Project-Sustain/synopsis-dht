@@ -35,7 +35,7 @@ public class ProxyQueryProcessor implements QueryProcessor {
     public CompletableFuture<Boolean> process(TargetQueryRequest queryRequest,
                                               StreamObserver<TargetQueryResponse> responseObserver) {
 
-        logger.info("Starting of query "+queryId++);
+        logger.info("Starting query "+queryId++);
         logger.info(queryRequest.toString());
 
         Set<String> endpoints = ring.getUniqueEndpoints();
@@ -65,7 +65,6 @@ public class ProxyQueryProcessor implements QueryProcessor {
                 }
             });
         });
-        logger.info("End of query "+queryId);
         return future;
     }
 

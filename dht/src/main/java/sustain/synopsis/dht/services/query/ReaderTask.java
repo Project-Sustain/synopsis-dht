@@ -107,7 +107,7 @@ public class ReaderTask implements Runnable {
             reader =
                     new SSTableReader<>(matchedSSTable.getMetadata(), StrandStorageKey.class, StrandStorageValue.class);
             for (StrandStorageKey firstKey : matchingBlocks) {
-                appendToResponse(readBlock(reader, firstKey, matchedSSTable.getMatchedIntervals()));
+                appendToResponse(readBlock(reader, firstKey, matchedSSTable.getMatchedIntervals()), matchedSSTable.getMetadata().getSessionId());
             }
             long t2 = System.currentTimeMillis();
             if (logger.isDebugEnabled()) {
@@ -148,10 +148,10 @@ public class ReaderTask implements Runnable {
         return result;
     }
 
-    void appendToResponse(List<TableIterator.TableEntry<StrandStorageKey, StrandStorageValue>> entries)
+    void appendToResponse(List<TableIterator.TableEntry<StrandStorageKey, StrandStorageValue>> entries, long sessionId)
             throws IOException {
         for (TableIterator.TableEntry<StrandStorageKey, StrandStorageValue> entry : entries) {
-            entry.getValue().getProtoBuffSerializedStrands().forEach(responseWrapper::addProtoBuffSerializedStrand);
+            entry.getValue().getProtoBuffSerializedStrands(sessionId).forEach(responseWrapper::addProtoBuffSerializedStrand);
         }
     }
 }

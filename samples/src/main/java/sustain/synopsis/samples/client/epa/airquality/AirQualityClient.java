@@ -11,6 +11,8 @@ public class AirQualityClient {
 
     static final String[] possible = new String[]{"42401", "42101", "42602", "88101", "88502", "81102", "SPEC", "PM10SPEC"};
 
+    static int AIR_QUALITY_GEOHASH_LENGTH = 5;
+
     static List<File> getFilteredList(List<File> files, String[] parameters, int yearStart, int yearEnd) {
         List<File> ret = new ArrayList<>();
         for (File f : files) {

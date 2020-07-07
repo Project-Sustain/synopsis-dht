@@ -111,7 +111,7 @@ public class BinCalculator {
             StringBuilder sb = new StringBuilder();
             sb.append(featureName);
             for (Feature f : quantizer.getTicks()) {
-                sb.append(","+f);
+                sb.append(","+f.getFloat());
             }
             return sb.toString();
         }
@@ -218,7 +218,6 @@ public class BinCalculator {
                 case ANY:
                 default:
                     res = calculateBestBinConfig(sample, featureName, ticks);
-
             }
             if (res.getRmse() < discErrorThreshold) {
                 return res;

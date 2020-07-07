@@ -1,8 +1,10 @@
 package sustain.synopsis.samples.client.epa.airquality;
 
 import sustain.synopsis.samples.client.common.Location;
+import sustain.synopsis.sketch.util.Geohash;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 public class HourlyDataEntry {
 
@@ -20,6 +22,15 @@ public class HourlyDataEntry {
         this.parameterName = parameterName;
         this.methodCode = methodCode;
         this.measurement = measurement;
+    }
+
+    String getKey() {
+        String geohash = Geohash.encode(
+                location.latitude,
+                location.longitude,
+                AirQualityClient.AIR_QUALITY_GEOHASH_LENGTH
+        );
+        return geohash+dateTime.toEpochSecond(ZoneOffset.UTC);
     }
 
 }

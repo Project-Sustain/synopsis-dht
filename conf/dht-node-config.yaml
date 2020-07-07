@@ -1,37 +1,37 @@
----
 # ingestion service port
 ingestionServicePort: 9091
 
 # ZK ensemble - the list of zk Servers
 zkEnsemble:
-  - 'localhost:2181'
-  - 'localhost:2182'
+  - 'lattice-1:2181'
+  - 'lattice-2:2181'
+  - 'lattice-3:2181'
 
 # storage directories and the upper limits on the usage used for storing data (in GB)
 storageDirs:
-  /sustain/data/a : 10
-  /sustain/data/b : 10
+  /s/$HOSTNAME/a/nobackup/galileo/sustain/data : 512
+  /s/$HOSTNAME/b/nobackup/galileo/sustain/data : 512
+  /s/$HOSTNAME/c/nobackup/galileo/sustain/data : 512
+  /s/$HOSTNAME/d/nobackup/galileo/sustain/data : 512
 
 # how the storage directories are chosen from available options listed under 'storageDirs'
 storageAllocationPolicy: 'round-robin'
 
 # location of the root commit log
-rootJournalLoc: '/tmp/$HOSTNAME-root-journal.slog'
+rootJournalLoc: '/s/$HOSTNAME/a/nobackup/galileo/sustain/logs/'
 
 # upper limit on the memory utilization by a memTable (in MB)
-memTableSize: 50
+memTableSize: 16
 
 # block size used when creating on-disk ssTables (in MB)
-blockSize: 10
+blockSize: 4
 
 # metadata storage directory - used for storing metadata of entity stores (e.g.: commit logs)
-metadataStoreDir: '/tmp/'
+metadataStoreDir: '/s/$HOSTNAME/a/nobackup/galileo/sustain/logs/'
 
 # writer pool size
-writerPoolSize: 10
+writerPoolSize: 4
 
 metadataServicePort: 9092
 metadataHost: 'lattice-7'
 metadataJournalLoc: '/s/parsons/b/others/sustain/sustain/metadata-journal.mlog'
-
-...

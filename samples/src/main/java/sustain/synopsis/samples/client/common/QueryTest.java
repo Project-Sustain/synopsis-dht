@@ -2,13 +2,11 @@ package sustain.synopsis.samples.client.common;
 
 import io.grpc.Channel;
 import io.grpc.ManagedChannelBuilder;
-import sustain.synopsis.dht.store.services.Expression;
-import sustain.synopsis.dht.store.services.Predicate;
-import sustain.synopsis.dht.store.services.TargetQueryRequest;
-import sustain.synopsis.dht.store.services.TargetedQueryServiceGrpc;
+import sustain.synopsis.dht.store.services.*;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.Iterator;
 
 public class QueryTest {
 
@@ -52,6 +50,13 @@ public class QueryTest {
                 .setTemporalScope(temporalExpression)
                 .setDataset(datasetId)
                 .build();
+
+        Iterator<TargetQueryResponse> responses = stub.query(req);
+
+        while (responses.hasNext()) {
+            TargetQueryResponse resp = responses.next();
+            System.out.println(resp);
+        }
     }
 
 }

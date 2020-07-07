@@ -1,6 +1,6 @@
 #!/bin/bash
 
-r_pid=`ps -ef | grep 'java' | grep ${USER} | grep 'synopsis' | cut -d ' ' -f4`
+r_pid=`ps -ef | grep 'java' | grep ${USER} | grep 'synopsis' | cut -d ' ' -f3`
 
 if [ -z ${r_pid} ]; then
     echo 'No Sustain process found!'

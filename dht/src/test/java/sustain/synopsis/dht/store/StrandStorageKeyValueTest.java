@@ -18,6 +18,17 @@ public class StrandStorageKeyValueTest {
     private long from = 1391216400000L;
     private long to = from + 100;
 
+    public static Strand createStrand(String geohash, long ts, long to, long sessionId, double... features) {
+        Path path = new Path(features.length);
+        for (int i = 0; i < features.length; i++) {
+            path.add(new Feature("feature_" + (i + 1), features[i]));
+        }
+        RunningStatisticsND runningStats = new RunningStatisticsND(features);
+        DataContainer container = new DataContainer(runningStats);
+        path.get(path.size() - 1).setData(container);
+        return new Strand(geohash, ts, to, path);
+    }
+
     public static Strand createStrand(String geohash, long ts, long to, double... features) {
         Path path = new Path(features.length);
         for (int i = 0; i < features.length; i++) {
@@ -76,7 +87,7 @@ public class StrandStorageKeyValueTest {
 
     @Test
     void testStrandStorageValueMerge() throws IOException {
-        Strand strand1 = createStrand("9xa", from, to, 1.0, 2.0, 3.0);
+        Strand strand1 = createStrand("9xa", from, to, 1, 1.0, 2.0, 3.0);
         ProtoBuffSerializedStrand protoBuffSerializedStrand1 = CommonUtil.strandToProtoBuff(strand1);
 
         StrandStorageValue value1 = new StrandStorageValue(protoBuffSerializedStrand1.toByteArray());
@@ -84,7 +95,7 @@ public class StrandStorageKeyValueTest {
         Assertions.assertEquals(Collections.singletonList(protoBuffSerializedStrand1), value1.getProtoBuffSerializedStrands());
 
         // test merging
-        Strand strand2 = createStrand("9xa", from, to, 1.0, 2.0, 3.0);
+        Strand strand2 = createStrand("9xa", from, to, 1, 1.0, 2.0, 3.0);
         ProtoBuffSerializedStrand protoBuffSerializedStrand2 = CommonUtil.strandToProtoBuff(strand2);
         StrandStorageValue value2 = new StrandStorageValue(protoBuffSerializedStrand2.toByteArray());
         value1.merge(value2);
@@ -102,8 +113,8 @@ public class StrandStorageKeyValueTest {
 
     @Test
     void testStrandStorageValueSerialization() throws IOException {
-        Strand strand1 = createStrand("9xa", from, to, 1.0, 2.0, 3.0);
-        Strand strand2 = createStrand("9xa", from, to, 1.0, 2.0, 3.0);
+        Strand strand1 = createStrand("9xa", from, to, 1, 1.0, 2.0, 3.0);
+        Strand strand2 = createStrand("9xa", from, to, 1, 1.0, 2.0, 3.0);
         StrandStorageValue val = new StrandStorageValue(serializeStrand(strand1));
         val.merge(new StrandStorageValue(serializeStrand(strand2)));
 

@@ -11,11 +11,13 @@ import java.util.Iterator;
 public class QueryTest {
 
     public static void main(String[] args) {
-        String host = args[0];
-        int port = Integer.parseInt(args[1]);
-        String datasetId = args[2];
-        LocalDateTime fromDateTime = LocalDateTime.parse(args[3]);
-        LocalDateTime toDateTime = LocalDateTime.parse(args[4]);
+        String host = args[0].split(":")[0];
+        int port = Integer.parseInt(args[0].split(":")[1]);
+        String datasetId = args[1];
+        LocalDateTime fromDateTime = LocalDateTime.parse(args[2]);
+        LocalDateTime toDateTime = LocalDateTime.parse(args[3]);
+
+        String feature = args[4];
 
         ZoneOffset offset = ZoneOffset.UTC;
         if (args.length > 5) {
@@ -49,6 +51,8 @@ public class QueryTest {
         TargetQueryRequest req = TargetQueryRequest.newBuilder()
                 .setTemporalScope(temporalExpression)
                 .setDataset(datasetId)
+                .addFeaturePredicates(Expression.newBuilder()
+                        .build())
                 .build();
 
         Iterator<TargetQueryResponse> responses = stub.query(req);

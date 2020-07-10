@@ -86,44 +86,44 @@ public class ReaderTaskTest {
         Mockito.verify(containerMock, Mockito.times(0)).write(Mockito.any());
     }
 
-    @Test
-    void testSendStrandsAsBatchesConversionToMatchingStrand() throws IOException {
-        MockitoAnnotations.initMocks(this);
-        Mockito.when(entityStoreMock1.getEntityId()).thenReturn("test_entity");
-        // use a small batch size to make sure that the response gets published to the container immediately
-        ReaderTask task = new ReaderTask(TargetQueryRequest.newBuilder().build(), containerMock, 1);
+//    @Test
+//    void testSendStrandsAsBatchesConversionToMatchingStrand() throws IOException {
+//        MockitoAnnotations.initMocks(this);
+//        Mockito.when(entityStoreMock1.getEntityId()).thenReturn("test_entity");
+//        // use a small batch size to make sure that the response gets published to the container immediately
+//        ReaderTask task = new ReaderTask(TargetQueryRequest.newBuilder().build(), containerMock, 1);
+//
+//        ByteString serializedStrand =
+//                StrandStorageKeyValueTest.createStrand("9xj", 1000, 2000, 100.0, 122.0, 513.4).serializeAsProtoBuff();
+//        ProtoBuffSerializedStrand strand = ProtoBuffSerializedStrand.newBuilder().mergeFrom(serializedStrand).build();
+//        TargetQueryResponse targetQueryResponse = TargetQueryResponse.newBuilder().addStrands(strand).build();
+//        task.appendToResponse(Collections.singletonList(new TableIterator.TableEntry<>(new StrandStorageKey(1000, 2000),
+//                                                                                       new StrandStorageValue(
+//                                                                                               serializedStrand
+//                                                                                                       .toByteArray()))), 1);
+//        Mockito.verify(containerMock, Mockito.times(1)).write(targetQueryResponse);
+//    }
 
-        ByteString serializedStrand =
-                StrandStorageKeyValueTest.createStrand("9xj", 1000, 2000, 100.0, 122.0, 513.4).serializeAsProtoBuff();
-        ProtoBuffSerializedStrand strand = ProtoBuffSerializedStrand.newBuilder().mergeFrom(serializedStrand).build();
-        TargetQueryResponse targetQueryResponse = TargetQueryResponse.newBuilder().addStrands(strand).build();
-        task.appendToResponse(Collections.singletonList(new TableIterator.TableEntry<>(new StrandStorageKey(1000, 2000),
-                                                                                       new StrandStorageValue(
-                                                                                               serializedStrand
-                                                                                                       .toByteArray()))), 1);
-        Mockito.verify(containerMock, Mockito.times(1)).write(targetQueryResponse);
-    }
-
-    @Test
-    void testStrandStorageValueWithMultipleStrands() throws IOException {
-        MockitoAnnotations.initMocks(this);
-        Mockito.when(entityStoreMock1.getEntityId()).thenReturn("test_entity");
-        // use a small batch size to make sure that the response gets published to the container immediately
-        ReaderTask task = new ReaderTask(TargetQueryRequest.newBuilder().build(), containerMock, 1);
-
-        ProtoBuffSerializedStrand strand1 = CommonUtil
-                .strandToProtoBuff(StrandStorageKeyValueTest.createStrand("9xj", 1000, 2000, 100.0, 122.0, 513.4));
-        ProtoBuffSerializedStrand strand2 = CommonUtil
-                .strandToProtoBuff(StrandStorageKeyValueTest.createStrand("9xj", 1000, 2000, 100.0, 123.0, 523.4));
-        StrandStorageValue strandStorageValue = new StrandStorageValue(strand1.toByteArray(), strand2.toByteArray());
-        List<TableIterator.TableEntry<StrandStorageKey, StrandStorageValue>> matchingBlockData = Collections
-                .singletonList(new TableIterator.TableEntry<>(new StrandStorageKey(1000, 2000), strandStorageValue));
-        task.appendToResponse(matchingBlockData, 1);
-        Mockito.verify(containerMock, Mockito.times(1))
-               .write(TargetQueryResponse.newBuilder().addStrands(strand1).build());
-        Mockito.verify(containerMock, Mockito.times(1))
-               .write(TargetQueryResponse.newBuilder().addStrands(strand2).build());
-    }
+//    @Test
+//    void testStrandStorageValueWithMultipleStrands() throws IOException {
+//        MockitoAnnotations.initMocks(this);
+//        Mockito.when(entityStoreMock1.getEntityId()).thenReturn("test_entity");
+//        // use a small batch size to make sure that the response gets published to the container immediately
+//        ReaderTask task = new ReaderTask(TargetQueryRequest.newBuilder().build(), containerMock, 1);
+//
+//        ProtoBuffSerializedStrand strand1 = CommonUtil
+//                .strandToProtoBuff(StrandStorageKeyValueTest.createStrand("9xj", 1000, 2000, 100.0, 122.0, 513.4));
+//        ProtoBuffSerializedStrand strand2 = CommonUtil
+//                .strandToProtoBuff(StrandStorageKeyValueTest.createStrand("9xj", 1000, 2000, 100.0, 123.0, 523.4));
+//        StrandStorageValue strandStorageValue = new StrandStorageValue(strand1.toByteArray(), strand2.toByteArray());
+//        List<TableIterator.TableEntry<StrandStorageKey, StrandStorageValue>> matchingBlockData = Collections
+//                .singletonList(new TableIterator.TableEntry<>(new StrandStorageKey(1000, 2000), strandStorageValue));
+//        task.appendToResponse(matchingBlockData, 1);
+//        Mockito.verify(containerMock, Mockito.times(1))
+//               .write(TargetQueryResponse.newBuilder().addStrands(strand1).build());
+//        Mockito.verify(containerMock, Mockito.times(1))
+//               .write(TargetQueryResponse.newBuilder().addStrands(strand2).build());
+//    }
 
     @Test
     void testSendStrandsAsBatchesMultipleBatches() throws IOException {

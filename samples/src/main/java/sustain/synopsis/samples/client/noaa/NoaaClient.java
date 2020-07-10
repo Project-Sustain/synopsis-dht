@@ -5,6 +5,10 @@ import sustain.synopsis.ingestion.client.core.*;
 import sustain.synopsis.ingestion.client.publishing.DHTStrandPublisher;
 import sustain.synopsis.ingestion.client.publishing.SimpleStrandPublisher;
 import sustain.synopsis.ingestion.client.publishing.StrandPublisher;
+import sustain.synopsis.metadata.GetMetadataResponse;
+import sustain.synopsis.metadata.ProtoBuffSerializedBinConfiguration;
+import sustain.synopsis.metadata.ProtoBuffSerializedDatasetMetadata;
+import sustain.synopsis.metadata.ProtoBuffSerializedSessionMetadata;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,6 +20,96 @@ public class NoaaClient {
 
     public static final int GEOHASH_LENGTH = 5;
     public static final Duration TEMPORAL_BRACKET_LENGTH = Duration.ofHours(6);
+
+    public static final GetMetadataResponse NOAA_EXAMPLE_METADATA_RESPONSE = GetMetadataResponse.newBuilder()
+            .addDatasetMetadata(
+                    ProtoBuffSerializedDatasetMetadata.newBuilder()
+                            .setDatasetId("noaa-2014")
+                            .addSessionMetadata(
+                                    ProtoBuffSerializedSessionMetadata.newBuilder()
+                                            .setSessionId(1)
+                                            .addBinConfiguration(
+                                            ProtoBuffSerializedBinConfiguration.newBuilder()
+                                    .setFeatureName("precipitable_water_entire_atmosphere")
+                                    .addValues((float) -8.34404193162917)
+                                    .addValues((float)-1.2860326673303453)
+                                    .addValues((float)5.771976596968479)
+                                    .addValues((float)12.829985861267302)
+                                    .addValues((float)19.88799512556613)
+                                    .addValues((float)26.946004389864946)
+                                    .addValues((float)34.00401365416377)
+                                    .addValues((float)41.062022918462596)
+                                    .addValues((float)48.12003218276142)
+                                    .addValues((float)55.178041447060245)
+                                    .addValues((float)62.23605071135906)
+                                    .addValues((float)69.2940599756579)
+                                    .addValues((float)76.35206923995672)
+                                    .addValues((float)83.41007850425555)
+                                    .addValues((float)90.46808776855437)
+                                    .build()
+                    )
+                            .addBinConfiguration(
+                                    ProtoBuffSerializedBinConfiguration.newBuilder()
+                                            .setFeatureName("visibility_surface")
+                                            .addValues((float) -1759.9194969172195)
+                                            .addValues((float)1662.3107932972966)
+                                            .addValues((float)5084.541083511813)
+                                            .addValues((float)8506.77137372633)
+                                            .addValues((float)11929.001663940846)
+                                            .addValues((float)15351.231954155359)
+                                            .addValues((float)18773.462244369875)
+                                            .addValues((float)22195.692534584392)
+                                            .addValues((float)25617.92282479891)
+                                            .build()
+                            )
+                            .addBinConfiguration(
+                                    ProtoBuffSerializedBinConfiguration.newBuilder()
+                                            .setFeatureName("temperature_surface")
+                                            .addValues((float) 217.90924072265673)
+                                            .addValues((float)227.61221064715863)
+                                            .addValues((float)237.3151805716605)
+                                            .addValues((float)247.0181504961624)
+                                            .addValues((float)256.7211204206643)
+                                            .addValues((float)266.4240903451662)
+                                            .addValues((float)276.12706026966805)
+                                            .addValues((float)285.8300301941699)
+                                            .addValues((float)295.53300011867185)
+                                            .addValues((float)305.2359700431737)
+                                            .addValues((float)314.9389399676756)
+                                            .addValues((float)324.6419098921775)
+                                            .addValues((float)334.3448798166794)
+                                            .build()
+                            )
+                            .addBinConfiguration(
+                                    ProtoBuffSerializedBinConfiguration.newBuilder()
+                                            .setFeatureName("relative_humidity_zerodegc_isotherm")
+                                            .addValues((float) -14.999999999999963)
+                                            .addValues((float)-6.80112890625014)
+                                            .addValues((float)1.3977421874996825)
+                                            .addValues((float)9.596613281249505)
+                                            .addValues((float)17.795484374999326)
+                                            .addValues((float)25.99435546874915)
+                                            .addValues((float)34.19322656249897)
+                                            .addValues((float)42.392097656248794)
+                                            .addValues((float)50.590968749998616)
+                                            .addValues((float)58.789839843748446)
+                                            .addValues((float)66.98871093749827)
+                                            .addValues((float)75.18758203124808)
+                                            .addValues((float)83.38645312499791)
+                                            .addValues((float)91.58532421874774)
+                                            .addValues((float)99.78419531249756)
+                                            .addValues((float)107.98306640624737)
+                                            .addValues((float)116.1819374999972)
+                                            .build()
+                            )
+                                            .build()
+                            )
+                            .build()
+            )
+            .build();
+
+
+
 
     public static void main(String[] args) throws IOException {
         if (args.length < 5) {
